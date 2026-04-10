@@ -1,7 +1,8 @@
 "use client";
 
 import { Box, Skeleton, Text } from "@mantine/core";
-import { IconPlus } from "@tabler/icons-react";
+import { notifications } from "@mantine/notifications";
+import { IconCheck, IconPlus } from "@tabler/icons-react";
 import { startTransition, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
@@ -59,6 +60,22 @@ export default function TripsPage() {
       setJourneys(seedSampleJourneys());
       setLoaded(true);
     });
+  }, []);
+
+  useEffect(() => {
+    const toast = sessionStorage.getItem("toritavi_toast");
+    if (toast === "journey_created") {
+      sessionStorage.removeItem("toritavi_toast");
+      notifications.show({
+        message: "Journeyを作成しました",
+        color: "teal",
+        icon: <IconCheck size={18} />,
+        autoClose: 3000,
+        withBorder: false,
+        style: { background: "var(--mantine-color-teal-6)", color: "white" },
+        styles: { icon: { color: "white", background: "transparent" } },
+      });
+    }
   }, []);
 
   const now = new Date();

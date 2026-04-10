@@ -226,6 +226,7 @@ export default function NewTripPage() {
     });
 
     clearJourneyDraft();
+    sessionStorage.setItem("toritavi_toast", "journey_created");
     router.push("/");
   };
 
