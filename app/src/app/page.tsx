@@ -271,7 +271,7 @@ export default function TripsPage() {
           width: 56,
           height: 56,
           borderRadius: "50%",
-          background: "#fab005",
+          background: "#f76707",
           color: "white",
           border: "none",
           cursor: "pointer",
