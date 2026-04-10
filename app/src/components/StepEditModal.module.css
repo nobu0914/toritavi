@@ -1,0 +1,106 @@
+.modal :global(.mantine-Modal-content) {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.modal :global(.mantine-Modal-header) {
+  display: none;
+}
+
+.modal :global(.mantine-Modal-body) {
+  padding: 0;
+  background: var(--mantine-color-gray-0);
+}
+
+.panel {
+  background: var(--mantine-color-gray-0);
+}
+
+.top {
+  background: white;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--mantine-color-gray-2);
+}
+
+.topTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--mantine-color-gray-9);
+}
+
+.body {
+  padding: 16px;
+}
+
+.sectionLabel {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--mantine-color-gray-6);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 0 0 8px;
+}
+
+.formSection {
+  background: white;
+  border: 1px solid var(--mantine-color-gray-2);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.formRow {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--mantine-color-gray-1);
+}
+
+.formRow:last-child {
+  border-bottom: none;
+}
+
+.formLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--mantine-color-gray-6);
+  margin-bottom: 4px;
+  display: block;
+}
+
+.plainInput :global(input) {
+  border: none;
+  background: transparent;
+  padding: 8px 0;
+  font-size: 16px;
+  color: var(--mantine-color-gray-9);
+}
+
+.plainInput :global(input:focus) {
+  outline: none;
+}
+
+.dateGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.saveButton {
+  margin-top: 20px;
+  width: 100%;
+  height: 46px;
+  border-radius: 8px;
+  background: var(--mantine-color-blue-7);
+  color: white;
+  border: none;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.saveButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

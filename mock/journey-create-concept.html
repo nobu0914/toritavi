@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>toritavi Journey Create Mock</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&family=Noto+Sans+Mono&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  :root {
+    --blue-50: #e8f1fe;
+    --blue-100: #d9e6ff;
+    --blue-200: #c5d7fb;
+    --blue-800: #0031d8;
+    --cyan-50: #e9f7f9;
+    --cyan-600: #00a3bf;
+    --green-50: #e6f5ec;
+    --green-600: #259d63;
+    --orange-50: #ffeee2;
+    --orange-600: #fb5b01;
+    --red-50: #fdeeee;
+    --red-800: #ec0000;
+    --white: #ffffff;
+    --solid-gray-50: #f2f2f2;
+    --solid-gray-100: #e6e6e6;
+    --solid-gray-200: #cccccc;
+    --solid-gray-300: #b3b3b3;
+    --solid-gray-400: #999999;
+    --solid-gray-500: #7f7f7f;
+    --solid-gray-600: #666666;
+    --solid-gray-700: #4d4d4d;
+    --solid-gray-900: #1a1a1a;
+    --font-sans: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'Noto Sans Mono', monospace;
+    --fw-regular: 400;
+    --fw-bold: 700;
+    --fs-14: 0.875rem;
+    --fs-16: 1rem;
+    --fs-18: 1.125rem;
+    --fs-24: 1.5rem;
+    --lh-120: 1.2;
+    --lh-140: 1.4;
+    --lh-150: 1.5;
+    --lh-170: 1.7;
+    --r8: 0.5rem;
+    --r12: 0.75rem;
+    --r16: 1rem;
+    --r-full: 624.9375rem;
+    --app-primary: var(--blue-800);
+    --app-primary-light: var(--blue-50);
+    --app-accent: var(--cyan-600);
+    --app-bg: var(--solid-gray-50);
+    --app-surface: var(--white);
+    --app-border: var(--solid-gray-100);
+    --app-text: var(--solid-gray-900);
+    --app-text-secondary: var(--solid-gray-600);
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background: var(--app-bg);
+    color: var(--app-text);
+    max-width: 430px;
+    margin: 0 auto;
+    min-height: 100vh;
+    line-height: var(--lh-150);
+  }
+
+  .nav-header-demo {
+    background: var(--app-primary);
+    color: var(--white);
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+  }
+
+  .nav-header-left { display: flex; align-items: center; gap: 12px; }
+  .nav-header-back,
+  .nav-header-action {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+  }
+  .nav-header-title { font-size: var(--fs-18); font-weight: var(--fw-bold); }
+
+  .screen {
+    padding: 16px 16px 96px;
+  }
+
+  .section-header-demo {
+    font-size: 12px;
+    font-weight: var(--fw-bold);
+    color: var(--solid-gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 0 0 8px;
+  }
+
+  .card-demo {
+    border: 1px solid var(--app-border);
+    border-radius: var(--r12);
+    padding: 16px;
+    background: var(--app-surface);
+    margin-bottom: 12px;
+  }
+
+  .card-demo-header {
+    background: var(--app-primary);
+    color: white;
+    margin: -16px -16px 12px;
+    padding: 14px 16px;
+  }
+
+  .card-demo-title {
+    font-size: var(--fs-18);
+    font-weight: var(--fw-bold);
+  }
+
+  .card-demo-date {
+    font-size: 12px;
+    opacity: 0.8;
+    margin-top: 2px;
+  }
+
+  .card-demo-sub {
+    font-size: var(--fs-14);
+    color: var(--app-text-secondary);
+  }
+
+  .input-label-demo {
+    font-size: 12px;
+    font-weight: var(--fw-bold);
+    color: var(--solid-gray-700);
+    margin-bottom: 6px;
+    display: block;
+  }
+
+  .input-demo,
+  .select-demo,
+  .textarea-demo {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--solid-gray-200);
+    border-radius: var(--r8);
+    font-size: var(--fs-16);
+    font-family: var(--font-sans);
+    color: var(--solid-gray-900);
+    background: var(--white);
+  }
+
+  .textarea-demo {
+    min-height: 88px;
+    resize: none;
+  }
+
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .badge-demo {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: var(--r8);
+    font-size: 11px;
+    font-weight: var(--fw-bold);
+  }
+
+  .plan-card-demo {
+    display: flex;
+    gap: 12px;
+    border: 1px solid var(--app-border);
+    border-radius: var(--r12);
+    padding: 14px;
+    background: var(--white);
+  }
+
+  .plan-card-demo + .plan-card-demo {
+    margin-top: 10px;
+  }
+
+  .plan-icon-demo {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--r8);
+    background: var(--app-primary-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+
+  .plan-body-demo { flex: 1; }
+  .plan-type-demo {
+    font-size: 11px;
+    color: var(--solid-gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .plan-title-demo {
+    font-size: var(--fs-16);
+    font-weight: var(--fw-bold);
+  }
+  .plan-detail-demo {
+    font-size: var(--fs-14);
+    color: var(--solid-gray-600);
+    margin-top: 2px;
+  }
+  .plan-conf-demo {
+    font-size: 12px;
+    color: var(--app-primary);
+    font-weight: var(--fw-bold);
+    margin-top: 6px;
+    font-family: var(--font-mono);
+  }
+
+  .slot-card {
+    border: 1px dashed var(--solid-gray-300);
+    border-radius: var(--r12);
+    padding: 14px;
+    background: var(--white);
+  }
+
+  .slot-actions {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .slot-action {
+    border: 1px solid var(--solid-gray-200);
+    border-radius: var(--r8);
+    padding: 10px 4px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: var(--fw-bold);
+    background: var(--white);
+    color: var(--app-primary);
+  }
+
+  .connector {
+    display: flex;
+    justify-content: center;
+    padding: 8px 0;
+  }
+
+  .connector button {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--r-full);
+    border: 1px solid var(--solid-gray-200);
+    background: var(--white);
+    color: var(--app-primary);
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  .info-row-demo {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--solid-gray-100);
+    font-size: var(--fs-14);
+  }
+
+  .info-row-demo:last-child { border-bottom: none; }
+  .info-label-demo { color: var(--solid-gray-500); }
+  .info-value-demo { font-weight: var(--fw-bold); }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 20px;
+    font-size: var(--fs-14);
+    font-weight: var(--fw-bold);
+    font-family: var(--font-sans);
+    border: none;
+    cursor: pointer;
+    border-radius: var(--r8);
+    line-height: var(--lh-140);
+    width: 100%;
+  }
+
+  .btn-primary { background: var(--app-primary); color: var(--white); }
+  .btn-secondary { background: var(--white); color: var(--app-primary); border: 1px solid var(--app-primary); }
+
+  .footer {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(100vw, 430px);
+    background: var(--white);
+    border-top: 1px solid var(--app-border);
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .hint {
+    font-size: 12px;
+    color: var(--solid-gray-600);
+    margin-top: 8px;
+    line-height: var(--lh-170);
+  }
+</style>
+</head>
+<body>
+  <div class="nav-header-demo">
+    <div class="nav-header-left">
+      <button class="nav-header-back">‹</button>
+      <span class="nav-header-title">新規作成</span>
+    </div>
+    <button class="nav-header-action">⋯</button>
+  </div>
+
+  <main class="screen">
+    <div class="card-demo">
+      <div class="card-demo-header">
+        <div class="card-demo-title">ジャーニー作成</div>
+        <div class="card-demo-date">旅程をひとつの流れとして登録します</div>
+      </div>
+      <div class="card-demo-sub">タイトル、日付、ステップを入力し、移動・宿泊・予定をひとまとめにします。</div>
+    </div>
+
+    <div class="card-demo">
+      <div class="section-header-demo">基本情報</div>
+      <label class="input-label-demo">タイトル</label>
+      <input class="input-demo" type="text" value="大阪出張">
+      <div class="grid-2" style="margin-top:12px">
+        <div>
+          <label class="input-label-demo">開始日</label>
+          <input class="input-demo" type="date" value="2026-04-15">
+        </div>
+        <div>
+          <label class="input-label-demo">終了日</label>
+          <input class="input-demo" type="date" value="2026-04-16">
+        </div>
+      </div>
+      <div class="hint">例: 出張、日帰り外出、週末旅行など用途を問わず登録できます。</div>
+    </div>
+
+    <div class="card-demo">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div class="section-header-demo" style="padding:0">ルート</div>
+        <span class="badge-demo" style="background:var(--blue-50);color:var(--blue-800)">2件登録済み</span>
+      </div>
+
+      <div class="plan-card-demo" style="background:var(--green-50);border-color:#c2e5d1">
+        <div class="plan-icon-demo" style="background:var(--white)">🚄</div>
+        <div class="plan-body-demo">
+          <div style="display:flex;justify-content:space-between;align-items:start;gap:8px">
+            <div>
+              <div class="plan-type-demo">Rail</div>
+              <div class="plan-title-demo">のぞみ 225号</div>
+            </div>
+            <span class="badge-demo" style="background:var(--blue-50);color:var(--blue-800)">手入力</span>
+          </div>
+          <div class="plan-detail-demo">東京 10:00 → 新大阪 12:30</div>
+          <div class="plan-conf-demo">Conf# TK-882541</div>
+        </div>
+      </div>
+
+      <div class="connector"><button>+</button></div>
+
+      <div class="slot-card">
+        <div style="display:flex;justify-content:space-between;align-items:start;gap:8px">
+          <div>
+            <div class="plan-type-demo">Step Slot</div>
+            <div class="plan-title-demo">宿泊・商談・食事などを追加</div>
+          </div>
+          <span class="badge-demo" style="background:var(--orange-50);color:var(--orange-600)">未登録</span>
+        </div>
+        <div class="slot-actions">
+          <div class="slot-action">撮影</div>
+          <div class="slot-action">アップロード</div>
+          <div class="slot-action">メール</div>
+          <div class="slot-action">手入力</div>
+        </div>
+      </div>
+
+      <div class="connector"><button>+</button></div>
+
+      <div class="plan-card-demo">
+        <div class="plan-icon-demo">🏨</div>
+        <div class="plan-body-demo">
+          <div style="display:flex;justify-content:space-between;align-items:start;gap:8px">
+            <div>
+              <div class="plan-type-demo">Lodging</div>
+              <div class="plan-title-demo">ホテル大阪ベイ</div>
+            </div>
+            <span class="badge-demo" style="background:var(--cyan-50);color:var(--cyan-600)">アップロード</span>
+          </div>
+          <div class="plan-detail-demo">18:00 チェックイン / 大阪市此花区</div>
+          <div class="plan-conf-demo">Conf# OSK-40218</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-demo">
+      <div class="section-header-demo">メモ</div>
+      <label class="input-label-demo">備考</label>
+      <textarea class="textarea-demo">クライアント訪問前に資料確認。ホテル到着後に翌日の移動経路を再確認。</textarea>
+    </div>
+
+    <div class="card-demo">
+      <div class="section-header-demo">保存イメージ</div>
+      <div class="info-row-demo">
+        <span class="info-label-demo">Journey 名</span>
+        <span class="info-value-demo">大阪出張</span>
+      </div>
+      <div class="info-row-demo">
+        <span class="info-label-demo">期間</span>
+        <span class="info-value-demo">4月15日 - 4月16日</span>
+      </div>
+      <div class="info-row-demo">
+        <span class="info-label-demo">登録ステップ</span>
+        <span class="info-value-demo">2件</span>
+      </div>
+    </div>
+  </main>
+
+  <div class="footer">
+    <button class="btn btn-secondary">下書き保存</button>
+    <button class="btn btn-primary">作成</button>
+  </div>
+</body>
+</html>

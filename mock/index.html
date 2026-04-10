@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>toritavi</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  [onclick] { cursor:pointer; }
+  :root {
+    --blue-0:#e7f5ff;--blue-1:#d0ebff;--blue-7:#1c7ed6;--blue-9:#1864ab;
+    --gray-0:#f8f9fa;--gray-1:#f1f3f5;--gray-2:#e9ecef;--gray-3:#dee2e6;--gray-4:#ced4da;--gray-5:#adb5bd;--gray-6:#868e96;--gray-7:#495057;--gray-8:#343a40;--gray-9:#212529;
+    --red-0:#fff5f5;--red-6:#fa5252;
+    --green-0:#ebfbee;--green-8:#2f9e44;
+    --orange-0:#fff4e6;--orange-6:#fd7e14;--orange-8:#e8590c;
+    --teal-0:#e6fcf5;--teal-6:#12b886;--teal-8:#099268;
+    --font:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;
+    --primary:var(--blue-7);--primary-light:var(--blue-0);
+    --shadow-xs:0 1px 3px rgba(0,0,0,0.05),0 1px 2px rgba(0,0,0,0.1);
+    --shadow-md:0 1px 3px rgba(0,0,0,0.05),rgba(0,0,0,0.05) 0 20px 25px -5px,rgba(0,0,0,0.04) 0 10px 10px -5px;
+  }
+  body { font-family:var(--font); background:var(--gray-0); color:var(--gray-9); max-width:430px; margin:0 auto; min-height:100vh; }
+  .screen { display:none; min-height:100vh; padding-bottom:72px; }
+  .screen.active { display:block; }
+
+  /* Icons */
+  .i { display:inline-flex; align-items:center; justify-content:center; }
+  .i svg { width:20px; height:20px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; pointer-events:none; }
+  .i { pointer-events:none; }
+  .i-sm svg { width:16px; height:16px; }
+  .i-lg svg { width:24px; height:24px; }
+  .i-xl svg { width:32px; height:32px; }
+
+  /* Header */
+  .hdr { background:var(--primary); color:white; padding:14px 16px; position:sticky; top:0; z-index:100; display:flex; align-items:center; justify-content:space-between; }
+  .hdr-left { display:flex; align-items:center; gap:12px; }
+  .hdr h1 { font-size:18px; font-weight:700; }
+  .back { background:none; border:none; color:white; cursor:pointer; padding:4px; display:flex; }
+  .hdr-act { background:none; border:none; color:rgba(255,255,255,.8); cursor:pointer; display:flex; padding:4px; }
+
+  /* Tab Bar */
+  .tabs { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:430px; background:white; border-top:1px solid var(--gray-2); display:flex; padding:6px 0 calc(6px + env(safe-area-inset-bottom)); z-index:200; }
+  .tab { flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; padding:6px 0; background:none; border:none; cursor:pointer; color:var(--gray-5); font-size:10px; font-weight:600; position:relative; }
+  .tab.on { color:var(--primary); }
+  .tab.on::after { content:''; position:absolute; top:-1px; left:20%; right:20%; height:2px; background:var(--primary); }
+  .tab .i svg { width:22px; height:22px; }
+
+  /* FAB */
+  .fab { position:fixed; bottom:calc(68px + env(safe-area-inset-bottom)); right:max(16px,calc(50% - 199px)); width:56px; height:56px; border-radius:50%; background:var(--primary); color:white; border:none; cursor:pointer; box-shadow:var(--shadow-md); z-index:150; display:flex; align-items:center; justify-content:center; }
+  .fab .i svg { width:24px; height:24px; }
+
+  /* Segmented Control */
+  .seg { display:inline-flex; background:var(--gray-1); border-radius:8px; padding:3px; gap:3px; margin:12px 16px; }
+  .seg-i { padding:7px 16px; font-size:13px; font-weight:600; background:transparent; color:var(--gray-6); border:none; cursor:pointer; border-radius:6px; }
+  .seg-i.on { background:white; color:var(--gray-9); box-shadow:var(--shadow-xs); }
+
+  .sec { font-size:11px; font-weight:700; color:var(--gray-6); text-transform:uppercase; letter-spacing:.5px; padding:16px 16px 8px; }
+
+  /* Trip Card */
+  .trip { background:white; margin:6px 16px; border-radius:8px; overflow:hidden; border:1px solid var(--gray-2); cursor:pointer; }
+  .trip:active { box-shadow:var(--shadow-xs); }
+  .trip-cover { background:var(--primary); color:white; padding:16px; }
+  .trip-cover-t { font-size:18px; font-weight:700; }
+  .trip-cover-d { font-size:12px; opacity:.8; margin-top:2px; }
+  .trip-body { padding:10px 14px; display:flex; justify-content:space-between; align-items:center; }
+  .trip-plans { font-size:13px; color:var(--gray-6); }
+  .trip-icons { display:flex; gap:6px; margin-top:4px; }
+  .trip-icon { width:28px; height:28px; border-radius:8px; background:var(--primary-light); color:var(--primary); display:flex; align-items:center; justify-content:center; }
+  .trip-icon .i svg { width:16px; height:16px; }
+  .badge { padding:3px 10px; border-radius:32px; font-size:11px; font-weight:700; }
+
+  /* Hero */
+  .hero { background:var(--primary); color:white; padding:24px 16px 20px; }
+  .hero-t { font-size:22px; font-weight:700; }
+  .hero-d { font-size:13px; opacity:.8; margin-top:4px; }
+  .hero-sum { display:flex; gap:12px; margin-top:12px; font-size:12px; opacity:.8; }
+
+  /* Day Header */
+  .day { font-size:13px; font-weight:700; color:var(--gray-9); padding:16px 16px 8px; display:flex; align-items:center; gap:8px; }
+  .day-line { flex:1; height:2px; background:var(--primary); border-radius:1px; }
+
+  /* Plan Card */
+  .plan { background:white; margin:6px 16px; border-radius:8px; border:1px solid var(--gray-2); padding:12px 14px; display:flex; gap:12px; cursor:pointer; }
+  .plan:active { box-shadow:var(--shadow-xs); }
+  .plan-ic { width:40px; height:40px; border-radius:8px; background:var(--primary-light); color:var(--primary); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .plan-ic .i svg { width:22px; height:22px; }
+  .plan-body { flex:1; min-width:0; }
+  .plan-type { font-size:11px; color:var(--gray-5); text-transform:uppercase; letter-spacing:.5px; }
+  .plan-t { font-size:14px; font-weight:600; margin-top:1px; }
+  .plan-d { font-size:13px; color:var(--gray-6); margin-top:2px; }
+  .plan-conf { font-size:12px; color:var(--primary); font-weight:600; margin-top:5px; font-family:var(--mono); }
+  .plan-arr { color:var(--gray-4); display:flex; align-items:center; }
+
+  /* Plan Detail */
+  .pd-hero { background:var(--primary); color:white; padding:24px 16px; text-align:center; }
+  .pd-icon { margin-bottom:8px; display:flex; justify-content:center; }
+  .pd-icon .i svg { width:36px; height:36px; }
+  .pd-type { font-size:11px; text-transform:uppercase; letter-spacing:1px; opacity:.7; }
+  .pd-t { font-size:20px; font-weight:700; margin-top:4px; }
+  .pd-sub { font-size:14px; opacity:.8; margin-top:4px; }
+
+  /* Route */
+  .route { background:white; margin:12px 16px; border-radius:8px; border:1px solid var(--gray-2); padding:20px 16px; display:flex; align-items:center; gap:12px; }
+  .route-pt { text-align:center; flex:1; }
+  .route-code { font-size:24px; font-weight:700; color:var(--gray-9); }
+  .route-name { font-size:12px; color:var(--gray-6); margin-top:2px; }
+  .route-time { font-size:14px; font-weight:600; margin-top:4px; }
+  .route-ar { display:flex; flex-direction:column; align-items:center; gap:2px; color:var(--gray-4); }
+  .route-al { width:40px; height:1px; background:var(--gray-3); }
+  .route-dur { font-size:11px; color:var(--gray-5); }
+
+  /* Info */
+  .info-sec { background:white; margin:12px 16px; border-radius:8px; border:1px solid var(--gray-2); overflow:hidden; }
+  .info-row { padding:12px 14px; border-bottom:1px solid var(--gray-1); display:flex; justify-content:space-between; }
+  .info-row:last-child { border-bottom:none; }
+  .info-l { font-size:13px; color:var(--gray-6); }
+  .info-v { font-size:13px; font-weight:600; text-align:right; }
+  .info-v.conf { color:var(--primary); font-family:var(--mono); }
+  .info-v.link { color:var(--primary); }
+
+  /* Forms */
+  .form-sec { background:white; margin:12px 16px; border-radius:8px; border:1px solid var(--gray-2); overflow:hidden; }
+  .form-row { padding:12px 14px; border-bottom:1px solid var(--gray-1); }
+  .form-row:last-child { border-bottom:none; }
+  .form-lb { font-size:12px; font-weight:600; color:var(--gray-6); margin-bottom:4px; display:block; }
+  .form-in { width:100%; padding:8px 0; border:none; font-size:16px; color:var(--gray-9); font-family:var(--font); background:none; }
+  .form-in:focus { outline:none; }
+  .form-in::placeholder { color:var(--gray-4); }
+  .form-date { display:flex; gap:12px; }
+  .form-date > div { flex:1; }
+  .save-btn { margin:20px 16px; padding:12px; border-radius:8px; border:none; background:var(--primary); color:white; width:calc(100% - 32px); font-size:16px; font-weight:600; cursor:pointer; }
+
+  /* Alert */
+  .alert { background:white; margin:6px 16px; border-radius:8px; border:1px solid var(--gray-2); padding:14px; display:flex; gap:10px; align-items:flex-start; }
+  .alert-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; margin-top:5px; }
+  .alert-t { font-size:14px; font-weight:600; }
+  .alert-d { font-size:13px; color:var(--gray-6); margin-top:2px; }
+  .alert-time { font-size:11px; color:var(--gray-5); margin-top:6px; }
+
+  /* Account */
+  .profile { background:white; margin:16px; border-radius:8px; border:1px solid var(--gray-2); padding:20px; display:flex; align-items:center; gap:16px; }
+  .avatar { width:56px; height:56px; border-radius:50%; background:var(--primary); display:flex; align-items:center; justify-content:center; font-size:20px; color:white; font-weight:700; flex-shrink:0; }
+  .prof-name { font-size:18px; font-weight:700; }
+  .prof-email { font-size:13px; color:var(--gray-6); margin-top:2px; }
+  .stats { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin:0 16px 16px; }
+  .stat { background:white; border-radius:8px; border:1px solid var(--gray-2); padding:16px; text-align:center; }
+  .stat-v { font-size:28px; font-weight:700; color:var(--primary); }
+  .stat-l { font-size:12px; color:var(--gray-6); margin-top:4px; }
+  .menu { background:white; margin:0 16px; border-radius:8px; border:1px solid var(--gray-2); overflow:hidden; }
+  .menu-i { padding:14px; border-bottom:1px solid var(--gray-1); display:flex; justify-content:space-between; align-items:center; cursor:pointer; font-size:15px; }
+  .menu-i:last-child { border-bottom:none; }
+  .menu-i:active { background:var(--gray-0); }
+
+  /* Timeline */
+  .tl { padding:0 16px; }
+  .tl-item { display:flex; gap:0; }
+  .tl-rail { display:flex; flex-direction:column; align-items:center; width:32px; flex-shrink:0; padding-top:2px; }
+  .tl-time { font-size:11px; font-weight:600; color:var(--gray-6); width:44px; flex-shrink:0; padding-top:14px; text-align:right; padding-right:10px; }
+  .tl-dot { width:12px; height:12px; border-radius:50%; border:2px solid var(--gray-4); background:white; flex-shrink:0; margin-top:14px; z-index:1; }
+  .tl-dot.done { background:var(--teal-6); border-color:var(--teal-6); }
+  .tl-dot.active { background:var(--primary); border-color:var(--primary); box-shadow:0 0 0 4px rgba(28,126,214,0.15); }
+  .tl-dot.upcoming { background:white; border-color:var(--gray-4); }
+  .tl-line { width:2px; flex:1; background:var(--gray-3); min-height:8px; }
+  .tl-line.done { background:var(--teal-6); }
+  .tl-line.active { background:var(--primary); }
+  .tl-card { flex:1; background:white; border:1px solid var(--gray-2); border-radius:8px; padding:10px 12px; margin:4px 0 4px 10px; cursor:pointer; display:flex; gap:10px; }
+  .tl-card:active { box-shadow:var(--shadow-xs); }
+  .tl-card.active-card { border-color:var(--primary); border-width:2px; }
+  .tl-card-ic { width:36px; height:36px; border-radius:8px; background:var(--primary-light); color:var(--primary); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .tl-card-ic .i svg { width:20px; height:20px; }
+  .tl-card-ic.done { background:var(--teal-0); color:var(--teal-8); }
+  .tl-card-body { flex:1; min-width:0; }
+  .tl-card-type { font-size:10px; color:var(--gray-5); text-transform:uppercase; letter-spacing:.5px; }
+  .tl-card-t { font-size:13px; font-weight:600; margin-top:1px; }
+  .tl-card-d { font-size:12px; color:var(--gray-6); margin-top:2px; }
+  .tl-card-conf { font-size:11px; color:var(--primary); font-weight:600; margin-top:3px; font-family:var(--mono); }
+  .tl-card-badge { font-size:10px; font-weight:700; padding:2px 8px; border-radius:20px; align-self:flex-start; margin-top:12px; white-space:nowrap; }
+  .tl-free { padding:6px 0 6px 10px; margin-left:0; font-size:12px; color:var(--gray-5); font-style:italic; }
+
+  /* Step cards */
+  .step-list { margin:0 16px; position:relative; }
+  .step-list::before { content:''; position:absolute; left:50%; top:24px; bottom:24px; width:2px; background:var(--gray-3); transform:translateX(-50%); z-index:0; }
+  .step-card { background:white; border:1px solid var(--gray-2); border-radius:8px; padding:12px; position:relative; z-index:1; }
+  .step-card-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+  .step-num { width:24px; height:24px; border-radius:50%; background:var(--primary); color:white; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; }
+  .step-label { font-size:11px; font-weight:600; color:var(--gray-5); text-transform:uppercase; letter-spacing:.5px; }
+  .step-remove { background:none; border:none; color:var(--gray-4); cursor:pointer; padding:4px; display:flex; }
+  .step-remove .i svg { width:16px; height:16px; }
+  .step-fields { display:flex; flex-direction:column; gap:8px; }
+  .step-input { width:100%; padding:8px 10px; border:1px solid var(--gray-3); border-radius:6px; font-size:14px; font-family:var(--font); color:var(--gray-9); background:var(--gray-0); }
+  .step-input:focus { outline:none; border-color:var(--primary); background:white; }
+  .step-input::placeholder { color:var(--gray-4); }
+  .step-row { display:flex; gap:8px; }
+  .step-row > * { flex:1; }
+  .step-connector { display:flex; align-items:center; justify-content:center; height:40px; position:relative; z-index:2; }
+  .step-connector-add { width:24px; height:24px; border-radius:50%; background:white; border:2px solid var(--gray-3); color:var(--gray-5); display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:1; }
+  .step-connector-add:active { border-color:var(--primary); color:var(--primary); }
+  .step-connector-add .i svg { width:14px; height:14px; }
+  .step-add { display:flex; align-items:center; justify-content:center; gap:8px; margin:4px 16px 12px; padding:10px; cursor:pointer; color:var(--primary); font-size:14px; font-weight:600; background:none; border:2px dashed var(--gray-3); border-radius:8px; font-family:var(--font); }
+  .step-add .i svg { width:18px; height:18px; }
+  .step-actions { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-top:10px; }
+  .step-act { display:flex; flex-direction:column; align-items:center; gap:4px; padding:10px 4px; background:var(--gray-0); border:1px solid var(--gray-2); border-radius:6px; cursor:pointer; color:var(--gray-7); font-size:10px; font-weight:600; font-family:var(--font); }
+  .step-act:active { background:var(--primary-light); border-color:var(--primary); color:var(--primary); }
+  .step-act .i svg { width:20px; height:20px; }
+
+  /* Registered step card */
+  .step-done { border-color:var(--teal-6); }
+  .step-done .step-num { background:var(--teal-6); }
+  .step-info { margin-top:8px; }
+  .step-info-row { display:flex; align-items:flex-start; gap:8px; padding:6px 0; border-bottom:1px solid var(--gray-1); font-size:13px; }
+  .step-info-row:last-child { border-bottom:none; }
+  .step-info-ic { color:var(--gray-5); flex-shrink:0; margin-top:1px; }
+  .step-info-ic .i svg { width:16px; height:16px; }
+  .step-info-text { flex:1; color:var(--gray-8); }
+  .step-info-label { font-size:11px; color:var(--gray-5); }
+  .step-info-val { font-weight:600; }
+  .step-info-conf { color:var(--primary); font-family:var(--mono); font-weight:600; }
+  .step-thumb { margin-top:8px; display:flex; gap:6px; }
+  .step-thumb-img { width:56px; height:56px; border-radius:6px; background:var(--gray-1); border:1px solid var(--gray-2); display:flex; align-items:center; justify-content:center; color:var(--gray-4); }
+  .step-thumb-img .i svg { width:20px; height:20px; }
+  .step-source { margin-top:8px; display:inline-flex; align-items:center; gap:4px; font-size:11px; color:var(--teal-8); background:var(--teal-0); padding:3px 8px; border-radius:4px; font-weight:600; }
+  .step-source .i svg { width:12px; height:12px; }
+
+  /* Modal overlay */
+  .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:500; align-items:center; justify-content:center; padding:24px; }
+  .modal-overlay.show { display:flex; }
+  .modal { background:white; border-radius:12px; max-width:340px; width:100%; overflow:hidden; box-shadow:var(--shadow-md); }
+  .modal-body { padding:24px 20px; text-align:center; }
+  .modal-icon { margin-bottom:16px; color:var(--primary); }
+  .modal-icon .i svg { width:48px; height:48px; }
+  .modal-title { font-size:18px; font-weight:700; margin-bottom:8px; }
+  .modal-desc { font-size:14px; color:var(--gray-6); line-height:1.6; }
+  .modal-preview { margin:16px 0; background:var(--gray-0); border:1px solid var(--gray-2); border-radius:8px; padding:16px; }
+  .modal-preview-placeholder { width:100%; height:160px; background:var(--gray-1); border-radius:6px; display:flex; align-items:center; justify-content:center; color:var(--gray-4); }
+  .modal-preview-placeholder .i svg { width:40px; height:40px; }
+  .modal-footer { padding:0 20px 20px; display:flex; gap:8px; }
+  .modal-footer .btn { flex:1; padding:12px; font-size:15px; justify-content:center; }
+  .btn-filled { background:var(--primary); color:white; border:none; border-radius:8px; font-weight:600; cursor:pointer; font-family:var(--font); display:flex; align-items:center; }
+  .btn-outline { background:white; color:var(--gray-7); border:1px solid var(--gray-3); border-radius:8px; font-weight:600; cursor:pointer; font-family:var(--font); display:flex; align-items:center; }
+
+  /* Empty */
+  .empty { text-align:center; padding:48px 32px; }
+  .empty .i { color:var(--gray-4); margin-bottom:12px; }
+  .empty .i svg { width:48px; height:48px; }
+  .empty-t { font-size:16px; font-weight:600; color:var(--gray-7); margin-bottom:4px; }
+  .empty-d { font-size:14px; color:var(--gray-6); line-height:1.6; }
+</style>
+</head>
+<body>
+
+<!-- SVG Icon Definitions -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="ic-flight" viewBox="0 0 24 24"><path d="M17.8 19.2L16 11l3.5-3.5C20.3 6.7 20.3 5.3 19.5 4.5 18.7 3.7 17.3 3.7 16.5 4.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5L2 10l7 3 2 2-3 7 3.3-1.7c.4-.2.6-.6.5-1.1z"/></symbol>
+  <symbol id="ic-rail" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="16" rx="2"/><path d="M4 11h16M12 3v8"/><circle cx="8.5" cy="15.5" r="1"/><circle cx="15.5" cy="15.5" r="1"/><path d="M6 19l-2 2M18 19l2 2"/></symbol>
+  <symbol id="ic-lodging" viewBox="0 0 24 24"><path d="M2 4v16M2 8h18a2 2 0 0 1 2 2v10M2 17h20M6 8V6a2 2 0 0 1 2-2h0a2 2 0 0 1 2 2v2"/></symbol>
+  <symbol id="ic-meeting" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2M2 13h20"/></symbol>
+  <symbol id="ic-restaurant" viewBox="0 0 24 24"><path d="M3 2v7c0 1.1.9 2 2 2h2a2 2 0 0 0 2-2V2M6 2v20M19 2c-2 0-4 3.3-4 7 0 2.2 1.8 4 4 4V2zM19 13v9"/></symbol>
+  <symbol id="ic-activity" viewBox="0 0 24 24"><path d="M2 9a3 3 0 0 1 0 6v5a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1v-5a3 3 0 0 1 0-6V4a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v5z"/><path d="M9 3v3M9 12v0M9 18v3"/></symbol>
+  <symbol id="ic-bell" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></symbol>
+  <symbol id="ic-inbox" viewBox="0 0 24 24"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></symbol>
+  <symbol id="ic-user" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+  <symbol id="ic-plus" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
+  <symbol id="ic-back" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></symbol>
+  <symbol id="ic-next" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></symbol>
+  <symbol id="ic-more" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></symbol>
+  <symbol id="ic-edit" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></symbol>
+  <symbol id="ic-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></symbol>
+  <symbol id="ic-map-pin" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></symbol>
+  <symbol id="ic-x-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></symbol>
+  <symbol id="ic-save" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></symbol>
+  <symbol id="ic-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
+  <symbol id="ic-camera" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></symbol>
+  <symbol id="ic-upload" viewBox="0 0 24 24"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></symbol>
+  <symbol id="ic-mail" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22 6 12 13 2 6"/></symbol>
+  <symbol id="ic-type" viewBox="0 0 24 24"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></symbol>
+  <symbol id="ic-grip" viewBox="0 0 24 24"><circle cx="9" cy="5" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="19" r="1"/></symbol>
+</svg>
+
+<!-- ======== Trips ======== -->
+<div id="s-trips" class="screen active">
+  <div class="hdr"><div class="hdr-left"><h1>toritavi</h1></div></div>
+
+  <div class="seg"><button class="seg-i on">Upcoming</button><button class="seg-i">Past</button></div>
+
+  <div class="trip" onclick="go('s-itin')">
+    <div class="trip-cover">
+      <div class="trip-cover-t">大阪出張</div>
+      <div class="trip-cover-d">4月15日 (火) - 4月16日 (水)</div>
+    </div>
+    <div class="trip-body">
+      <div>
+        <div class="trip-plans">5 plans</div>
+        <div class="trip-icons">
+          <div class="trip-icon"><span class="i"><svg><use href="#ic-rail"/></svg></span></div>
+          <div class="trip-icon"><span class="i"><svg><use href="#ic-meeting"/></svg></span></div>
+          <div class="trip-icon"><span class="i"><svg><use href="#ic-lodging"/></svg></span></div>
+        </div>
+      </div>
+      <span class="badge" style="background:var(--blue-0);color:var(--primary)">3日後</span>
+    </div>
+  </div>
+
+  <div class="trip" onclick="go('s-itin')">
+    <div class="trip-cover" style="background:var(--blue-9)">
+      <div class="trip-cover-t">福岡 商談訪問</div>
+      <div class="trip-cover-d">4月22日 (火)</div>
+    </div>
+    <div class="trip-body">
+      <div>
+        <div class="trip-plans">4 plans</div>
+        <div class="trip-icons">
+          <div class="trip-icon"><span class="i"><svg><use href="#ic-flight"/></svg></span></div>
+          <div class="trip-icon"><span class="i"><svg><use href="#ic-meeting"/></svg></span></div>
+          <div class="trip-icon"><span class="i"><svg><use href="#ic-restaurant"/></svg></span></div>
+          <div class="trip-icon"><span class="i"><svg><use href="#ic-flight"/></svg></span></div>
+        </div>
+      </div>
+      <span class="badge" style="background:var(--blue-0);color:var(--primary)">10日後</span>
+    </div>
+  </div>
+
+  <div class="trip">
+    <div class="trip-cover" style="background:var(--gray-7)">
+      <div class="trip-cover-t">名古屋 通院</div>
+      <div class="trip-cover-d">4月8日 (火)</div>
+    </div>
+    <div class="trip-body">
+      <div>
+        <div class="trip-plans">2 plans</div>
+        <div class="trip-icons">
+          <div class="trip-icon"><span class="i"><svg><use href="#ic-rail"/></svg></span></div>
+          <div class="trip-icon"><span class="i"><svg><use href="#ic-activity"/></svg></span></div>
+        </div>
+      </div>
+      <span class="badge" style="background:var(--gray-1);color:var(--gray-7)">完了</span>
+    </div>
+  </div>
+
+  <button class="fab" onclick="go('s-new')"><span class="i"><svg><use href="#ic-plus"/></svg></span></button>
+</div>
+
+<!-- ======== Itinerary ======== -->
+<div id="s-itin" class="screen">
+  <div class="hdr">
+    <div class="hdr-left"><button class="back" onclick="go('s-trips')"><span class="i"><svg><use href="#ic-back"/></svg></span></button><h1>大阪出張</h1></div>
+    <button class="hdr-act"><span class="i"><svg><use href="#ic-more"/></svg></span></button>
+  </div>
+
+  <div class="hero">
+    <div class="hero-t">大阪出張</div>
+    <div class="hero-d">4月15日 (火) - 4月16日 (水)</div>
+    <div class="hero-sum"><span>2 rail</span><span>1 meeting</span><span>1 hotel</span></div>
+  </div>
+
+  <!-- Day 1 -->
+  <div class="day">火曜日, 4月15日<div class="day-line"></div></div>
+
+  <div class="tl">
+    <!-- 09:00 出発 (done) -->
+    <div class="tl-item">
+      <div class="tl-time">09:00</div>
+      <div class="tl-rail"><div class="tl-dot done"></div><div class="tl-line done"></div></div>
+      <div class="tl-free">自宅 出発</div>
+    </div>
+
+    <!-- 10:00 新幹線 (done) -->
+    <div class="tl-item" onclick="go('s-rail')">
+      <div class="tl-time">10:00</div>
+      <div class="tl-rail"><div class="tl-dot done"></div><div class="tl-line done"></div></div>
+      <div class="tl-card">
+        <div class="tl-card-ic done"><span class="i"><svg><use href="#ic-rail"/></svg></span></div>
+        <div class="tl-card-body">
+          <div class="tl-card-type">Rail</div>
+          <div class="tl-card-t">のぞみ 225号</div>
+          <div class="tl-card-d">東京 10:00 → 新大阪 12:30</div>
+          <div class="tl-card-conf">Conf# TK-882541</div>
+        </div>
+        <div class="tl-card-badge" style="background:var(--teal-0);color:var(--teal-8)">完了</div>
+      </div>
+    </div>
+
+    <!-- 12:30 到着 (active) -->
+    <div class="tl-item">
+      <div class="tl-time">12:30</div>
+      <div class="tl-rail"><div class="tl-dot active"></div><div class="tl-line active"></div></div>
+      <div class="tl-free" style="color:var(--primary);font-style:normal;font-weight:600">新大阪駅 到着 — いまここ</div>
+    </div>
+
+    <!-- 14:00 商談 (upcoming) -->
+    <div class="tl-item" onclick="go('s-meet')">
+      <div class="tl-time">14:00</div>
+      <div class="tl-rail"><div class="tl-dot upcoming"></div><div class="tl-line"></div></div>
+      <div class="tl-card active-card">
+        <div class="tl-card-ic"><span class="i"><svg><use href="#ic-meeting"/></svg></span></div>
+        <div class="tl-card-body">
+          <div class="tl-card-type">Meeting</div>
+          <div class="tl-card-t">ABC社 商談</div>
+          <div class="tl-card-d">14:00 - 16:00 · 梅田</div>
+        </div>
+        <div class="tl-card-badge" style="background:var(--blue-0);color:var(--primary)">次</div>
+      </div>
+    </div>
+
+    <!-- 16:30 移動 -->
+    <div class="tl-item">
+      <div class="tl-time">16:30</div>
+      <div class="tl-rail"><div class="tl-dot upcoming"></div><div class="tl-line"></div></div>
+      <div class="tl-free">ホテルへ移動（御堂筋線）</div>
+    </div>
+
+    <!-- 18:00 ホテル (upcoming) -->
+    <div class="tl-item" onclick="go('s-hotel')">
+      <div class="tl-time">18:00</div>
+      <div class="tl-rail"><div class="tl-dot upcoming"></div><div class="tl-line" style="background:transparent"></div></div>
+      <div class="tl-card">
+        <div class="tl-card-ic"><span class="i"><svg><use href="#ic-lodging"/></svg></span></div>
+        <div class="tl-card-body">
+          <div class="tl-card-type">Lodging</div>
+          <div class="tl-card-t">ホテル大阪ベイ</div>
+          <div class="tl-card-d">Check-in 18:00</div>
+          <div class="tl-card-conf">Conf# H-283901</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Day 2 -->
+  <div class="day">水曜日, 4月16日<div class="day-line"></div></div>
+
+  <div class="tl">
+    <!-- 11:00 チェックアウト -->
+    <div class="tl-item">
+      <div class="tl-time">11:00</div>
+      <div class="tl-rail"><div class="tl-dot upcoming"></div><div class="tl-line"></div></div>
+      <div class="tl-card">
+        <div class="tl-card-ic"><span class="i"><svg><use href="#ic-lodging"/></svg></span></div>
+        <div class="tl-card-body">
+          <div class="tl-card-type">Lodging</div>
+          <div class="tl-card-t">ホテル大阪ベイ</div>
+          <div class="tl-card-d">Check-out 11:00</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 13:00 帰りの新幹線 -->
+    <div class="tl-item">
+      <div class="tl-time">13:00</div>
+      <div class="tl-rail"><div class="tl-dot upcoming"></div><div class="tl-line"></div></div>
+      <div class="tl-card">
+        <div class="tl-card-ic"><span class="i"><svg><use href="#ic-rail"/></svg></span></div>
+        <div class="tl-card-body">
+          <div class="tl-card-type">Rail</div>
+          <div class="tl-card-t">のぞみ 240号</div>
+          <div class="tl-card-d">新大阪 13:00 → 東京 15:30</div>
+          <div class="tl-card-conf">Conf# TK-882542</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 15:30 到着 -->
+    <div class="tl-item">
+      <div class="tl-time">15:30</div>
+      <div class="tl-rail"><div class="tl-dot upcoming"></div><div class="tl-line" style="background:transparent"></div></div>
+      <div class="tl-free">東京駅 到着 → 帰宅</div>
+    </div>
+  </div>
+
+  <button class="fab" onclick="go('s-form')"><span class="i"><svg><use href="#ic-plus"/></svg></span></button>
+</div>
+
+<!-- ======== Plan: Rail ======== -->
+<div id="s-rail" class="screen">
+  <div class="hdr"><div class="hdr-left"><button class="back" onclick="go('s-itin')"><span class="i"><svg><use href="#ic-back"/></svg></span></button><h1>Rail</h1></div><button class="hdr-act"><span class="i"><svg><use href="#ic-edit"/></svg></span></button></div>
+
+  <div class="pd-hero"><div class="pd-icon"><span class="i"><svg><use href="#ic-rail"/></svg></span></div><div class="pd-type">Rail</div><div class="pd-t">のぞみ 225号</div><div class="pd-sub">4月15日 (火)</div></div>
+
+  <div class="route">
+    <div class="route-pt"><div class="route-code">東京</div><div class="route-name">Tokyo Station</div><div class="route-time">10:00</div></div>
+    <div class="route-ar"><div class="route-al"></div><div class="route-dur">2h 30m</div></div>
+    <div class="route-pt"><div class="route-code">新大阪</div><div class="route-name">Shin-Osaka</div><div class="route-time">12:30</div></div>
+  </div>
+
+  <div class="info-sec">
+    <div class="info-row"><span class="info-l">Confirmation #</span><span class="info-v conf">TK-882541</span></div>
+    <div class="info-row"><span class="info-l">Carrier</span><span class="info-v">JR東海 (東海道新幹線)</span></div>
+    <div class="info-row"><span class="info-l">Train</span><span class="info-v">のぞみ 225号</span></div>
+    <div class="info-row"><span class="info-l">Seat</span><span class="info-v">7号車 A席 (Window)</span></div>
+    <div class="info-row"><span class="info-l">Class</span><span class="info-v">普通車指定席</span></div>
+    <div class="info-row"><span class="info-l">Passenger</span><span class="info-v">田中 太郎</span></div>
+  </div>
+
+  <div class="sec">Notes</div>
+  <div class="info-sec"><div class="info-row"><span class="info-v" style="text-align:left;font-weight:400;color:var(--gray-7)">到着後、御堂筋線でなんば方面へ。ABC社は梅田駅から徒歩5分。</span></div></div>
+</div>
+
+<!-- ======== Plan: Meeting ======== -->
+<div id="s-meet" class="screen">
+  <div class="hdr"><div class="hdr-left"><button class="back" onclick="go('s-itin')"><span class="i"><svg><use href="#ic-back"/></svg></span></button><h1>Meeting</h1></div><button class="hdr-act"><span class="i"><svg><use href="#ic-edit"/></svg></span></button></div>
+
+  <div class="pd-hero"><div class="pd-icon"><span class="i"><svg><use href="#ic-meeting"/></svg></span></div><div class="pd-type">Meeting</div><div class="pd-t">ABC社 商談</div><div class="pd-sub">4月15日 (火) 14:00 - 16:00</div></div>
+
+  <div class="info-sec">
+    <div class="info-row"><span class="info-l">Date</span><span class="info-v">4月15日 (火)</span></div>
+    <div class="info-row"><span class="info-l">Time</span><span class="info-v">14:00 - 16:00</span></div>
+    <div class="info-row"><span class="info-l">Location</span><span class="info-v">ABC株式会社 本社ビル</span></div>
+    <div class="info-row"><span class="info-l">Address</span><span class="info-v">大阪市北区梅田1-2-3</span></div>
+    <div class="info-row"><span class="info-l">Phone</span><span class="info-v link">06-1234-5678</span></div>
+  </div>
+
+  <div class="sec">Notes</div>
+  <div class="info-sec"><div class="info-row"><span class="info-v" style="text-align:left;font-weight:400;color:var(--gray-7)">担当: 佐藤さん。会議資料はメールで送付済み。1Fの受付で来訪者シールを受け取ること。</span></div></div>
+</div>
+
+<!-- ======== Plan: Hotel ======== -->
+<div id="s-hotel" class="screen">
+  <div class="hdr"><div class="hdr-left"><button class="back" onclick="go('s-itin')"><span class="i"><svg><use href="#ic-back"/></svg></span></button><h1>Lodging</h1></div><button class="hdr-act"><span class="i"><svg><use href="#ic-edit"/></svg></span></button></div>
+
+  <div class="pd-hero"><div class="pd-icon"><span class="i"><svg><use href="#ic-lodging"/></svg></span></div><div class="pd-type">Lodging</div><div class="pd-t">ホテル大阪ベイ</div><div class="pd-sub">4月15日 - 4月16日</div></div>
+
+  <div class="info-sec">
+    <div class="info-row"><span class="info-l">Confirmation #</span><span class="info-v conf">H-283901</span></div>
+    <div class="info-row"><span class="info-l">Check-in</span><span class="info-v">4月15日 18:00</span></div>
+    <div class="info-row"><span class="info-l">Check-out</span><span class="info-v">4月16日 11:00</span></div>
+    <div class="info-row"><span class="info-l">Room</span><span class="info-v">シングル (禁煙)</span></div>
+    <div class="info-row"><span class="info-l">Address</span><span class="info-v">大阪市中央区難波5-1-1</span></div>
+    <div class="info-row"><span class="info-l">Phone</span><span class="info-v link">06-9876-5432</span></div>
+    <div class="info-row"><span class="info-l">Guest</span><span class="info-v">田中 太郎 (1名)</span></div>
+  </div>
+</div>
+
+<!-- ======== Add Plan Form ======== -->
+<div id="s-form" class="screen">
+  <div class="hdr"><div class="hdr-left"><button class="back" onclick="go('s-itin')"><span class="i"><svg><use href="#ic-back"/></svg></span></button><h1>Add Plan</h1></div></div>
+
+  <div class="form-sec">
+    <div class="form-row"><label class="form-lb">タイトル</label><input class="form-in" type="text" placeholder="例: のぞみ 225号、ABC社 商談"></div>
+    <div class="form-row"><label class="form-lb">場所</label><input class="form-in" type="text" placeholder="例: 東京駅、大阪市北区梅田"></div>
+    <div class="form-row"><label class="form-lb">確認番号</label><input class="form-in" type="text" placeholder="例: TK-882541（任意）"></div>
+  </div>
+  <div class="sec">日時</div>
+  <div class="form-sec">
+    <div class="form-row"><div class="form-date"><div><label class="form-lb">日付</label><input class="form-in" type="date" value="2026-04-15"></div><div><label class="form-lb">時刻</label><input class="form-in" type="time" value="10:00"></div></div></div>
+  </div>
+  <div class="sec">詳細</div>
+  <div class="form-sec">
+    <div class="form-row"><label class="form-lb">メモ</label><input class="form-in" type="text" placeholder="備考やメモを入力"></div>
+  </div>
+  <button class="save-btn" onclick="go('s-itin')">保存</button>
+</div>
+
+<!-- ======== New Trip ======== -->
+<div id="s-new" class="screen">
+  <div class="hdr"><div class="hdr-left"><button class="back" onclick="go('s-trips')"><span class="i"><svg><use href="#ic-back"/></svg></span></button><h1>新規作成</h1></div></div>
+
+  <div class="form-sec">
+    <div class="form-row"><label class="form-lb">タイトル</label><input class="form-in" type="text" placeholder="例: 大阪出張"></div>
+  </div>
+
+  <div class="sec">ルート</div>
+
+  <div class="step-list" id="step-list">
+    <!-- Step 1: 登録済み（撮影） -->
+    <div class="step-card step-done" id="step-1">
+      <div class="step-card-head">
+        <div style="display:flex;align-items:center;gap:8px"><div class="step-num">1</div><span class="step-label">列車</span></div>
+        <button class="step-remove" onclick="removeStep('step-1')"><span class="i"><svg><use href="#ic-x-circle"/></svg></span></button>
+      </div>
+      <div class="step-info">
+        <div class="step-info-row">
+          <div class="step-info-ic"><span class="i"><svg><use href="#ic-rail"/></svg></span></div>
+          <div class="step-info-text">
+            <div class="step-info-val">のぞみ 225号</div>
+          </div>
+        </div>
+        <div class="step-info-row">
+          <div class="step-info-ic"><span class="i"><svg><use href="#ic-clock"/></svg></span></div>
+          <div class="step-info-text">
+            <div class="step-info-label">時間</div>
+            <div class="step-info-val">10:00 → 12:30</div>
+          </div>
+        </div>
+        <div class="step-info-row">
+          <div class="step-info-ic"><span class="i"><svg><use href="#ic-map-pin"/></svg></span></div>
+          <div class="step-info-text">
+            <div class="step-info-label">区間</div>
+            <div class="step-info-val">東京 → 新大阪</div>
+          </div>
+        </div>
+        <div class="step-info-row">
+          <div class="step-info-ic"><span class="i"><svg><use href="#ic-copy"/></svg></span></div>
+          <div class="step-info-text">
+            <div class="step-info-label">確認番号</div>
+            <div class="step-info-conf">TK-882541</div>
+          </div>
+        </div>
+      </div>
+      <div class="step-thumb">
+        <div class="step-thumb-img"><span class="i"><svg><use href="#ic-camera"/></svg></span></div>
+      </div>
+      <div class="step-source"><span class="i"><svg><use href="#ic-camera"/></svg></span> 撮影 → OCR</div>
+    </div>
+
+    <div class="step-connector"><button class="step-connector-add" onclick="addStepBefore(this)"><span class="i"><svg><use href="#ic-plus"/></svg></span></button></div>
+
+    <!-- Step 2: 登録済み（メール） -->
+    <div class="step-card step-done" id="step-2">
+      <div class="step-card-head">
+        <div style="display:flex;align-items:center;gap:8px"><div class="step-num">2</div><span class="step-label">商談</span></div>
+        <button class="step-remove" onclick="removeStep('step-2')"><span class="i"><svg><use href="#ic-x-circle"/></svg></span></button>
+      </div>
+      <div class="step-info">
+        <div class="step-info-row">
+          <div class="step-info-ic"><span class="i"><svg><use href="#ic-meeting"/></svg></span></div>
+          <div class="step-info-text">
+            <div class="step-info-val">ABC社 商談</div>
+          </div>
+        </div>
+        <div class="step-info-row">
+          <div class="step-info-ic"><span class="i"><svg><use href="#ic-clock"/></svg></span></div>
+          <div class="step-info-text">
+            <div class="step-info-label">時間</div>
+            <div class="step-info-val">14:00 - 16:00</div>
+          </div>
+        </div>
+        <div class="step-info-row">
+          <div class="step-info-ic"><span class="i"><svg><use href="#ic-map-pin"/></svg></span></div>
+          <div class="step-info-text">
+            <div class="step-info-label">場所</div>
+            <div class="step-info-val">大阪市北区梅田1-2-3</div>
+          </div>
+        </div>
+      </div>
+      <div class="step-source"><span class="i"><svg><use href="#ic-mail"/></svg></span> メールから取込</div>
+    </div>
+
+    <div class="step-connector"><button class="step-connector-add" onclick="addStepBefore(this)"><span class="i"><svg><use href="#ic-plus"/></svg></span></button></div>
+
+    <!-- Step 3: 登録済み（アップロード） -->
+    <div class="step-card step-done" id="step-3">
+      <div class="step-card-head">
+        <div style="display:flex;align-items:center;gap:8px"><div class="step-num">3</div><span class="step-label">宿泊</span></div>
+        <button class="step-remove" onclick="removeStep('step-3')"><span class="i"><svg><use href="#ic-x-circle"/></svg></span></button>
+      </div>
+      <div class="step-info">
+        <div class="step-info-row">
+          <div class="step-info-ic"><span class="i"><svg><use href="#ic-lodging"/></svg></span></div>
+          <div class="step-info-text">
+            <div class="step-info-val">ホテル大阪ベイ</div>
+          </div>
+        </div>
+        <div class="step-info-row">
+          <div class="step-info-ic"><span class="i"><svg><use href="#ic-clock"/></svg></span></div>
+          <div class="step-info-text">
+            <div class="step-info-label">時間</div>
+            <div class="step-info-val">Check-in 18:00 / Check-out 11:00</div>
+          </div>
+        </div>
+        <div class="step-info-row">
+          <div class="step-info-ic"><span class="i"><svg><use href="#ic-copy"/></svg></span></div>
+          <div class="step-info-text">
+            <div class="step-info-label">確認番号</div>
+            <div class="step-info-conf">H-283901</div>
+          </div>
+        </div>
+      </div>
+      <div class="step-thumb">
+        <div class="step-thumb-img"><span class="i"><svg><use href="#ic-upload"/></svg></span></div>
+        <div class="step-thumb-img"><span class="i"><svg><use href="#ic-upload"/></svg></span></div>
+      </div>
+      <div class="step-source"><span class="i"><svg><use href="#ic-upload"/></svg></span> PDFアップロード</div>
+    </div>
+
+    <div class="step-connector"><button class="step-connector-add" onclick="addStepBefore(this)"><span class="i"><svg><use href="#ic-plus"/></svg></span></button></div>
+
+    <!-- Step 4: 未登録 -->
+    <div class="step-card" id="step-4">
+      <div class="step-card-head">
+        <div style="display:flex;align-items:center;gap:8px"><div class="step-num">4</div></div>
+        <button class="step-remove" onclick="removeStep('step-4')"><span class="i"><svg><use href="#ic-x-circle"/></svg></span></button>
+      </div>
+      <div class="step-actions">
+        <button class="step-act" onclick="openCamera()"><span class="i"><svg><use href="#ic-camera"/></svg></span>撮影</button>
+        <button class="step-act"><span class="i"><svg><use href="#ic-upload"/></svg></span>アップロード</button>
+        <button class="step-act"><span class="i"><svg><use href="#ic-mail"/></svg></span>メール</button>
+        <button class="step-act"><span class="i"><svg><use href="#ic-type"/></svg></span>手入力</button>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;justify-content:center;margin:12px 0">
+    <button onclick="addStep()" style="width:44px;height:44px;border-radius:50%;background:var(--primary);color:white;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-xs)"><span class="i"><svg><use href="#ic-plus"/></svg></span></button>
+  </div>
+
+  <div class="sec">メモ</div>
+  <div class="form-sec">
+    <div class="form-row"><input class="form-in" type="text" placeholder="目的や備考など"></div>
+  </div>
+
+  <div style="display:flex;gap:10px;margin:20px 16px">
+    <button onclick="go('s-trips')" style="flex:1;padding:12px;border-radius:8px;border:1px solid var(--gray-3);background:white;color:var(--gray-7);font-size:15px;font-weight:600;cursor:pointer;font-family:var(--font);display:flex;align-items:center;justify-content:center;gap:6px"><span class="i" style="pointer-events:none"><svg><use href="#ic-save"/></svg></span>下書き保存</button>
+    <button onclick="go('s-trips')" style="flex:1;padding:12px;border-radius:8px;border:none;background:var(--primary);color:white;font-size:15px;font-weight:600;cursor:pointer;font-family:var(--font)">作成</button>
+  </div>
+</div>
+
+<!-- ======== Alerts ======== -->
+<div id="s-alerts" class="screen">
+  <div class="hdr"><div class="hdr-left"><h1>Alerts</h1></div></div>
+
+  <div class="alert">
+    <div class="alert-dot" style="background:var(--orange-6)"></div>
+    <div><div class="alert-t">のぞみ 225号 — 10分遅延</div><div class="alert-d">東京駅 出発が10:10に変更されました。新大阪到着は12:40の見込みです。</div><div class="alert-time">2分前</div></div>
+  </div>
+  <div class="alert">
+    <div class="alert-dot" style="background:var(--teal-6)"></div>
+    <div><div class="alert-t">ホテル大阪ベイ — チェックイン可能</div><div class="alert-d">本日18:00よりチェックイン可能です。</div><div class="alert-time">1時間前</div></div>
+  </div>
+  <div class="alert">
+    <div class="alert-dot" style="background:var(--primary)"></div>
+    <div><div class="alert-t">明日の予定リマインダー</div><div class="alert-d">のぞみ 240号 新大阪 13:00発。チェックアウトは11:00です。</div><div class="alert-time">3時間前</div></div>
+  </div>
+</div>
+
+<!-- ======== Unfiled ======== -->
+<div id="s-unfiled" class="screen">
+  <div class="hdr"><div class="hdr-left"><h1>Unfiled</h1></div></div>
+  <div class="empty">
+    <span class="i"><svg><use href="#ic-inbox"/></svg></span>
+    <div class="empty-t">未整理のアイテムはありません</div>
+    <div class="empty-d">確認メールを転送すると、<br>ここに表示されます。</div>
+  </div>
+</div>
+
+<!-- ======== Account ======== -->
+<div id="s-account" class="screen">
+  <div class="hdr"><div class="hdr-left"><h1>Account</h1></div></div>
+
+  <div class="profile"><div class="avatar">T</div><div><div class="prof-name">田中 太郎</div><div class="prof-email">tanaka@example.com</div></div></div>
+
+  <div class="sec">Travel Stats</div>
+  <div class="stats">
+    <div class="stat"><div class="stat-v">12</div><div class="stat-l">Trips</div></div>
+    <div class="stat"><div class="stat-v">24</div><div class="stat-l">Days</div></div>
+    <div class="stat"><div class="stat-v">8</div><div class="stat-l">Cities</div></div>
+    <div class="stat"><div class="stat-v">4,820</div><div class="stat-l">km</div></div>
+  </div>
+
+  <div class="menu">
+    <div class="menu-i">Profile Settings <span class="i" style="color:var(--gray-4)"><svg><use href="#ic-next"/></svg></span></div>
+    <div class="menu-i">Notification Settings <span class="i" style="color:var(--gray-4)"><svg><use href="#ic-next"/></svg></span></div>
+    <div class="menu-i">Connected Accounts <span class="i" style="color:var(--gray-4)"><svg><use href="#ic-next"/></svg></span></div>
+    <div class="menu-i">Help &amp; Support <span class="i" style="color:var(--gray-4)"><svg><use href="#ic-next"/></svg></span></div>
+    <div class="menu-i" style="color:var(--red-6)">Sign Out</div>
+  </div>
+</div>
+
+<!-- ======== Camera Modal ======== -->
+<div class="modal-overlay" id="modal-camera">
+  <div class="modal">
+    <div class="modal-body">
+      <div class="modal-icon"><span class="i"><svg><use href="#ic-camera"/></svg></span></div>
+      <div class="modal-title">書類を撮影</div>
+      <div class="modal-desc">チケット・予約確認書・QRコードなどを撮影してください。<br><strong>OCRで自動的に反映します。</strong></div>
+      <div class="modal-preview">
+        <div class="modal-preview-placeholder"><span class="i"><svg><use href="#ic-camera"/></svg></span></div>
+      </div>
+      <div class="modal-desc" style="font-size:12px;color:var(--gray-5)">対応形式: チケット、搭乗券、予約確認メール、QRコード</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">キャンセル</button>
+      <button class="btn btn-filled" onclick="closeModal()">撮影する</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======== Tab Bar ======== -->
+<div class="tabs">
+  <button class="tab on" id="t-trips" onclick="switchTab('s-trips','t-trips')"><span class="i"><svg><use href="#ic-flight"/></svg></span>Trips</button>
+  <button class="tab" id="t-alerts" onclick="switchTab('s-alerts','t-alerts')"><span class="i"><svg><use href="#ic-bell"/></svg></span>Alerts</button>
+  <button class="tab" id="t-unfiled" onclick="switchTab('s-unfiled','t-unfiled')"><span class="i"><svg><use href="#ic-inbox"/></svg></span>Unfiled</button>
+  <button class="tab" id="t-account" onclick="switchTab('s-account','t-account')"><span class="i"><svg><use href="#ic-user"/></svg></span>Account</button>
+</div>
+
+<script>
+function go(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');window.scrollTo(0,0);}
+function switchTab(sid,tid){go(sid);document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));document.getElementById(tid).classList.add('on');}
+// Step management
+var stepCount = 4;
+function addStep(){
+  stepCount++;
+  var id = 'step-' + stepCount;
+  var html = '<div class="step-connector"><button class="step-connector-add" onclick="addStepBefore(this)"><span class="i"><svg><use href="#ic-plus"/></svg></span></button></div>'
+    + '<div class="step-card" id="'+id+'">'
+    + '<div class="step-card-head">'
+    + '<div style="display:flex;align-items:center;gap:8px"><div class="step-num">'+stepCount+'</div><span class="step-label">工程</span></div>'
+    + '<button class="step-remove" onclick="removeStep(\''+id+'\')"><span class="i"><svg><use href="#ic-x-circle"/></svg></span></button>'
+    + '</div>'
+    + '<div class="step-actions">'
+    + '<button class="step-act" onclick="openCamera()"><span class="i"><svg><use href="#ic-camera"/></svg></span>撮影</button>'
+    + '<button class="step-act"><span class="i"><svg><use href="#ic-upload"/></svg></span>アップロード</button>'
+    + '<button class="step-act"><span class="i"><svg><use href="#ic-mail"/></svg></span>メール</button>'
+    + '<button class="step-act"><span class="i"><svg><use href="#ic-type"/></svg></span>手入力</button>'
+    + '</div></div>';
+  document.getElementById('step-list').insertAdjacentHTML('beforeend', html);
+  renumberSteps();
+}
+function removeStep(id){
+  var el = document.getElementById(id);
+  if(el){
+    var prev = el.previousElementSibling;
+    if(prev && prev.classList.contains('step-connector')) prev.remove();
+    el.remove();
+    renumberSteps();
+  }
+}
+function renumberSteps(){
+  var cards = document.querySelectorAll('#step-list .step-card');
+  cards.forEach(function(c,i){
+    var num = c.querySelector('.step-num');
+    if(num) num.textContent = i+1;
+  });
+}
+
+// Insert step before (between cards)
+function addStepBefore(btn){
+  stepCount++;
+  var id = 'step-' + stepCount;
+  var html = '<div class="step-card" id="'+id+'">'
+    + '<div class="step-card-head">'
+    + '<div style="display:flex;align-items:center;gap:8px"><div class="step-num">0</div></div>'
+    + '<button class="step-remove" onclick="removeStep(\''+id+'\')"><span class="i"><svg><use href="#ic-x-circle"/></svg></span></button>'
+    + '</div>'
+    + '<div class="step-actions">'
+    + '<button class="step-act" onclick="openCamera()"><span class="i"><svg><use href="#ic-camera"/></svg></span>撮影</button>'
+    + '<button class="step-act"><span class="i"><svg><use href="#ic-upload"/></svg></span>アップロード</button>'
+    + '<button class="step-act"><span class="i"><svg><use href="#ic-mail"/></svg></span>メール</button>'
+    + '<button class="step-act"><span class="i"><svg><use href="#ic-type"/></svg></span>手入力</button>'
+    + '</div></div>'
+    + '<div class="step-connector"><button class="step-connector-add" onclick="addStepBefore(this)"><span class="i"><svg><use href="#ic-plus"/></svg></span></button></div>';
+  var connector = btn.closest('.step-connector');
+  connector.insertAdjacentHTML('afterend', html);
+  renumberSteps();
+}
+
+// Camera modal
+function openCamera(){ document.getElementById('modal-camera').classList.add('show'); }
+function closeModal(){ document.querySelectorAll('.modal-overlay').forEach(function(m){ m.classList.remove('show'); }); }
+
+// iOS: ensure onclick fires on all tappable elements
+document.addEventListener('DOMContentLoaded',function(){
+  document.querySelectorAll('[onclick]').forEach(function(el){
+    el.style.cursor='pointer';
+    el.addEventListener('touchend',function(){});
+  });
+});
+</script>
+</body>
+</html>

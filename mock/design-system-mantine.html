@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>toritavi Design System v1.1 (Mantine)</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    /*
+     * Based on: Mantine v7 Default Theme
+     * https://mantine.dev/
+     * Open Color based palette
+     */
+
+    /* === Blue (Primary) === */
+    --blue-0: #e7f5ff; --blue-1: #d0ebff; --blue-2: #a5d8ff;
+    --blue-3: #74c0fc; --blue-4: #4dabf7; --blue-5: #339af0;
+    --blue-6: #228be6; --blue-7: #1c7ed6; --blue-8: #1971c2; --blue-9: #1864ab;
+
+    /* === Gray === */
+    --gray-0: #f8f9fa; --gray-1: #f1f3f5; --gray-2: #e9ecef;
+    --gray-3: #dee2e6; --gray-4: #ced4da; --gray-5: #adb5bd;
+    --gray-6: #868e96; --gray-7: #495057; --gray-8: #343a40; --gray-9: #212529;
+
+    /* === Red === */
+    --red-0: #fff5f5; --red-1: #ffe3e3; --red-5: #ff6b6b;
+    --red-6: #fa5252; --red-7: #f03e3e; --red-8: #e03131; --red-9: #c92a2a;
+
+    /* === Green === */
+    --green-0: #ebfbee; --green-1: #d3f9d8; --green-5: #51cf66;
+    --green-6: #40c057; --green-7: #37b24d; --green-8: #2f9e44; --green-9: #2b8a3e;
+
+    /* === Yellow === */
+    --yellow-0: #fff9db; --yellow-1: #fff3bf; --yellow-5: #fab005;
+    --yellow-6: #f59f00; --yellow-8: #e67700;
+
+    /* === Orange === */
+    --orange-0: #fff4e6; --orange-1: #ffe8cc; --orange-5: #ff922b;
+    --orange-6: #fd7e14; --orange-8: #e8590c;
+
+    /* === Cyan === */
+    --cyan-0: #e3fafc; --cyan-1: #c5f6fa; --cyan-5: #22b8cf;
+    --cyan-6: #15aabf; --cyan-8: #0c8599;
+
+    /* === Teal === */
+    --teal-0: #e6fcf5; --teal-1: #c3fae8; --teal-5: #20c997;
+    --teal-6: #12b886; --teal-8: #099268;
+
+    /* === Violet === */
+    --violet-0: #f3f0ff; --violet-1: #e5dbff; --violet-5: #845ef7;
+    --violet-6: #7950f2; --violet-8: #6741d9;
+
+    /* === Typography === */
+    --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    --fs-xs: 0.75rem;   /* 12px */
+    --fs-sm: 0.875rem;  /* 14px */
+    --fs-md: 1rem;       /* 16px */
+    --fs-lg: 1.125rem;  /* 18px */
+    --fs-xl: 1.25rem;   /* 20px */
+    --lh-xs: 1.4; --lh-sm: 1.45; --lh-md: 1.55; --lh-lg: 1.6; --lh-xl: 1.65;
+    --fw-regular: 400; --fw-medium: 600; --fw-bold: 700;
+
+    /* === Spacing === */
+    --sp-xs: 0.625rem;  /* 10px */
+    --sp-sm: 0.75rem;   /* 12px */
+    --sp-md: 1rem;       /* 16px */
+    --sp-lg: 1.25rem;   /* 20px */
+    --sp-xl: 2rem;       /* 32px */
+
+    /* === Radius === */
+    --r-xs: 0.125rem;   /* 2px */
+    --r-sm: 0.25rem;    /* 4px */
+    --r-md: 0.5rem;     /* 8px */
+    --r-lg: 1rem;        /* 16px */
+    --r-xl: 2rem;        /* 32px */
+
+    /* === Shadow === */
+    --shadow-xs: 0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.1);
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.05), rgba(0,0,0,0.05) 0 10px 15px -5px, rgba(0,0,0,0.04) 0 7px 7px -5px;
+    --shadow-md: 0 1px 3px rgba(0,0,0,0.05), rgba(0,0,0,0.05) 0 20px 25px -5px, rgba(0,0,0,0.04) 0 10px 10px -5px;
+
+    /* === App Tokens === */
+    --primary: var(--blue-7);       /* #1c7ed6 — WCAG AA compliant (4.6:1) */
+    --primary-light: var(--blue-0);
+    --primary-dark: var(--blue-9);
+    --bg: var(--gray-0);
+    --surface: #ffffff;
+    --border: var(--gray-3);
+    --text: var(--gray-9);
+    --text-dimmed: var(--gray-6);
+    --text-muted: var(--gray-5);
+  }
+
+  body { font-family: var(--font-sans); background: white; color: var(--text); line-height: var(--lh-md); }
+
+  /* === Layout === */
+  .page { max-width: 880px; margin: 0 auto; padding: 48px 32px 80px; }
+  .title { font-size: 2.125rem; font-weight: var(--fw-bold); color: var(--text); margin-bottom: 4px; }
+  .subtitle { font-size: var(--fs-sm); color: var(--text-dimmed); margin-bottom: 48px; padding-bottom: 16px; border-bottom: 1px solid var(--gray-2); }
+  .section { margin-bottom: 56px; }
+  .section-title { font-size: 1.375rem; font-weight: var(--fw-bold); color: var(--text); margin-bottom: 4px; }
+  .section-desc { font-size: var(--fs-sm); color: var(--text-dimmed); margin-bottom: var(--sp-lg); }
+  .section-divider { height: 1px; background: var(--gray-2); margin-bottom: var(--sp-lg); }
+  .sub-label { font-size: var(--fs-xs); font-weight: var(--fw-medium); color: var(--text-dimmed); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: var(--sp-xs); margin-top: var(--sp-lg); }
+
+  /* === Swatches === */
+  .colors { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 4px; }
+  .color-item { border-radius: var(--r-sm); overflow: hidden; }
+  .color-swatch { height: 48px; }
+  .color-info { padding: 6px 8px; }
+  .color-name { font-size: 11px; font-weight: var(--fw-medium); }
+  .color-hex { font-size: 10px; color: var(--text-dimmed); font-family: var(--font-mono); }
+  .color-row { display: flex; gap: 2px; margin-bottom: 12px; }
+  .color-row-item { flex: 1; height: 40px; border-radius: var(--r-sm); display: flex; align-items: flex-end; padding: 4px 6px; font-size: 9px; font-family: var(--font-mono); }
+  .color-row-label { font-size: var(--fs-sm); font-weight: var(--fw-medium); margin-bottom: 6px; }
+
+  /* === Preview === */
+  .preview { background: var(--gray-0); border-radius: var(--r-md); padding: 24px; margin-bottom: 12px; }
+  .preview-label { font-size: 11px; font-weight: var(--fw-medium); color: var(--text-dimmed); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+  .preview-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+
+  /* ===== Components (Mantine Style) ===== */
+
+  /* Buttons */
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 8px 18px; font-size: var(--fs-sm); font-weight: var(--fw-medium); font-family: var(--font-sans); border: none; cursor: pointer; border-radius: var(--r-md); line-height: var(--lh-sm); transition: background 0.15s; }
+  .btn:hover { opacity: 0.92; }
+  .btn-filled { background: var(--primary); color: white; }
+  .btn-light { background: var(--blue-0); color: var(--blue-7); }
+  .btn-outline { background: transparent; color: var(--primary); border: 1px solid var(--primary); }
+  .btn-subtle { background: transparent; color: var(--primary); }
+  .btn-subtle:hover { background: var(--blue-0); }
+  .btn-danger { background: var(--red-6); color: white; }
+  .btn-sm { padding: 4px 12px; font-size: var(--fs-xs); }
+  .btn-lg { padding: 12px 24px; font-size: var(--fs-md); }
+  .btn-compact { padding: 4px 8px; font-size: var(--fs-xs); }
+
+  /* FAB */
+  .fab-d { width: 56px; height: 56px; border-radius: var(--r-xl); background: var(--primary); color: white; border: none; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-md); }
+
+  /* Cards */
+  .card-d { background: var(--surface); border: 1px solid var(--gray-2); border-radius: var(--r-md); overflow: hidden; max-width: 340px; }
+  .card-section { padding: var(--sp-md); }
+  .card-header { background: var(--primary); color: white; padding: 14px var(--sp-md); }
+  .card-title { font-size: var(--fs-lg); font-weight: var(--fw-bold); }
+  .card-sub { font-size: var(--fs-sm); color: var(--text-dimmed); }
+
+  /* Plan Card */
+  .plan-c { display: flex; gap: 12px; background: var(--surface); border: 1px solid var(--gray-2); border-radius: var(--r-md); padding: var(--sp-sm) var(--sp-md); max-width: 380px; transition: box-shadow 0.15s; cursor: pointer; }
+  .plan-c:hover { box-shadow: var(--shadow-xs); }
+  .plan-c-icon { width: 40px; height: 40px; border-radius: var(--r-md); background: var(--blue-0); display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+  .plan-c-body { flex: 1; }
+  .plan-c-type { font-size: 11px; color: var(--text-dimmed); text-transform: uppercase; letter-spacing: 0.5px; }
+  .plan-c-title { font-size: var(--fs-sm); font-weight: var(--fw-medium); }
+  .plan-c-detail { font-size: var(--fs-sm); color: var(--text-dimmed); margin-top: 2px; }
+  .plan-c-conf { font-size: var(--fs-xs); color: var(--primary); font-weight: var(--fw-medium); margin-top: 4px; font-family: var(--font-mono); }
+
+  /* Badge */
+  .badge-d { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: var(--r-xl); font-size: 11px; font-weight: var(--fw-bold); }
+  .badge-light { background: var(--blue-0); color: var(--blue-7); }
+
+  /* Avatar */
+  .avatar-d { display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: var(--fw-bold); color: white; }
+  .avatar-s { width: 32px; height: 32px; font-size: var(--fs-xs); }
+  .avatar-m { width: 40px; height: 40px; font-size: var(--fs-sm); }
+  .avatar-l { width: 56px; height: 56px; font-size: var(--fs-xl); }
+
+  /* Input */
+  .input-d { width: 100%; max-width: 320px; padding: 8px 12px; border: 1px solid var(--gray-4); border-radius: var(--r-md); font-size: var(--fs-sm); font-family: var(--font-sans); color: var(--text); background: var(--surface); transition: border-color 0.15s; }
+  .input-d:focus { outline: none; border-color: var(--primary); }
+  .input-d::placeholder { color: var(--gray-5); }
+  .input-label-d { font-size: var(--fs-sm); font-weight: var(--fw-medium); color: var(--text); margin-bottom: 4px; display: block; }
+  .input-desc { font-size: var(--fs-xs); color: var(--text-dimmed); margin-top: 4px; }
+  .input-error-d { border-color: var(--red-6) !important; }
+  .error-d { font-size: var(--fs-xs); color: var(--red-6); margin-top: 4px; }
+
+  /* Select */
+  .select-d { width: 100%; max-width: 320px; padding: 8px 32px 8px 12px; border: 1px solid var(--gray-4); border-radius: var(--r-md); font-size: var(--fs-sm); font-family: var(--font-sans); color: var(--text); background: var(--surface); appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23868e96' fill='none' stroke-width='2'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; }
+  .select-d:focus { outline: none; border-color: var(--primary); }
+
+  /* Textarea */
+  .textarea-d { width: 100%; max-width: 320px; padding: 8px 12px; min-height: 80px; border: 1px solid var(--gray-4); border-radius: var(--r-md); font-size: var(--fs-sm); font-family: var(--font-sans); color: var(--text); background: var(--surface); resize: vertical; }
+  .textarea-d:focus { outline: none; border-color: var(--primary); }
+
+  /* Search */
+  .search-w { position: relative; max-width: 320px; }
+  .search-ic { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 14px; color: var(--gray-5); }
+  .search-in { width: 100%; padding: 8px 12px 8px 36px; border: 1px solid var(--gray-4); border-radius: var(--r-md); font-size: var(--fs-sm); font-family: var(--font-sans); color: var(--text); background: var(--surface); }
+  .search-in:focus { outline: none; border-color: var(--primary); }
+
+  /* Switch */
+  .switch-d { width: 44px; height: 24px; background: var(--gray-4); border-radius: 12px; position: relative; cursor: pointer; border: none; transition: background 0.15s; }
+  .switch-d::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; background: white; border-radius: 50%; transition: transform 0.15s; box-shadow: var(--shadow-xs); }
+  .switch-d.on { background: var(--primary); }
+  .switch-d.on::after { transform: translateX(20px); }
+
+  /* Tab Bar */
+  .tabbar-d { display: flex; border-bottom: 2px solid var(--gray-2); max-width: 360px; }
+  .tabbar-i { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 0; font-size: 10px; font-weight: var(--fw-medium); color: var(--gray-5); border: none; background: none; cursor: pointer; position: relative; }
+  .tabbar-i.active { color: var(--primary); }
+  .tabbar-i.active::after { content: ''; position: absolute; bottom: -2px; left: 0; right: 0; height: 2px; background: var(--primary); }
+  .tabbar-ic { font-size: 18px; }
+
+  /* Segmented Control */
+  .seg-d { display: inline-flex; background: var(--gray-1); border-radius: var(--r-md); padding: 3px; gap: 3px; }
+  .seg-item { padding: 6px 16px; font-size: var(--fs-sm); font-weight: var(--fw-medium); background: transparent; color: var(--text-dimmed); border: none; cursor: pointer; border-radius: calc(var(--r-md) - 2px); transition: all 0.15s; }
+  .seg-item.active { background: white; color: var(--text); box-shadow: var(--shadow-xs); }
+
+  /* Nav Header */
+  .nav-d { background: var(--primary); color: white; padding: 12px var(--sp-md); display: flex; align-items: center; justify-content: space-between; max-width: 380px; }
+  .nav-left { display: flex; align-items: center; gap: 12px; }
+  .nav-back { background: none; border: none; font-size: 18px; cursor: pointer; color: white; padding: 4px; }
+  .nav-title { font-size: var(--fs-md); font-weight: var(--fw-bold); }
+  .nav-action { background: none; border: none; font-size: 18px; cursor: pointer; color: rgba(255,255,255,0.8); }
+
+  /* Toast */
+  .toast-d { display: inline-flex; align-items: center; gap: 10px; padding: 12px 16px; border-radius: var(--r-md); font-size: var(--fs-sm); max-width: 340px; box-shadow: var(--shadow-md); }
+  .toast-success-d { background: var(--teal-6); color: white; }
+  .toast-error-d { background: var(--red-6); color: white; }
+  .toast-info-d { background: var(--gray-8); color: white; }
+
+  /* Empty State */
+  .empty-d { text-align: center; padding: 40px 24px; max-width: 380px; }
+  .empty-ic { font-size: 48px; margin-bottom: 12px; color: var(--gray-4); }
+  .empty-ti { font-size: var(--fs-lg); font-weight: var(--fw-medium); color: var(--text); margin-bottom: 4px; }
+  .empty-de { font-size: var(--fs-sm); color: var(--text-dimmed); line-height: var(--lh-lg); }
+
+  /* Modal */
+  .modal-d { background: var(--surface); border-radius: var(--r-md); max-width: 340px; overflow: hidden; box-shadow: var(--shadow-md); }
+  .modal-h { padding: var(--sp-md); font-size: var(--fs-lg); font-weight: var(--fw-bold); }
+  .modal-b { padding: 0 var(--sp-md) var(--sp-md); font-size: var(--fs-sm); color: var(--text-dimmed); line-height: var(--lh-lg); }
+  .modal-f { padding: var(--sp-sm) var(--sp-md) var(--sp-md); display: flex; justify-content: flex-end; gap: 8px; }
+
+  /* Bottom Sheet */
+  .bs-d { background: var(--surface); border-radius: var(--r-lg) var(--r-lg) 0 0; max-width: 380px; box-shadow: var(--shadow-md); }
+  .bs-handle { width: 36px; height: 4px; background: var(--gray-3); border-radius: var(--r-xl); margin: var(--sp-xs) auto; }
+  .bs-body { padding: 0 var(--sp-md) var(--sp-md); }
+  .bs-item { padding: 12px 0; border-bottom: 1px solid var(--gray-1); font-size: var(--fs-sm); cursor: pointer; display: flex; align-items: center; gap: 12px; }
+  .bs-item:last-child { border-bottom: none; }
+  .bs-danger { color: var(--red-6); }
+
+  /* Divider */
+  .divider-d { height: 1px; background: var(--gray-2); max-width: 380px; }
+  .divider-label { display: flex; align-items: center; gap: 12px; font-size: var(--fs-xs); color: var(--text-dimmed); max-width: 380px; }
+  .divider-ln { flex: 1; height: 1px; background: var(--gray-2); }
+
+  /* Loading */
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loader-d { width: 28px; height: 28px; border: 3px solid var(--gray-2); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.7s linear infinite; }
+  .loader-s { width: 18px; height: 18px; border-width: 2px; }
+  .loader-l { width: 42px; height: 42px; border-width: 4px; }
+
+  @keyframes shimmer { to { background-position: -200% 0; } }
+  .skel-d { background: linear-gradient(90deg, var(--gray-1) 25%, var(--gray-0) 50%, var(--gray-1) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: var(--r-sm); }
+
+  /* List Item */
+  .li-d { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--gray-1); max-width: 380px; cursor: pointer; font-size: var(--fs-sm); }
+  .li-left { display: flex; align-items: center; gap: 12px; }
+  .li-icon { font-size: 18px; color: var(--text-dimmed); width: 24px; text-align: center; }
+  .li-arrow { color: var(--gray-4); font-size: 14px; }
+  .li-sub { font-size: var(--fs-xs); color: var(--text-dimmed); margin-top: 2px; }
+
+  /* Section Header */
+  .sec-h { font-size: 11px; font-weight: var(--fw-bold); color: var(--text-dimmed); text-transform: uppercase; letter-spacing: 0.5px; padding: var(--sp-md) 0 var(--sp-xs); max-width: 380px; }
+
+  /* Route Display */
+  .route-d { background: var(--surface); border: 1px solid var(--gray-2); border-radius: var(--r-md); padding: var(--sp-lg) var(--sp-md); display: flex; align-items: center; gap: 12px; max-width: 380px; }
+  .route-pt { text-align: center; flex: 1; }
+  .route-cd { font-size: 1.5rem; font-weight: var(--fw-bold); color: var(--text); }
+  .route-nm { font-size: var(--fs-xs); color: var(--text-dimmed); margin-top: 2px; }
+  .route-tm { font-size: var(--fs-sm); font-weight: var(--fw-medium); margin-top: 4px; }
+  .route-ar { display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--gray-4); flex-shrink: 0; }
+  .route-al { width: 40px; height: 1px; background: var(--gray-3); }
+  .route-du { font-size: 11px; color: var(--text-dimmed); }
+
+  /* Conf Number */
+  .conf-d { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; background: var(--blue-0); border-radius: var(--r-md); font-family: var(--font-mono); font-size: var(--fs-sm); font-weight: var(--fw-medium); color: var(--blue-7); cursor: pointer; }
+
+  /* Profile */
+  .prof-d { display: flex; align-items: center; gap: var(--sp-md); max-width: 380px; }
+  .prof-name { font-size: var(--fs-lg); font-weight: var(--fw-bold); }
+  .prof-email { font-size: var(--fs-sm); color: var(--text-dimmed); }
+
+  /* Stats */
+  .stats-d { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--sp-xs); max-width: 380px; }
+  .stat-d { background: var(--gray-0); border-radius: var(--r-md); padding: var(--sp-md); text-align: center; }
+  .stat-val { font-size: 1.75rem; font-weight: var(--fw-bold); color: var(--primary); }
+  .stat-lbl { font-size: var(--fs-xs); color: var(--text-dimmed); margin-top: 4px; }
+
+  /* Trip Hero */
+  .hero-d { background: var(--primary); color: white; padding: var(--sp-xl) var(--sp-md) var(--sp-lg); border-radius: var(--r-md); max-width: 380px; }
+  .hero-ti { font-size: 1.625rem; font-weight: var(--fw-bold); }
+  .hero-dt { font-size: var(--fs-sm); opacity: 0.8; margin-top: 4px; }
+  .hero-sum { display: flex; gap: 12px; margin-top: var(--sp-sm); font-size: var(--fs-xs); opacity: 0.8; }
+
+  /* Timeline */
+  .tl-d { max-width: 380px; }
+  .tl-item { display: flex; gap: 12px; }
+  .tl-rail { display: flex; flex-direction: column; align-items: center; width: 20px; }
+  .tl-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--primary); flex-shrink: 0; margin-top: 6px; }
+  .tl-dot.done { background: var(--teal-6); }
+  .tl-line { width: 2px; flex: 1; background: var(--gray-2); min-height: 16px; }
+  .tl-line.done { background: var(--teal-6); }
+  .tl-content { flex: 1; padding-bottom: 12px; }
+
+  /* Day Header */
+  .day-d { font-size: var(--fs-sm); font-weight: var(--fw-bold); color: var(--text); padding: var(--sp-xs) 0; border-bottom: 2px solid var(--primary); margin-bottom: var(--sp-xs); max-width: 380px; }
+
+  /* Info Row */
+  .ir-d { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--gray-1); max-width: 380px; }
+  .ir-label { font-size: var(--fs-sm); color: var(--text-dimmed); }
+  .ir-value { font-size: var(--fs-sm); font-weight: var(--fw-medium); }
+
+  /* Token ref */
+  .tref { font-size: 11px; color: var(--gray-5); font-family: var(--font-mono); }
+
+  /* Principles */
+  .principles { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: var(--sp-sm); }
+  .principle { background: var(--gray-0); border-radius: var(--r-md); padding: var(--sp-md); }
+  .principle-n { font-size: 1.75rem; font-weight: var(--fw-bold); color: var(--primary); margin-bottom: 4px; }
+  .principle-t { font-size: var(--fs-sm); font-weight: var(--fw-bold); margin-bottom: 4px; }
+  .principle-d { font-size: var(--fs-xs); color: var(--text-dimmed); line-height: var(--lh-lg); }
+
+  /* Screen Map */
+  .smap { font-size: var(--fs-sm); line-height: 2; color: var(--gray-7); font-family: var(--font-mono); background: var(--gray-0); border-radius: var(--r-md); padding: var(--sp-lg); overflow-x: auto; white-space: pre; }
+
+  /* Icons */
+  .i { display:inline-flex; align-items:center; justify-content:center; }
+  .i svg { width:20px; height:20px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+  .i-sm svg { width:16px; height:16px; }
+  .i-lg svg { width:24px; height:24px; }
+  .i-xl svg { width:32px; height:32px; }
+
+  .plan-c-icon { color: var(--primary); }
+  .plan-c-icon .i svg { width:22px; height:22px; }
+
+  .icon-item .i svg { width:28px; height:28px; }
+  .icon-item .i { margin-bottom:4px; color: var(--text); }
+</style>
+</head>
+<body>
+
+<!-- SVG Icon Definitions -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="ic-flight" viewBox="0 0 24 24"><path d="M17.8 19.2L16 11l3.5-3.5C20.3 6.7 20.3 5.3 19.5 4.5 18.7 3.7 17.3 3.7 16.5 4.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5L2 10l7 3 2 2-3 7 3.3-1.7c.4-.2.6-.6.5-1.1z"/></symbol>
+  <symbol id="ic-rail" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="16" rx="2"/><path d="M4 11h16M12 3v8"/><circle cx="8.5" cy="15.5" r="1"/><circle cx="15.5" cy="15.5" r="1"/><path d="M6 19l-2 2M18 19l2 2"/></symbol>
+  <symbol id="ic-lodging" viewBox="0 0 24 24"><path d="M2 4v16M2 8h18a2 2 0 0 1 2 2v10M2 17h20M6 8V6a2 2 0 0 1 2-2h0a2 2 0 0 1 2 2v2"/></symbol>
+  <symbol id="ic-meeting" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2M2 13h20"/></symbol>
+  <symbol id="ic-restaurant" viewBox="0 0 24 24"><path d="M3 2v7c0 1.1.9 2 2 2h2a2 2 0 0 0 2-2V2M6 2v20M19 2c-2 0-4 3.3-4 7 0 2.2 1.8 4 4 4V2zM19 13v9"/></symbol>
+  <symbol id="ic-activity" viewBox="0 0 24 24"><path d="M2 9a3 3 0 0 1 0 6v5a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1v-5a3 3 0 0 1 0-6V4a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v5z"/><path d="M9 3v3M9 12v0M9 18v3"/></symbol>
+  <symbol id="ic-bell" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></symbol>
+  <symbol id="ic-inbox" viewBox="0 0 24 24"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></symbol>
+  <symbol id="ic-user" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+  <symbol id="ic-plus" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
+  <symbol id="ic-back" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></symbol>
+  <symbol id="ic-next" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></symbol>
+  <symbol id="ic-more" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></symbol>
+  <symbol id="ic-edit" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></symbol>
+  <symbol id="ic-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></symbol>
+  <symbol id="ic-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+  <symbol id="ic-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></symbol>
+  <symbol id="ic-x" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
+  <symbol id="ic-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></symbol>
+  <symbol id="ic-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></symbol>
+  <symbol id="ic-trash" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></symbol>
+</svg>
+<div class="page">
+
+  <h1 class="title">toritavi</h1>
+  <p class="subtitle">Design System v1.1 (Mantine Edition) &#8212; Based on <a href="https://mantine.dev/" style="color:var(--primary)">Mantine v7</a> Default Theme</p>
+
+  <!-- 0. Principles -->
+  <div class="section">
+    <h2 class="section-title">0. Design Principles</h2>
+    <div class="section-divider"></div>
+    <div class="principles">
+      <div class="principle"><div class="principle-n">01</div><div class="principle-t">Mantine Tokens</div><div class="principle-d">Mantine v7のデフォルトテーマトークンをベースに構築。Open Colorパレット採用。</div></div>
+      <div class="principle"><div class="principle-n">02</div><div class="principle-t">Subtle Shadows</div><div class="principle-d">控えめな多層シャドウで自然な奥行き。派手な影は使わない。</div></div>
+      <div class="principle"><div class="principle-n">03</div><div class="principle-t">Soft &amp; Modern</div><div class="principle-d">デフォルトradius 8px(md)。丸みのあるモダンなUI。</div></div>
+      <div class="principle"><div class="principle-n">04</div><div class="principle-t">High Density</div><div class="principle-d">情報密度を優先。装飾的な余白は最小限に。</div></div>
+    </div>
+  </div>
+
+  <!-- 1. Colors -->
+  <div class="section">
+    <h2 class="section-title">1. Colors</h2>
+    <div class="section-divider"></div>
+    <p class="section-desc">Open Color ベース。各色10段階（0=最淡〜9=最濃）。primaryShade = 7（WCAG AA準拠）。</p>
+
+    <div class="color-row-label">Blue (Primary)</div>
+    <div class="color-row">
+      <div class="color-row-item" style="background:#e7f5ff;color:#228be6">0</div>
+      <div class="color-row-item" style="background:#d0ebff;color:#228be6">1</div>
+      <div class="color-row-item" style="background:#a5d8ff;color:#228be6">2</div>
+      <div class="color-row-item" style="background:#74c0fc;color:white">3</div>
+      <div class="color-row-item" style="background:#4dabf7;color:white">4</div>
+      <div class="color-row-item" style="background:#339af0;color:white">5</div>
+      <div class="color-row-item" style="background:#228be6;color:white">6</div>
+      <div class="color-row-item" style="background:#1c7ed6;color:white"><strong>7 ★</strong></div>
+      <div class="color-row-item" style="background:#1971c2;color:white">8</div>
+      <div class="color-row-item" style="background:#1864ab;color:white">9</div>
+    </div>
+
+    <div class="color-row-label">Gray</div>
+    <div class="color-row">
+      <div class="color-row-item" style="background:#f8f9fa;color:#868e96">0</div>
+      <div class="color-row-item" style="background:#f1f3f5;color:#868e96">1</div>
+      <div class="color-row-item" style="background:#e9ecef;color:#868e96">2</div>
+      <div class="color-row-item" style="background:#dee2e6;color:#495057">3</div>
+      <div class="color-row-item" style="background:#ced4da;color:#495057">4</div>
+      <div class="color-row-item" style="background:#adb5bd;color:white">5</div>
+      <div class="color-row-item" style="background:#868e96;color:white">6</div>
+      <div class="color-row-item" style="background:#495057;color:white">7</div>
+      <div class="color-row-item" style="background:#343a40;color:white">8</div>
+      <div class="color-row-item" style="background:#212529;color:white">9</div>
+    </div>
+
+    <div class="sub-label" style="margin-top:0">Semantic (shade 6 = representative)</div>
+    <div class="colors">
+      <div class="color-item"><div class="color-swatch" style="background:#fa5252"></div><div class="color-info"><div class="color-name">Red</div><div class="color-hex">#fa5252</div></div></div>
+      <div class="color-item"><div class="color-swatch" style="background:#40c057"></div><div class="color-info"><div class="color-name">Green</div><div class="color-hex">#40c057</div></div></div>
+      <div class="color-item"><div class="color-swatch" style="background:#f59f00"></div><div class="color-info"><div class="color-name">Yellow</div><div class="color-hex">#f59f00</div></div></div>
+      <div class="color-item"><div class="color-swatch" style="background:#fd7e14"></div><div class="color-info"><div class="color-name">Orange</div><div class="color-hex">#fd7e14</div></div></div>
+      <div class="color-item"><div class="color-swatch" style="background:#15aabf"></div><div class="color-info"><div class="color-name">Cyan</div><div class="color-hex">#15aabf</div></div></div>
+      <div class="color-item"><div class="color-swatch" style="background:#12b886"></div><div class="color-info"><div class="color-name">Teal</div><div class="color-hex">#12b886</div></div></div>
+      <div class="color-item"><div class="color-swatch" style="background:#7950f2"></div><div class="color-info"><div class="color-name">Violet</div><div class="color-hex">#7950f2</div></div></div>
+    </div>
+  </div>
+
+  <!-- 2. Typography -->
+  <div class="section">
+    <h2 class="section-title">2. Typography</h2>
+    <div class="section-divider"></div>
+    <p class="section-desc">System font stack。Weight: 400 / 600 / 700。</p>
+    <div>
+      <div style="padding:10px 0;border-bottom:1px solid var(--gray-2);font-size:2.125rem;font-weight:700;line-height:1.3">h1 &#8212; 34px/700</div>
+      <div style="padding:10px 0;border-bottom:1px solid var(--gray-2);font-size:1.625rem;font-weight:700;line-height:1.35">h2 &#8212; 26px/700</div>
+      <div style="padding:10px 0;border-bottom:1px solid var(--gray-2);font-size:1.375rem;font-weight:700;line-height:1.4">h3 &#8212; 22px/700</div>
+      <div style="padding:10px 0;border-bottom:1px solid var(--gray-2);font-size:1.125rem;font-weight:700;line-height:1.45">h4 &#8212; 18px/700</div>
+      <div style="padding:10px 0;border-bottom:1px solid var(--gray-2);font-size:var(--fs-sm);line-height:var(--lh-md)">body (sm) &#8212; 14px/400 &#8212; 東京から大阪まで新幹線で約2時間30分。</div>
+      <div style="padding:10px 0;border-bottom:1px solid var(--gray-2);font-size:var(--fs-xs);color:var(--text-dimmed)">caption (xs) &#8212; 12px &#8212; 4月15日（火）- 4月16日（水）</div>
+      <div style="padding:10px 0;font-size:var(--fs-sm);font-family:var(--font-mono);color:var(--primary)">mono &#8212; Conf# TK-882541</div>
+    </div>
+  </div>
+
+  <!-- 3. Spacing & Radius -->
+  <div class="section">
+    <h2 class="section-title">3. Spacing &amp; Radius</h2>
+    <div class="section-divider"></div>
+    <div class="preview">
+      <div class="preview-label">Spacing</div>
+      <div style="display:flex;gap:16px;align-items:flex-end">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px"><div style="width:14px;height:10px;background:var(--primary)"></div><span class="tref">xs 10</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px"><div style="width:14px;height:12px;background:var(--primary)"></div><span class="tref">sm 12</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px"><div style="width:14px;height:16px;background:var(--primary)"></div><span class="tref">md 16</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px"><div style="width:14px;height:20px;background:var(--primary)"></div><span class="tref">lg 20</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px"><div style="width:14px;height:32px;background:var(--primary)"></div><span class="tref">xl 32</span></div>
+      </div>
+    </div>
+    <div class="preview">
+      <div class="preview-label">Border Radius</div>
+      <div style="display:flex;gap:16px;align-items:flex-end">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><div style="width:48px;height:48px;background:var(--blue-0);border:2px solid var(--primary);border-radius:2px"></div><span class="tref">xs 2px</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><div style="width:48px;height:48px;background:var(--blue-0);border:2px solid var(--primary);border-radius:4px"></div><span class="tref">sm 4px</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><div style="width:48px;height:48px;background:var(--blue-0);border:2px solid var(--primary);border-radius:8px"></div><span class="tref">md 8px</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><div style="width:48px;height:48px;background:var(--blue-0);border:2px solid var(--primary);border-radius:16px"></div><span class="tref">lg 16px</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><div style="width:48px;height:48px;background:var(--blue-0);border:2px solid var(--primary);border-radius:32px"></div><span class="tref">xl 32px</span></div>
+      </div>
+    </div>
+    <div class="preview">
+      <div class="preview-label">Shadow</div>
+      <div style="display:flex;gap:24px">
+        <div style="width:80px;height:60px;background:white;border-radius:var(--r-md);box-shadow:var(--shadow-xs);display:flex;align-items:center;justify-content:center"><span class="tref">xs</span></div>
+        <div style="width:80px;height:60px;background:white;border-radius:var(--r-md);box-shadow:var(--shadow-sm);display:flex;align-items:center;justify-content:center"><span class="tref">sm</span></div>
+        <div style="width:80px;height:60px;background:white;border-radius:var(--r-md);box-shadow:var(--shadow-md);display:flex;align-items:center;justify-content:center"><span class="tref">md</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Buttons -->
+  <div class="section">
+    <h2 class="section-title">4. Buttons</h2><div class="section-divider"></div>
+    <div class="preview">
+      <div class="preview-label">Variants</div>
+      <div class="preview-row">
+        <button class="btn btn-filled">Filled</button>
+        <button class="btn btn-light">Light</button>
+        <button class="btn btn-outline">Outline</button>
+        <button class="btn btn-subtle">Subtle</button>
+        <button class="btn btn-danger">Danger</button>
+      </div>
+    </div>
+    <div class="preview">
+      <div class="preview-label">Sizes / FAB</div>
+      <div class="preview-row">
+        <button class="btn btn-filled btn-compact">Compact</button>
+        <button class="btn btn-filled btn-sm">Small</button>
+        <button class="btn btn-filled">Default</button>
+        <button class="btn btn-filled btn-lg">Large</button>
+        <button class="fab-d">+</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. Badges -->
+  <div class="section">
+    <h2 class="section-title">5. Badges</h2><div class="section-divider"></div>
+    <div class="preview">
+      <div class="preview-row">
+        <span class="badge-d" style="background:var(--blue-0);color:var(--primary)">Upcoming</span>
+        <span class="badge-d" style="background:var(--teal-0);color:var(--teal-8)">On Time</span>
+        <span class="badge-d" style="background:var(--orange-0);color:var(--orange-8)">Delayed</span>
+        <span class="badge-d" style="background:var(--red-0);color:var(--red-8)">Cancelled</span>
+        <span class="badge-d" style="background:var(--gray-1);color:var(--gray-7)">Past</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. Plan Icons -->
+  <div class="section">
+    <h2 class="section-title">6. Plan Type Icons</h2><div class="section-divider"></div>
+    <div class="icons-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px">
+      <div class="icon-item" style="border:1px solid var(--gray-2);border-radius:var(--r-md);padding:14px 8px;text-align:center"><span class="i"><svg><use href="#ic-flight"/></svg></span><div style="font-size:10px;color:var(--text-dimmed)">Flight</div></div>
+      <div class="icon-item" style="border:1px solid var(--gray-2);border-radius:var(--r-md);padding:14px 8px;text-align:center"><span class="i"><svg><use href="#ic-rail"/></svg></span><div style="font-size:10px;color:var(--text-dimmed)">Rail</div></div>
+      <div class="icon-item" style="border:1px solid var(--gray-2);border-radius:var(--r-md);padding:14px 8px;text-align:center"><span class="i"><svg><use href="#ic-lodging"/></svg></span><div style="font-size:10px;color:var(--text-dimmed)">Lodging</div></div>
+      <div class="icon-item" style="border:1px solid var(--gray-2);border-radius:var(--r-md);padding:14px 8px;text-align:center"><span class="i"><svg><use href="#ic-meeting"/></svg></span><div style="font-size:10px;color:var(--text-dimmed)">Meeting</div></div>
+      <div class="icon-item" style="border:1px solid var(--gray-2);border-radius:var(--r-md);padding:14px 8px;text-align:center"><span class="i"><svg><use href="#ic-restaurant"/></svg></span><div style="font-size:10px;color:var(--text-dimmed)">Restaurant</div></div>
+      <div class="icon-item" style="border:1px solid var(--gray-2);border-radius:var(--r-md);padding:14px 8px;text-align:center"><span class="i"><svg><use href="#ic-activity"/></svg></span><div style="font-size:10px;color:var(--text-dimmed)">Activity</div></div>
+    </div>
+  </div>
+
+  <!-- 7. Cards -->
+  <div class="section">
+    <h2 class="section-title">7. Cards</h2><div class="section-divider"></div>
+    <div class="preview"><div class="preview-label">Trip Card</div><div class="card-d"><div class="card-header"><div class="card-title">大阪出張</div><div style="font-size:12px;opacity:0.8;margin-top:2px">4月15日 - 4月16日</div></div><div class="card-section"><div class="card-sub">1 rail, 1 meeting, 1 hotel</div></div></div></div>
+    <div class="preview"><div class="preview-label">Plan Card</div>
+      <div class="plan-c"><div class="plan-c-icon"><span class="i"><svg><use href="#ic-rail"/></svg></span></div><div class="plan-c-body"><div class="plan-c-type">Rail</div><div class="plan-c-title">のぞみ 225号</div><div class="plan-c-detail">東京 10:00 &#8594; 新大阪 12:30</div><div class="plan-c-conf">Conf# TK-882541</div></div></div>
+    </div>
+  </div>
+
+  <!-- 8-10. Forms -->
+  <div class="section">
+    <h2 class="section-title">8. Forms</h2><div class="section-divider"></div>
+    <div class="preview"><div class="preview-label">Text Input</div><label class="input-label-d">Trip Name</label><input class="input-d" type="text" placeholder="例: 大阪出張"><div class="input-desc">Journey のタイトルを入力</div></div>
+    <div class="preview"><div class="preview-label">Error State</div><label class="input-label-d">Trip Name <span style="color:var(--red-6)">*</span></label><input class="input-d input-error-d" type="text"><div class="error-d">Trip名は必須です</div></div>
+    <div class="preview"><div class="preview-label">Select</div><label class="input-label-d">Plan Type</label><select class="select-d"><option>Rail</option><option>Flight</option><option>Lodging</option><option>Meeting</option></select></div>
+    <div class="preview"><div class="preview-label">Textarea</div><label class="input-label-d">Notes</label><textarea class="textarea-d" placeholder="メモを入力"></textarea></div>
+    <div class="preview"><div class="preview-label">Search</div><div class="search-w"><span class="search-ic" style="display:flex"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span><input class="search-in" type="text" placeholder="駅名・空港コードを検索"></div></div>
+    <div class="preview"><div class="preview-label">Switch</div><div style="display:flex;gap:20px"><div style="display:flex;align-items:center;gap:8px"><button class="switch-d on"></button><span style="font-size:var(--fs-sm)">ON</span></div><div style="display:flex;align-items:center;gap:8px"><button class="switch-d"></button><span style="font-size:var(--fs-sm)">OFF</span></div></div></div>
+  </div>
+
+  <!-- 9. Navigation -->
+  <div class="section">
+    <h2 class="section-title">9. Navigation</h2><div class="section-divider"></div>
+    <div class="preview"><div class="preview-label">Nav Header</div>
+      <div class="nav-d"><div class="nav-left"><button class="nav-back"><span class="i"><svg><use href="#ic-back"/></svg></span></button><span class="nav-title">大阪出張</span></div><button class="nav-action"><span class="i"><svg><use href="#ic-more"/></svg></span></button></div>
+    </div>
+    <div class="preview"><div class="preview-label">Tab Bar</div>
+      <div class="tabbar-d"><div class="tabbar-i active"><span class="i"><svg><use href="#ic-flight"/></svg></span>Trips</div><div class="tabbar-i"><span class="i"><svg><use href="#ic-bell"/></svg></span>Alerts</div><div class="tabbar-i"><span class="i"><svg><use href="#ic-inbox"/></svg></span>Unfiled</div><div class="tabbar-i"><span class="i"><svg><use href="#ic-user"/></svg></span>Account</div></div>
+    </div>
+    <div class="preview"><div class="preview-label">Segmented Control</div>
+      <div class="seg-d"><button class="seg-item active">Upcoming</button><button class="seg-item">Past</button></div>
+      <div style="margin-top:12px"><div class="seg-d"><button class="seg-item active">All</button><button class="seg-item">Flight</button><button class="seg-item">Rail</button><button class="seg-item">Hotel</button></div></div>
+    </div>
+  </div>
+
+  <!-- 10. Feedback -->
+  <div class="section">
+    <h2 class="section-title">10. Feedback</h2><div class="section-divider"></div>
+    <div class="preview"><div class="preview-label">Toast</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="toast-d toast-success-d"><span class="i i-sm"><svg><use href="#ic-check"/></svg></span> 保存しました</div>
+        <div class="toast-d toast-error-d"><span class="i i-sm"><svg><use href="#ic-x"/></svg></span> エラーが発生しました</div>
+        <div class="toast-d toast-info-d"><span class="i i-sm"><svg><use href="#ic-info"/></svg></span> Trip を削除しました</div>
+      </div>
+    </div>
+    <div class="preview"><div class="preview-label">Loading</div>
+      <div class="preview-row"><div class="loader-d loader-s"></div><div class="loader-d"></div><div class="loader-d loader-l"></div></div>
+    </div>
+    <div class="preview"><div class="preview-label">Skeleton</div>
+      <div style="max-width:320px"><div style="display:flex;gap:12px"><div class="skel-d" style="width:40px;height:40px;border-radius:50%"></div><div style="flex:1"><div class="skel-d" style="height:16px;width:60%;margin-bottom:8px"></div><div class="skel-d" style="height:14px;margin-bottom:6px"></div><div class="skel-d" style="height:14px;width:80%"></div></div></div></div>
+    </div>
+    <div class="preview"><div class="preview-label">Empty State</div>
+      <div class="empty-d"><div class="empty-ic"><span class="i" style="color:var(--gray-4)"><svg style="width:48px;height:48px"><use href="#ic-flight"/></svg></span></div><div class="empty-ti">Tripがありません</div><div class="empty-de">右下の「+」ボタンから最初のTripを作成しましょう</div></div>
+    </div>
+  </div>
+
+  <!-- 11. Overlays -->
+  <div class="section">
+    <h2 class="section-title">11. Overlays</h2><div class="section-divider"></div>
+    <div class="preview"><div class="preview-label">Modal</div>
+      <div class="modal-d"><div class="modal-h">Tripを削除しますか？</div><div class="modal-b">「大阪出張」とすべてのPlanが削除されます。この操作は取り消せません。</div><div class="modal-f"><button class="btn btn-subtle btn-sm">キャンセル</button><button class="btn btn-danger btn-sm">削除する</button></div></div>
+    </div>
+    <div class="preview"><div class="preview-label">Bottom Sheet</div>
+      <div class="bs-d"><div class="bs-handle"></div><div class="bs-body"><div class="bs-item"><span class="i i-sm"><svg><use href="#ic-edit"/></svg></span> 編集する</div><div class="bs-item"><span class="i i-sm"><svg><use href="#ic-link"/></svg></span> 共有する</div><div class="bs-item"><span class="i i-sm"><svg><use href="#ic-copy"/></svg></span> 複製する</div><div class="bs-item bs-danger"><span class="i i-sm"><svg><use href="#ic-trash"/></svg></span> 削除する</div></div></div>
+    </div>
+  </div>
+
+  <!-- 12. Data Display -->
+  <div class="section">
+    <h2 class="section-title">12. Data Display</h2><div class="section-divider"></div>
+    <div class="preview"><div class="preview-label">Info Rows</div>
+      <div class="ir-d"><span class="ir-label">Confirmation #</span><span class="ir-value" style="color:var(--primary);font-family:var(--font-mono)">TK-882541</span></div>
+      <div class="ir-d"><span class="ir-label">Carrier</span><span class="ir-value">JR東海</span></div>
+      <div class="ir-d" style="border:none"><span class="ir-label">Seat</span><span class="ir-value">7号車 A席</span></div>
+    </div>
+    <div class="preview"><div class="preview-label">Confirmation Number (copyable)</div><div style="display:flex;gap:12px"><div class="conf-d">TK-882541 <span class="i i-sm"><svg><use href="#ic-copy"/></svg></span></div><div class="conf-d">ABCDEF <span class="i i-sm"><svg><use href="#ic-copy"/></svg></span></div></div></div>
+    <div class="preview"><div class="preview-label">Route Display</div>
+      <div class="route-d"><div class="route-pt"><div class="route-cd">東京</div><div class="route-nm">Tokyo</div><div class="route-tm">10:00</div></div><div class="route-ar"><div class="route-al"></div><div class="route-du">2h 30m</div></div><div class="route-pt"><div class="route-cd">新大阪</div><div class="route-nm">Shin-Osaka</div><div class="route-tm">12:30</div></div></div>
+    </div>
+    <div class="preview"><div class="preview-label">Day Header</div><div class="day-d">火曜日, 4月15日</div></div>
+    <div class="preview"><div class="preview-label">Alert</div>
+      <div style="display:flex;gap:10px;align-items:flex-start;border:1px solid var(--gray-2);border-radius:var(--r-md);padding:14px;max-width:380px"><div style="width:8px;height:8px;border-radius:50%;background:var(--orange-6);flex-shrink:0;margin-top:5px"></div><div><div style="font-size:var(--fs-sm);font-weight:var(--fw-medium)">のぞみ 225号 &#8212; 10分遅延</div><div style="font-size:var(--fs-xs);color:var(--text-dimmed);margin-top:2px">出発が10:10に変更されました。</div></div></div>
+    </div>
+  </div>
+
+  <!-- 13. Layout Components -->
+  <div class="section">
+    <h2 class="section-title">13. Layout Components</h2><div class="section-divider"></div>
+    <div class="preview"><div class="preview-label">Divider</div>
+      <div style="display:flex;flex-direction:column;gap:16px"><div class="divider-d"></div><div class="divider-label"><div class="divider-ln"></div>または<div class="divider-ln"></div></div></div>
+    </div>
+    <div class="preview"><div class="preview-label">Avatar</div>
+      <div class="preview-row">
+        <div class="avatar-d avatar-s" style="background:var(--primary)">T</div>
+        <div class="avatar-d avatar-m" style="background:var(--primary)">T</div>
+        <div class="avatar-d avatar-l" style="background:var(--primary)">T</div>
+        <div class="avatar-d avatar-m" style="background:var(--cyan-6)">A</div>
+        <div class="avatar-d avatar-m" style="background:var(--teal-6)">M</div>
+      </div>
+    </div>
+    <div class="preview"><div class="preview-label">Section Header + List Item</div>
+      <div class="sec-h">Settings</div>
+      <div class="li-d"><div class="li-left"><span class="li-icon"><span class="i i-sm"><svg><use href="#ic-user"/></svg></span></span><div>Profile Settings</div></div><span class="li-arrow"><span class="i i-sm"><svg><use href="#ic-next"/></svg></span></span></div>
+      <div class="li-d"><div class="li-left"><span class="li-icon"><span class="i i-sm"><svg><use href="#ic-bell"/></svg></span></span><div><div>Notifications</div><div class="li-sub">Alerts, Reminders</div></div></div><span class="li-arrow"><span class="i i-sm"><svg><use href="#ic-next"/></svg></span></span></div>
+    </div>
+    <div class="preview"><div class="preview-label">Profile Card</div><div class="prof-d"><div class="avatar-d avatar-l" style="background:var(--primary)">T</div><div><div class="prof-name">田中 太郎</div><div class="prof-email">tanaka@example.com</div></div></div></div>
+    <div class="preview"><div class="preview-label">Stats</div><div class="stats-d"><div class="stat-d"><div class="stat-val">12</div><div class="stat-lbl">Trips</div></div><div class="stat-d"><div class="stat-val">24</div><div class="stat-lbl">Days</div></div><div class="stat-d"><div class="stat-val">8</div><div class="stat-lbl">Cities</div></div><div class="stat-d"><div class="stat-val">4,820</div><div class="stat-lbl">km</div></div></div></div>
+  </div>
+
+  <!-- 14. Trip Components -->
+  <div class="section">
+    <h2 class="section-title">14. Trip Components</h2><div class="section-divider"></div>
+    <div class="preview"><div class="preview-label">Trip Hero</div><div class="hero-d"><div class="hero-ti">大阪出張</div><div class="hero-dt">4月15日 (火) - 4月16日 (水)</div><div class="hero-sum"><span>1 rail</span><span>1 meeting</span><span>1 hotel</span></div></div></div>
+    <div class="preview"><div class="preview-label">Timeline</div>
+      <div class="tl-d">
+        <div class="tl-item"><div class="tl-rail"><div class="tl-dot done"></div><div class="tl-line done"></div></div><div class="tl-content"><div class="plan-c" style="max-width:100%"><div class="plan-c-icon"><span class="i"><svg><use href="#ic-rail"/></svg></span></div><div class="plan-c-body"><div class="plan-c-type">Rail</div><div class="plan-c-title">のぞみ 225号</div><div class="plan-c-detail">東京 10:00 &#8594; 新大阪 12:30</div></div></div></div></div>
+        <div class="tl-item"><div class="tl-rail"><div class="tl-dot"></div><div class="tl-line"></div></div><div class="tl-content"><div class="plan-c" style="max-width:100%"><div class="plan-c-icon"><span class="i"><svg><use href="#ic-meeting"/></svg></span></div><div class="plan-c-body"><div class="plan-c-type">Meeting</div><div class="plan-c-title">ABC社 商談</div><div class="plan-c-detail">14:00 - 16:00</div></div></div></div></div>
+        <div class="tl-item"><div class="tl-rail"><div class="tl-dot"></div></div><div class="tl-content"><div class="plan-c" style="max-width:100%"><div class="plan-c-icon"><span class="i"><svg><use href="#ic-lodging"/></svg></span></div><div class="plan-c-body"><div class="plan-c-type">Lodging</div><div class="plan-c-title">ホテル大阪ベイ</div><div class="plan-c-detail">Check-in 18:00</div></div></div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 15. Screen Map -->
+  <div class="section">
+    <h2 class="section-title">15. Screen Map</h2><div class="section-divider"></div>
+    <div class="smap">Tab: Trips
+  ├── Trip List (Upcoming / Past)
+  │     └── Trip Detail (Itinerary)
+  │           ├── Plan Detail → Edit Plan
+  │           ├── Add Plan (type → form)
+  │           └── Share Trip
+
+Tab: Alerts
+  └── Alert List
+
+Tab: Unfiled
+  └── Unfiled Items → File to Trip
+
+Tab: Account
+  ├── Profile / Travel Stats
+  └── Settings</div>
+  </div>
+
+</div>
+</body>
+</html>

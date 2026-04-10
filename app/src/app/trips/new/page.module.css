@@ -1,0 +1,320 @@
+.screen {
+  padding-bottom: 72px;
+}
+
+.sectionLabel {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--mantine-color-gray-6);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 16px 16px 8px;
+}
+
+.formSection {
+  background: white;
+  margin: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--mantine-color-gray-2);
+  overflow: hidden;
+}
+
+.formRow {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--mantine-color-gray-1);
+}
+
+.formRow:last-child {
+  border-bottom: none;
+}
+
+.formLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--mantine-color-gray-6);
+  margin-bottom: 4px;
+  display: block;
+}
+
+.titleInput :global(input),
+.memoInput :global(input) {
+  width: 100%;
+  padding: 8px 0;
+  border: none;
+  font-size: 16px;
+  color: var(--mantine-color-gray-9);
+  background: transparent;
+}
+
+.titleInput :global(input::placeholder),
+.memoInput :global(input::placeholder) {
+  color: var(--mantine-color-gray-4);
+}
+
+.stepList {
+  margin: 0 16px;
+  position: relative;
+}
+
+.stepList::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 24px;
+  bottom: 24px;
+  width: 2px;
+  background: var(--mantine-color-gray-3);
+  transform: translateX(-50%);
+  z-index: 0;
+}
+
+.stepCard {
+  background: white;
+  border: 1px solid var(--mantine-color-gray-2);
+  border-radius: 8px;
+  padding: 12px;
+  position: relative;
+  z-index: 1;
+}
+
+.stepDone {
+  border-color: var(--mantine-color-teal-6);
+}
+
+.stepHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.stepHeadMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stepNum {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--mantine-color-blue-7);
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stepDone .stepNum {
+  background: var(--mantine-color-teal-6);
+}
+
+.stepLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--mantine-color-gray-5);
+}
+
+.stepRemove {
+  background: none;
+  border: none;
+  color: var(--mantine-color-gray-4);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+}
+
+.stepInfo {
+  margin-top: 8px;
+}
+
+.stepInfoRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--mantine-color-gray-1);
+}
+
+.stepInfoRow:last-child {
+  border-bottom: none;
+}
+
+.stepInfoIcon {
+  color: var(--mantine-color-gray-5);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.stepInfoText {
+  flex: 1;
+}
+
+.stepInfoLabel {
+  font-size: 11px;
+  color: var(--mantine-color-gray-5);
+}
+
+.stepInfoValue {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--mantine-color-gray-8);
+}
+
+.stepConf {
+  color: var(--mantine-color-blue-7);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.stepThumb {
+  margin-top: 8px;
+  display: flex;
+  gap: 6px;
+}
+
+.stepThumbImg {
+  width: 56px;
+  height: 56px;
+  border-radius: 6px;
+  background: var(--mantine-color-gray-1);
+  border: 1px solid var(--mantine-color-gray-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--mantine-color-gray-4);
+}
+
+.stepSource {
+  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--mantine-color-teal-8);
+  background: var(--mantine-color-teal-0);
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.connector {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  position: relative;
+  z-index: 2;
+}
+
+.connectorButton {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: white;
+  border: 2px solid var(--mantine-color-gray-3);
+  color: var(--mantine-color-gray-5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.connectorButton:active {
+  border-color: var(--mantine-color-blue-7);
+  color: var(--mantine-color-blue-7);
+}
+
+.stepActions {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.stepAct {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 4px;
+  background: var(--mantine-color-gray-0);
+  border: 1px solid var(--mantine-color-gray-2);
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--mantine-color-gray-7);
+  font-size: 10px;
+  font-weight: 600;
+  font-family: inherit;
+}
+
+.stepAct:active {
+  background: var(--mantine-color-blue-0);
+  border-color: var(--mantine-color-blue-7);
+  color: var(--mantine-color-blue-7);
+}
+
+.fabWrap {
+  display: flex;
+  justify-content: center;
+  margin: 12px 0;
+}
+
+.fab {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--mantine-color-blue-7);
+  color: white;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.footerButtons {
+  display: flex;
+  gap: 10px;
+  margin: 20px 16px;
+}
+
+/* buttons sized via flex:1 on each */
+
+.draftButton {
+  flex: 1;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--mantine-color-gray-3);
+  background: white;
+  color: var(--mantine-color-gray-7);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.createButton {
+  flex: 1;
+  padding: 12px;
+  border-radius: 8px;
+  border: none;
+  background: var(--mantine-color-blue-7);
+  color: white;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.createButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
