@@ -202,6 +202,17 @@ localStorage キー: `toritavi_journeys`
 - `trips/[id]` はタイムライン表示を復元し、編集モーダルもフォーム風に調整
 - `npm run lint` と `npm run build` は最終時点で通過
 
+## 作業サマリ（2026-04-10 スマホ claude.ai/code セッション）
+
+- **FABボタン色変更**: トップページ `/` の新規作成ボタン（FAB）の背景色を青（`var(--mantine-color-blue-7)`）→ 黄色（`#fab005`）に変更
+  - 対象ファイル: `app/src/app/page.tsx:274`
+  - CSS変数では反映されなかったため、直接HEXカラーコードを指定
+- **デプロイ確認**: Vercel（mainブランチ自動デプロイ）で本番反映を確認
+- **マルチデバイス運用テスト**: PC（VSCode拡張）とスマホ（claude.ai/code）の2セッション並行運用を確認
+  - 会話履歴は各セッション独立
+  - コードはGit経由で共有される
+  - 経緯を残すには HANDOVER.md やメモリファイルに記録が必要
+
 ---
 
 ## 開発サーバー起動
