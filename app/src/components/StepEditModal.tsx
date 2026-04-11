@@ -229,6 +229,8 @@ export function StepEditModal({
               </Box>
             </Box>
           )}
+        </Box>
+        <Box className={classes.footer}>
           <button
             className={classes.saveButton}
             onClick={editing ? onSave : () => setEditing(true)}
