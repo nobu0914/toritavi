@@ -349,15 +349,40 @@ export default function ScanPage() {
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [addToExisting, setAddToExisting] = useState(true);
 
+  const pdfToImage = async (file: File): Promise<Blob> => {
+    const pdfjsLib = await import("pdfjs-dist");
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    const page = await pdf.getPage(1);
+    const scale = 2; // 高解像度でOCR精度向上
+    const viewport = page.getViewport({ scale });
+    const canvas = document.createElement("canvas");
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    const ctx = canvas.getContext("2d")!;
+    await page.render({ canvas, canvasContext: ctx, viewport }).promise;
+    return new Promise((resolve) => canvas.toBlob((b) => resolve(b!), "image/png"));
+  };
+
   const handleFile = async (file: File) => {
-    const url = URL.createObjectURL(file);
-    setImageUrl(url);
     setStatus("processing");
     setProgress(0);
 
     try {
+      let ocrTarget: File | Blob = file;
+
+      // PDFの場合は画像に変換
+      if (file.type === "application/pdf") {
+        const imageBlob = await pdfToImage(file);
+        ocrTarget = imageBlob;
+        setImageUrl(URL.createObjectURL(imageBlob));
+      } else {
+        setImageUrl(URL.createObjectURL(file));
+      }
+
       const Tesseract = await import("tesseract.js");
-      const result = await Tesseract.recognize(file, "jpn+eng", {
+      const result = await Tesseract.recognize(ocrTarget, "jpn+eng", {
         logger: (m) => {
           if (m.status === "recognizing text" && typeof m.progress === "number") {
             setProgress(Math.round(m.progress * 100));
