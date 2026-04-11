@@ -274,7 +274,9 @@ export default function TripDetailPage() {
                 : "";
             return (
               <Box key={step.id} className={classes.timelineItem}>
-                <Box className={classes.timelineTime}>{step.time || "--:--"}</Box>
+                <Box className={classes.timelineTime}>
+                  {step.time?.match(/\d{1,2}:\d{2}/)?.[0] || "--:--"}
+                </Box>
                 <Box className={classes.timelineRail}>
                   <Box className={`${classes.timelineDot} ${dotClass}`} />
                   <Box className={`${classes.timelineLine} ${lineClass}`} />
@@ -290,6 +292,9 @@ export default function TripDetailPage() {
                     <Text className={classes.timelineType}>{step.category}</Text>
                     <Text className={classes.timelineTitle}>{step.title}</Text>
                     {step.detail && <Text className={classes.timelineDetail}>{step.detail}</Text>}
+                    {step.time && step.time !== (step.time.match(/\d{1,2}:\d{2}/)?.[0] || "") && (
+                      <Text className={classes.timelineDetail}>{step.time}</Text>
+                    )}
                     {step.confNumber && (
                       <Text className={classes.timelineConf}>Conf# {step.confNumber}</Text>
                     )}
