@@ -192,6 +192,22 @@ localStorage キー: `toritavi_journeys`
 
 ---
 
+## 作業サマリ（2026-04-11 スマホ claude.ai/code セッション）
+
+- **FABボタン色変更（テスト）**: 新規作成ボタン（FAB）の背景色を段階的に変更
+  - 青（`blue-7`）→ 黄色（`#fab005`）→ オレンジ（`#f76707`）
+  - CSS変数（`var(--mantine-color-yellow-5)`）では反映されず、直接HEXカラーコード指定で解決
+  - 対象ファイル: `app/src/app/page.tsx` FABセクション
+- **Journey作成完了トースト通知の追加**
+  - 新規Journey作成後、一覧画面に戻った際に成功トーストを表示
+  - デザインシステム（`mock/design-system-mantine.html`）の toast-success スタイル準拠: teal-6背景・白文字・チェックアイコン・3秒自動消去
+  - `sessionStorage`（キー: `toritavi_toast`）で画面遷移間の通知状態を受け渡し
+  - `useSearchParams` は Suspense boundary が必要なため不採用
+  - 対象ファイル: `app/src/app/page.tsx`（受信側）、`app/src/app/trips/new/page.tsx`（送信側）
+  - Mantine `notifications.show()` を使用（`@mantine/notifications` は `layout.tsx` で設定済み）
+- **Vercelデプロイフロー確認**: mainブランチへのpush → 自動ビルド → 本番反映の流れを複数回確認
+- **マルチデバイス運用**: PC（VSCode拡張）とスマホ（claude.ai/code）の並行運用を継続確認
+
 ## 直近の作業サマリ（2026-04-11）
 
 - `会話・作業の履歴を確認して` 指示で `CODEX_MEMORY.md` と `HANDOVER.md` を確認し、現状を棚卸し
