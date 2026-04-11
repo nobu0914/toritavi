@@ -214,8 +214,9 @@ export default function NewTripPage() {
     const sortedDates =
       startDate <= endDate ? { startDate, endDate } : { startDate: endDate, endDate: startDate };
 
+    const newId = generateId();
     addJourney({
-      id: generateId(),
+      id: newId,
       title: title.trim(),
       startDate: sortedDates.startDate,
       endDate: sortedDates.endDate,
@@ -226,7 +227,7 @@ export default function NewTripPage() {
     });
 
     clearJourneyDraft();
-    sessionStorage.setItem("toritavi_toast", "journey_created");
+    sessionStorage.setItem("toritavi_toast", `journey_created:${newId}`);
     router.push("/");
   };
 
