@@ -280,31 +280,13 @@
 
 .footerButtons {
   display: flex;
-  gap: 10px;
+  flex-direction: column;
+  gap: 8px;
   margin: 20px 16px;
 }
 
-/* buttons sized via flex:1 on each */
-
-.draftButton {
-  flex: 1;
-  padding: 12px;
-  border-radius: 8px;
-  border: 1px solid var(--mantine-color-gray-3);
-  background: white;
-  color: var(--mantine-color-gray-7);
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  font-family: inherit;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-}
-
 .createButton {
-  flex: 1;
+  width: 100%;
   padding: 12px;
   border-radius: 8px;
   border: none;
@@ -319,4 +301,21 @@
 .createButton:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.draftButton {
+  width: 100%;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid var(--mantine-color-gray-3);
+  background: white;
+  color: var(--mantine-color-gray-5);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
 }

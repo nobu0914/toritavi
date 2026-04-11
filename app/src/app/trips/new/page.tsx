@@ -407,18 +407,18 @@ export default function NewTripPage() {
 
         <Box className={classes.footerButtons}>
           <button
-            className={classes.draftButton}
-            onClick={handleSaveJourneyDraft}
-          >
-            <IconDeviceFloppy size={18} />
-            下書き保存
-          </button>
-          <button
             className={classes.createButton}
             onClick={handleCreate}
             disabled={!title.trim()}
           >
             作成
+          </button>
+          <button
+            className={classes.draftButton}
+            onClick={handleSaveJourneyDraft}
+          >
+            <IconDeviceFloppy size={16} />
+            下書き保存
           </button>
         </Box>
       </Box>
