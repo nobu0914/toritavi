@@ -29,7 +29,7 @@ import { TabBar } from "@/components/TabBar";
 import { StepEditModal, emptyStepDraft } from "@/components/StepEditModal";
 import type { StepDraft } from "@/components/StepEditModal";
 import classes from "./page.module.css";
-import { deleteJourney, getJourney, updateJourney } from "@/lib/store";
+import { addJourney, deleteJourney, getJourney, updateJourney } from "@/lib/store";
 import {
   formatDateRange,
   formatDateJP,
@@ -224,10 +224,39 @@ export default function TripDetailPage() {
   };
 
   const handleDelete = () => {
-    if (confirm("このJourneyを削除しますか？")) {
-      deleteJourney(journey.id);
-      router.push("/");
-    }
+    const backup = { ...journey };
+    deleteJourney(journey.id);
+    router.push("/");
+
+    const toastId = "journey-deleted-toast";
+    setTimeout(() => {
+      notifications.show({
+        id: toastId,
+        autoClose: 4000,
+        withBorder: false,
+        withCloseButton: false,
+        style: {
+          background: "var(--mantine-color-gray-8)",
+          color: "white",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.05), rgba(0,0,0,0.05) 0 20px 25px -5px, rgba(0,0,0,0.04) 0 10px 10px -5px",
+        },
+        message: (
+          <Box style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <Text size="sm" fw={600} c="white">削除しました</Text>
+            <UnstyledButton
+              onClick={() => {
+                addJourney(backup);
+                notifications.hide(toastId);
+                router.push(`/trips/${backup.id}`);
+              }}
+              style={{ color: "var(--mantine-color-blue-3)", fontSize: 13, fontWeight: 700 }}
+            >
+              戻す
+            </UnstyledButton>
+          </Box>
+        ),
+      });
+    }, 100);
   };
 
   return (
