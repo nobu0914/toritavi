@@ -68,6 +68,15 @@ Toritavi/
 
 ---
 
+## 最重要運用ルール
+
+- 画面修正の指示を受けたら、実装前に必ず `mock/design-system-mantine.html` を参照する
+- 必要に応じて `mock/design-system.html` と `mock/index.html` も参照し、既存パターンを優先する
+- デザインシステムやモックに存在する UI を差し置いて、独自 UI を勝手に作らない
+- プロジェクト再開時は、作業前チェックとしてこのルールを必ず確認する
+
+---
+
 ## データモデル（types.ts）
 
 ```typescript

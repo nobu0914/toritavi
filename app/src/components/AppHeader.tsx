@@ -13,6 +13,7 @@ type Props = {
 
 export function AppHeader({ title, back, backHref, action }: Props) {
   const router = useRouter();
+  const handleBack = () => (backHref ? router.push(backHref) : router.back());
 
   return (
     <Box
@@ -35,14 +36,34 @@ export function AppHeader({ title, back, backHref, action }: Props) {
             color="white"
             size="sm"
             style={{ padding: 4 }}
-            onClick={() => (backHref ? router.push(backHref) : router.back())}
+            onClick={handleBack}
           >
             <IconChevronLeft size={20} />
           </ActionIcon>
         )}
-        <Text fw={700} size="18px" c="white" lh={1.2}>
-          {title}
-        </Text>
+        {back ? (
+          <Box
+            component="button"
+            type="button"
+            onClick={handleBack}
+            style={{
+              background: "transparent",
+              border: "none",
+              padding: 0,
+              margin: 0,
+              color: "white",
+              cursor: "pointer",
+            }}
+          >
+            <Text fw={700} size="18px" c="white" lh={1.2}>
+              {title}
+            </Text>
+          </Box>
+        ) : (
+          <Text fw={700} size="18px" c="white" lh={1.2}>
+            {title}
+          </Text>
+        )}
       </Box>
       {action && (
         <Box style={{ color: "rgba(255,255,255,0.8)" }}>{action}</Box>

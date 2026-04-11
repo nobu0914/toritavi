@@ -11,10 +11,13 @@ import {
   Text,
   TextInput,
 } from "@mantine/core";
+import { notifications } from "@mantine/notifications";
 import {
   IconCheck,
   IconDotsVertical,
   IconEdit,
+  IconInfoCircle,
+  IconMinus,
   IconPlayerPlay,
   IconTrash,
   IconX,
@@ -51,14 +54,15 @@ type PageData = {
   loaded: boolean;
 };
 
+function createInitialPageData(today: string): PageData {
+  return {
+    journey: null,
+    journeyForm: { title: "", startDate: today, endDate: today, memo: "" },
+    loaded: false,
+  };
+}
+
 function loadPageData(id: string, today: string): PageData {
-  if (typeof window === "undefined") {
-    return {
-      journey: null,
-      journeyForm: { title: "", startDate: today, endDate: today, memo: "" },
-      loaded: false,
-    };
-  }
   const found = getJourney(id) ?? null;
   return {
     journey: found,
@@ -74,16 +78,28 @@ export default function TripDetailPage() {
   const params = useParams();
   const id = params.id as string;
   const today = getTodayDateString();
-  const [pageData, setPageData] = useState<PageData>(() => loadPageData(id, today));
+  const [pageData, setPageData] = useState<PageData>(() => createInitialPageData(today));
   const { journey, loaded } = pageData;
   const setJourney = (j: Journey | null) => setPageData((d) => ({ ...d, journey: j }));
-  const [journeyForm, setJourneyForm] = useState<JourneyForm>(pageData.journeyForm);
+  const [journeyForm, setJourneyForm] = useState<JourneyForm>(() => createInitialPageData(today).journeyForm);
   const [modalOpened, { open: openModal, close: closeModal }] = useDisclosure(false);
   const [journeyModalOpened, { open: openJourneyModal, close: closeJourneyModal }] =
     useDisclosure(false);
+  const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] =
+    useDisclosure(false);
+  const [stepDeleteModalOpened, { open: openStepDeleteModal, close: closeStepDeleteModal }] =
+    useDisclosure(false);
+  const [journeyMenuOpened, setJourneyMenuOpened] = useState(false);
   const [draft, setDraft] = useState<StepDraft>(emptyStepDraft());
   const [editingStepId, setEditingStepId] = useState<string>("new");
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [pendingStepDeleteIndex, setPendingStepDeleteIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    const nextPageData = loadPageData(id, today);
+    setPageData(nextPageData);
+    setJourneyForm(nextPageData.journeyForm);
+  }, [id, today]);
 
   useEffect(() => {
     if (loaded && !journey) router.replace("/");
@@ -157,6 +173,7 @@ export default function TripDetailPage() {
   };
 
   const openJourneyEdit = () => {
+    setJourneyMenuOpened(false);
     setJourneyForm({
       title: journey.title,
       startDate: journey.startDate,
@@ -164,6 +181,13 @@ export default function TripDetailPage() {
       memo: journey.memo ?? "",
     });
     openJourneyModal();
+  };
+
+  const requestJourneyDelete = () => {
+    setJourneyMenuOpened(false);
+    window.setTimeout(() => {
+      openDeleteModal();
+    }, 0);
   };
 
   const saveJourneyDetails = () => {
@@ -188,6 +212,33 @@ export default function TripDetailPage() {
     persist({ ...journey, steps: journey.steps.filter((_, stepIndex) => stepIndex !== index) });
   };
 
+  const requestStepDelete = (index: number) => {
+    setPendingStepDeleteIndex(index);
+    window.setTimeout(() => {
+      openStepDeleteModal();
+    }, 0);
+  };
+
+  const confirmStepDelete = () => {
+    if (pendingStepDeleteIndex === null) return;
+    removeStep(pendingStepDeleteIndex);
+    setPendingStepDeleteIndex(null);
+    closeStepDeleteModal();
+    notifications.show({
+      message: "Step を削除しました",
+      icon: <IconInfoCircle size={18} />,
+      autoClose: 3000,
+      withBorder: false,
+      style: { background: "var(--mantine-color-gray-8)", color: "white" },
+      styles: {
+        root: { color: "white" },
+        body: { color: "white" },
+        description: { color: "white" },
+        icon: { color: "white", background: "transparent" },
+      },
+    });
+  };
+
   const setStepStatus = (index: number, status: StepStatus) => {
     persist({
       ...journey,
@@ -198,10 +249,9 @@ export default function TripDetailPage() {
   };
 
   const handleDelete = () => {
-    if (confirm("このJourneyを削除しますか？")) {
-      deleteJourney(journey.id);
-      router.push("/");
-    }
+    sessionStorage.setItem("toritavi_toast", "journey_deleted");
+    deleteJourney(journey.id);
+    router.push("/");
   };
 
   return (
@@ -211,7 +261,12 @@ export default function TripDetailPage() {
         back
         backHref="/"
         action={
-          <Menu position="bottom-end" withArrow>
+          <Menu
+            position="bottom-end"
+            withArrow
+            opened={journeyMenuOpened}
+            onChange={setJourneyMenuOpened}
+          >
             <Menu.Target>
               <ActionIcon variant="transparent" color="white" radius="sm">
                 <IconDotsVertical size={18} />
@@ -222,7 +277,11 @@ export default function TripDetailPage() {
                 Journey を編集
               </Menu.Item>
               <Menu.Divider />
-              <Menu.Item color="red" leftSection={<IconTrash size={14} />} onClick={handleDelete}>
+              <Menu.Item
+                color="red"
+                leftSection={<IconTrash size={14} />}
+                onClick={requestJourneyDelete}
+              >
                 Journey を削除
               </Menu.Item>
             </Menu.Dropdown>
@@ -321,27 +380,48 @@ export default function TripDetailPage() {
                         <Menu.Label>ステータス変更</Menu.Label>
                         <Menu.Item
                           leftSection={<IconPlayerPlay size={14} />}
-                          onClick={() => setStepStatus(iconIndex, "進行中")}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setStepStatus(iconIndex, "進行中");
+                          }}
                         >
                           進行中
                         </Menu.Item>
                         <Menu.Item
                           leftSection={<IconCheck size={14} />}
-                          onClick={() => setStepStatus(iconIndex, "完了")}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setStepStatus(iconIndex, "完了");
+                          }}
                         >
                           完了
                         </Menu.Item>
-                        <Menu.Item onClick={() => setStepStatus(iconIndex, "未開始")}>未開始</Menu.Item>
-                        <Menu.Item onClick={() => setStepStatus(iconIndex, "遅延")}>遅延</Menu.Item>
-                        <Menu.Item onClick={() => setStepStatus(iconIndex, "キャンセル")}>キャンセル</Menu.Item>
+                        <Menu.Item onClick={(e) => {
+                          e.stopPropagation();
+                          setStepStatus(iconIndex, "未開始");
+                        }}>未開始</Menu.Item>
+                        <Menu.Item onClick={(e) => {
+                          e.stopPropagation();
+                          setStepStatus(iconIndex, "遅延");
+                        }}>遅延</Menu.Item>
+                        <Menu.Item onClick={(e) => {
+                          e.stopPropagation();
+                          setStepStatus(iconIndex, "キャンセル");
+                        }}>キャンセル</Menu.Item>
                         <Menu.Divider />
-                        <Menu.Item leftSection={<IconEdit size={14} />} onClick={() => openEdit(iconIndex)}>
+                        <Menu.Item leftSection={<IconEdit size={14} />} onClick={(e) => {
+                          e.stopPropagation();
+                          openEdit(iconIndex);
+                        }}>
                           編集
                         </Menu.Item>
                         <Menu.Item
                           color="red"
                           leftSection={<IconTrash size={14} />}
-                          onClick={() => removeStep(iconIndex)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            requestStepDelete(iconIndex);
+                          }}
                         >
                           削除
                         </Menu.Item>
@@ -469,6 +549,65 @@ export default function TripDetailPage() {
             >
               更新
             </Button>
+          </Box>
+        </Box>
+      </Modal>
+
+      <Modal
+        opened={deleteModalOpened}
+        onClose={closeDeleteModal}
+        centered
+        radius="md"
+        classNames={{ content: classes.confirmModal }}
+        withCloseButton={false}
+      >
+        <Box className={classes.confirmPanel}>
+          <Text className={classes.confirmTitle}>Journeyを削除しますか？</Text>
+          <Text className={classes.confirmBody}>
+            「{journey.title}」とすべてのPlanが削除されます。この操作は取り消せません。
+          </Text>
+          <Box className={classes.confirmFooter}>
+            <button className={classes.confirmCancel} onClick={closeDeleteModal}>
+              キャンセル
+            </button>
+            <button className={classes.confirmDelete} onClick={handleDelete}>
+              削除する
+            </button>
+          </Box>
+        </Box>
+      </Modal>
+
+      <Modal
+        opened={stepDeleteModalOpened}
+        onClose={() => {
+          setPendingStepDeleteIndex(null);
+          closeStepDeleteModal();
+        }}
+        centered
+        radius="md"
+        classNames={{ content: classes.confirmModal }}
+        withCloseButton={false}
+      >
+        <Box className={classes.confirmPanel}>
+          <Text className={classes.confirmTitle}>ステップを削除しますか？</Text>
+          <Text className={classes.confirmBody}>
+            {pendingStepDeleteIndex !== null
+              ? `「${journey.steps[pendingStepDeleteIndex]?.title ?? ""}」が削除されます。この操作は取り消せません。`
+              : "この操作は取り消せません。"}
+          </Text>
+          <Box className={classes.confirmFooter}>
+            <button
+              className={classes.confirmCancel}
+              onClick={() => {
+                setPendingStepDeleteIndex(null);
+                closeStepDeleteModal();
+              }}
+            >
+              キャンセル
+            </button>
+            <button className={classes.confirmDelete} onClick={confirmStepDelete}>
+              削除する
+            </button>
           </Box>
         </Box>
       </Modal>

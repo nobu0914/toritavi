@@ -7,12 +7,14 @@ import {
   Text,
   TextInput,
 } from "@mantine/core";
+import { notifications } from "@mantine/notifications";
 import {
   IconCamera,
   IconCircleX,
   IconClock,
   IconCopy,
   IconDeviceFloppy,
+  IconInfoCircle,
   IconMail,
   IconMapPin,
   IconPlus,
@@ -139,9 +141,12 @@ export default function NewTripPage() {
     setForm((f) => ({ ...f, items: typeof fn === "function" ? fn(f.items) : fn }));
   const [modalOpened, { open: openModal, close: closeModal }] = useDisclosure(false);
   const [cameraOpened, { open: openCamera, close: closeCamera }] = useDisclosure(false);
+  const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] =
+    useDisclosure(false);
   const [draft, setDraft] = useState<StepDraft>(emptyStepDraft());
   const [targetItemId, setTargetItemId] = useState<string | null>(null);
   const [targetSource, setTargetSource] = useState<StepSource>("手入力");
+  const [pendingDeleteItemId, setPendingDeleteItemId] = useState<string | null>(null);
 
   const openManualInput = (itemId: string) => {
     const item = items.find((entry) => entry.id === itemId);
@@ -205,6 +210,31 @@ export default function NewTripPage() {
 
   const removeStep = (itemId: string) => {
     setItems((prev) => prev.filter((item) => item.id !== itemId));
+  };
+
+  const requestRemoveStep = (itemId: string) => {
+    setPendingDeleteItemId(itemId);
+    openDeleteModal();
+  };
+
+  const confirmRemoveStep = () => {
+    if (!pendingDeleteItemId) return;
+    removeStep(pendingDeleteItemId);
+    setPendingDeleteItemId(null);
+    closeDeleteModal();
+    notifications.show({
+      message: "Step を削除しました",
+      icon: <IconInfoCircle size={18} />,
+      autoClose: 3000,
+      withBorder: false,
+      style: { background: "var(--mantine-color-gray-8)", color: "white" },
+      styles: {
+        root: { color: "white" },
+        body: { color: "white" },
+        description: { color: "white" },
+        icon: { color: "white", background: "transparent" },
+      },
+    });
   };
 
   const handleCreate = () => {
@@ -278,7 +308,7 @@ export default function NewTripPage() {
                   </Box>
                   <button
                     className={classes.stepRemove}
-                    onClick={() => removeStep(item.id)}
+                    onClick={() => requestRemoveStep(item.id)}
                   >
                     <IconCircleX size={16} />
                   </button>
@@ -491,6 +521,41 @@ export default function NewTripPage() {
             <Button radius="md" color="blue" onClick={closeCamera} style={{ flex: 1 }}>
               撮影する
             </Button>
+          </Box>
+        </Box>
+      </Modal>
+
+      <Modal
+        opened={deleteModalOpened}
+        onClose={() => {
+          setPendingDeleteItemId(null);
+          closeDeleteModal();
+        }}
+        centered
+        radius="md"
+        classNames={{ content: classes.confirmModal }}
+        withCloseButton={false}
+      >
+        <Box className={classes.confirmPanel}>
+          <Text className={classes.confirmTitle}>ステップを削除しますか？</Text>
+          <Text className={classes.confirmBody}>
+            {pendingDeleteItemId
+              ? `「${items.find((item) => item.id === pendingDeleteItemId)?.step?.title ?? `ステップ ${items.findIndex((item) => item.id === pendingDeleteItemId) + 1}`}」が削除されます。この操作は取り消せません。`
+              : "この操作は取り消せません。"}
+          </Text>
+          <Box className={classes.confirmFooter}>
+            <button
+              className={classes.confirmCancel}
+              onClick={() => {
+                setPendingDeleteItemId(null);
+                closeDeleteModal();
+              }}
+            >
+              キャンセル
+            </button>
+            <button className={classes.confirmDelete} onClick={confirmRemoveStep}>
+              削除する
+            </button>
           </Box>
         </Box>
       </Modal>

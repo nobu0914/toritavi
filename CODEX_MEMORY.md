@@ -19,6 +19,8 @@
 - トップ初回表示時、`toritavi_journeys` が空ならサンプル Journey を自動投入する
 - 新規作成用の下書きは `toritavi_journey_draft` に保存する
 - `Alerts` と `Account` は静的モックデータ中心
+- 画面修正では必ず先に `mock/design-system-mantine.html` を参照する
+- デザインシステムやモックにある UI を優先し、独自 UI を勝手に作らない
 
 ## 今回の作業記録
 - ユーザー指示 `会話・作業の履歴を確認して` に従い、`CODEX_MEMORY.md` と `HANDOVER.md` を読み、現状を整理した
@@ -66,4 +68,5 @@ JSON.parse(localStorage.getItem("toritavi_journeys") ?? "[]")
 ## 再開時の定型指示
 - ユーザーが `会話・作業の履歴を確認して` と指示した場合は、まず `CODEX_MEMORY.md` と `HANDOVER.md` を読む
 - 必要に応じて `CLAUDE.md`、`app/CLAUDE.md`、`app/AGENTS.md` も確認する
+- 画面修正に入る前は、必ず `mock/design-system-mantine.html` と必要なモック HTML を再確認する
 - 読み込み後は、把握した前提と現在の未完了事項を短く要約してから作業を再開する
