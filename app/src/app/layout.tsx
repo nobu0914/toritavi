@@ -28,7 +28,7 @@ export default function RootLayout({
       <body>
         <MantineProvider theme={theme} defaultColorScheme="light">
           <Notifications position="bottom-center" style={{ bottom: 80 }} />
-          <PullToRefresh>{children}</PullToRefresh>
+          {children}
         </MantineProvider>
       </body>
     </html>
