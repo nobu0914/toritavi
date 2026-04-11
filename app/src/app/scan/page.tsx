@@ -11,6 +11,7 @@ import {
   IconToolsKitchen2,
   IconBus,
   IconTicket,
+  IconStethoscope,
   IconDots,
   IconCheck,
   IconAlertCircle,
@@ -41,6 +42,7 @@ const scanCategories: ScanCategory[] = [
   { key: "商談", label: "ビジネス", icon: IconBriefcase, color: "indigo", description: "" },
   { key: "食事", label: "レストラン", icon: IconToolsKitchen2, color: "orange", description: "" },
   { key: "バス", label: "バス", icon: IconBus, color: "green", description: "" },
+  { key: "病院", label: "病院", icon: IconStethoscope, color: "red", description: "" },
   { key: "その他", label: "その他", icon: IconDots, color: "gray", description: "" },
 ];
 
@@ -231,6 +233,29 @@ function parseByCategory(text: string, category: StepCategory): { title: string;
       }
 
       if (!title) title = "バス情報";
+      break;
+    }
+
+    case "病院": {
+      // 病院: 病院名、診療科、予約日時、診察券番号
+      const hospitalMatch = allText.match(/([\u4e00-\u9faf]{2,10}(病院|クリニック|医院|診療所))/);
+      if (hospitalMatch) {
+        title = hospitalMatch[0];
+        fields.push({ label: "病院名", value: title });
+      }
+
+      const deptMatch = allText.match(/(内科|外科|眼科|歯科|皮膚科|整形外科|耳鼻科|小児科|産婦人科|泌尿器科|精神科|神経科|循環器|消化器|呼吸器)/);
+      if (deptMatch) fields.push({ label: "診療科", value: deptMatch[0] });
+
+      const dateMatch2 = allText.match(/(\d{1,2}月\d{1,2}日|\d{4}[年/.]\d{1,2}[月/.]\d{1,2}日?)/);
+      if (dateMatch2) fields.push({ label: "予約日", value: dateMatch2[1] });
+
+      if (timeMatch) fields.push({ label: "予約時刻", value: timeMatch[1] });
+
+      const cardMatch = allText.match(/(\d{4,10})/);
+      if (cardMatch) fields.push({ label: "診察券番号", value: cardMatch[1] });
+
+      if (!title) title = "病院予約";
       break;
     }
 

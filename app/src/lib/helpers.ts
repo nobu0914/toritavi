@@ -9,6 +9,7 @@ import {
   IconBriefcase,
   IconToolsKitchen2,
   IconTicket,
+  IconStethoscope,
   IconDots,
   IconCamera,
   IconUpload,
@@ -27,6 +28,7 @@ export function getCategoryIcon(category: StepCategory) {
     商談: IconBriefcase,
     食事: IconToolsKitchen2,
     観光: IconTicket,
+    病院: IconStethoscope,
     その他: IconDots,
   };
   return map[category] ?? IconDots;

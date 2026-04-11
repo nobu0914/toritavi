@@ -10,6 +10,7 @@ export type StepCategory =
   | "商談"
   | "食事"
   | "観光"
+  | "病院"
   | "その他";
 
 export type Information = {

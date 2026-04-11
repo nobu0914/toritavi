@@ -23,6 +23,7 @@ const categories: StepCategory[] = [
   "商談",
   "食事",
   "観光",
+  "病院",
   "その他",
 ];
 
