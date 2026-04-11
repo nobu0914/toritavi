@@ -1,13 +1,13 @@
 "use client";
 
-import { Box, Skeleton, Text, UnstyledButton } from "@mantine/core";
-import { notifications } from "@mantine/notifications";
+import { Box, Skeleton, Text } from "@mantine/core";
 import { IconPlus } from "@tabler/icons-react";
 import { startTransition, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
 import { TabBar } from "@/components/TabBar";
-import { deleteJourney, seedSampleJourneys } from "@/lib/store";
+import { seedSampleJourneys } from "@/lib/store";
+import { showSuccessToast } from "@/lib/toast";
 import {
   daysUntil,
   formatDateRange,
@@ -64,38 +64,9 @@ export default function TripsPage() {
 
   useEffect(() => {
     const toast = sessionStorage.getItem("toritavi_toast");
-    if (toast?.startsWith("journey_created:")) {
-      const createdId = toast.split(":")[1];
+    if (toast?.startsWith("journey_created")) {
       sessionStorage.removeItem("toritavi_toast");
-      const toastId = "journey-created-toast";
-      notifications.show({
-        id: toastId,
-        autoClose: 4000,
-        withBorder: false,
-        withCloseButton: false,
-        style: {
-          background: "var(--mantine-color-gray-8)",
-          color: "white",
-          boxShadow: "0 1px 3px rgba(0,0,0,0.05), rgba(0,0,0,0.05) 0 20px 25px -5px, rgba(0,0,0,0.04) 0 10px 10px -5px",
-        },
-        message: (
-          <Box style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <Text size="sm" fw={600} c="white">作成しました</Text>
-            <UnstyledButton
-              onClick={() => {
-                if (createdId) {
-                  deleteJourney(createdId);
-                  setJourneys(seedSampleJourneys());
-                }
-                notifications.hide(toastId);
-              }}
-              style={{ color: "var(--mantine-color-blue-3)", fontSize: 13, fontWeight: 700 }}
-            >
-              戻す
-            </UnstyledButton>
-          </Box>
-        ),
-      });
+      showSuccessToast("Journeyを作成しました");
     }
   }, []);
 

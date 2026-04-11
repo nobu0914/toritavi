@@ -8,11 +8,9 @@ import {
   Modal,
   Skeleton,
   Stack,
-  UnstyledButton,
   Text,
   TextInput,
 } from "@mantine/core";
-import { notifications } from "@mantine/notifications";
 import {
   IconCheck,
   IconDotsVertical,
@@ -25,11 +23,13 @@ import { startTransition, useEffect, useState } from "react";
 import { useDisclosure } from "@mantine/hooks";
 import { useParams, useRouter } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
+import { DeleteConfirmModal } from "@/components/DeleteConfirmModal";
 import { TabBar } from "@/components/TabBar";
 import { StepEditModal, emptyStepDraft } from "@/components/StepEditModal";
 import type { StepDraft } from "@/components/StepEditModal";
 import classes from "./page.module.css";
-import { addJourney, deleteJourney, getJourney, updateJourney } from "@/lib/store";
+import { deleteJourney, getJourney, updateJourney } from "@/lib/store";
+import { showSuccessToast } from "@/lib/toast";
 import {
   formatDateRange,
   formatDateJP,
@@ -63,6 +63,7 @@ export default function TripDetailPage() {
   const [draft, setDraft] = useState<StepDraft>(emptyStepDraft());
   const [editingStepId, setEditingStepId] = useState<string>("new");
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ type: "step"; index: number } | { type: "journey" } | null>(null);
 
   useEffect(() => {
     startTransition(() => {
@@ -180,38 +181,7 @@ export default function TripDetailPage() {
   };
 
   const removeStep = (index: number) => {
-    const removed = journey.steps[index];
-    persist({ ...journey, steps: journey.steps.filter((_, stepIndex) => stepIndex !== index) });
-
-    // 戻すトースト
-    const toastId = "step-removed-toast";
-    notifications.show({
-      id: toastId,
-      autoClose: 4000,
-      withBorder: false,
-      withCloseButton: false,
-      style: {
-        background: "var(--mantine-color-gray-8)",
-        color: "white",
-        boxShadow: "0 1px 3px rgba(0,0,0,0.05), rgba(0,0,0,0.05) 0 20px 25px -5px, rgba(0,0,0,0.04) 0 10px 10px -5px",
-      },
-      message: (
-        <Box style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <Text size="sm" fw={600} c="white">削除しました</Text>
-          <UnstyledButton
-            onClick={() => {
-              const restored = [...journey.steps];
-              restored.splice(index, 0, removed);
-              persist({ ...journey, steps: restored });
-              notifications.hide(toastId);
-            }}
-            style={{ color: "var(--mantine-color-blue-3)", fontSize: 13, fontWeight: 700 }}
-          >
-            戻す
-          </UnstyledButton>
-        </Box>
-      ),
-    });
+    setDeleteTarget({ type: "step", index });
   };
 
   const setStepStatus = (index: number, status: StepStatus) => {
@@ -224,39 +194,20 @@ export default function TripDetailPage() {
   };
 
   const handleDelete = () => {
-    const backup = { ...journey };
-    deleteJourney(journey.id);
-    router.push("/");
+    setDeleteTarget({ type: "journey" });
+  };
 
-    const toastId = "journey-deleted-toast";
-    setTimeout(() => {
-      notifications.show({
-        id: toastId,
-        autoClose: 4000,
-        withBorder: false,
-        withCloseButton: false,
-        style: {
-          background: "var(--mantine-color-gray-8)",
-          color: "white",
-          boxShadow: "0 1px 3px rgba(0,0,0,0.05), rgba(0,0,0,0.05) 0 20px 25px -5px, rgba(0,0,0,0.04) 0 10px 10px -5px",
-        },
-        message: (
-          <Box style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <Text size="sm" fw={600} c="white">削除しました</Text>
-            <UnstyledButton
-              onClick={() => {
-                addJourney(backup);
-                notifications.hide(toastId);
-                router.push(`/trips/${backup.id}`);
-              }}
-              style={{ color: "var(--mantine-color-blue-3)", fontSize: 13, fontWeight: 700 }}
-            >
-              戻す
-            </UnstyledButton>
-          </Box>
-        ),
-      });
-    }, 100);
+  const confirmDelete = () => {
+    if (!deleteTarget) return;
+    if (deleteTarget.type === "step") {
+      persist({ ...journey, steps: journey.steps.filter((_, i) => i !== deleteTarget.index) });
+      showSuccessToast("ステップを削除しました");
+    } else {
+      deleteJourney(journey.id);
+      showSuccessToast("Journeyを削除しました");
+      router.push("/");
+    }
+    setDeleteTarget(null);
   };
 
   return (
@@ -531,7 +482,21 @@ export default function TripDetailPage() {
         </Box>
       </Modal>
 
-
+      <DeleteConfirmModal
+        opened={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+        title={
+          deleteTarget?.type === "journey"
+            ? "Journeyを削除しますか？"
+            : "ステップを削除しますか？"
+        }
+        description={
+          deleteTarget?.type === "journey"
+            ? `「${journey.title}」とすべてのステップが削除されます。この操作は取り消せません。`
+            : "このステップが削除されます。この操作は取り消せません。"
+        }
+      />
 
       <TabBar />
     </>
