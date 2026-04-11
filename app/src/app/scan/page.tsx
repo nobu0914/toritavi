@@ -17,7 +17,6 @@ import {
   IconCheck,
   IconAlertCircle,
   IconChevronDown,
-  IconChevronUp,
 } from "@tabler/icons-react";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -347,7 +346,7 @@ export default function ScanPage() {
   const [formValues, setFormValues] = useState<Record<string, string>>({});
   const [ocrText, setOcrText] = useState("");
   const [progress, setProgress] = useState(0);
-  const [previewExpanded, setPreviewExpanded] = useState(false);
+  const [showCategoryPicker, setShowCategoryPicker] = useState(false);
 
   const handleFile = async (file: File) => {
     const url = URL.createObjectURL(file);
@@ -384,6 +383,12 @@ export default function ScanPage() {
 
   const updateField = (key: string, value: string) => {
     setFormValues((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const changeCategory = (cat: StepCategory) => {
+    setDetectedCategory(cat);
+    setFormValues(extractFields(ocrText, cat));
+    setShowCategoryPicker(false);
   };
 
 
@@ -424,7 +429,7 @@ export default function ScanPage() {
     setOcrText("");
     setFormValues({});
     setProgress(0);
-    setPreviewExpanded(false);
+    setShowCategoryPicker(false);
   };
 
   const catDef = getCategoryDef(detectedCategory);
@@ -514,41 +519,45 @@ export default function ScanPage() {
         {/* 結果: カテゴリ別専用フォーム */}
         {status === "done" && (
           <>
-            {/* スキャン元プレビュー（アコーディオン） */}
+            {/* スキャン元プレビュー */}
             {imageUrl && (
-              <Box
-                className={classes.previewAccordion}
-                onClick={() => setPreviewExpanded((v) => !v)}
-              >
+              <Box className={classes.previewCard}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={imageUrl}
-                  alt="スキャン元"
-                  className={`${classes.previewCropped} ${previewExpanded ? classes.expanded : ""}`}
-                />
-                <Box className={classes.previewToggle}>
-                  {previewExpanded ? (
-                    <><IconChevronUp size={14} />閉じる</>
-                  ) : (
-                    <><IconChevronDown size={14} />スキャン元データを表示</>
-                  )}
-                </Box>
+                <img src={imageUrl} alt="スキャン元" className={classes.previewThumb} />
               </Box>
             )}
 
-            {/* カテゴリ表示 */}
+            {/* カテゴリ表示（タップで変更可能） */}
             <Box className={classes.categoryHeader}>
               <Box
                 className={classes.categoryBadge}
                 style={{
                   background: `var(--mantine-color-${catDef.color}-0)`,
                   color: `var(--mantine-color-${catDef.color}-7)`,
+                  cursor: "pointer",
                 }}
+                onClick={() => setShowCategoryPicker((v) => !v)}
               >
                 <catDef.icon size={14} />
                 {catDef.label}
+                <IconChevronDown size={12} style={{ marginLeft: 2 }} />
               </Box>
             </Box>
+
+            {showCategoryPicker && (
+              <Box className={classes.categoryPicker}>
+                {categoryDefs.map((c) => (
+                  <Box
+                    key={c.key}
+                    className={`${classes.categoryOption} ${c.key === detectedCategory ? classes.categoryOptionActive : ""}`}
+                    onClick={() => changeCategory(c.key)}
+                  >
+                    <c.icon size={16} />
+                    <Text size="sm" fw={600}>{c.label}</Text>
+                  </Box>
+                ))}
+              </Box>
+            )}
 
             {/* 専用フォーム */}
             <Box className={classes.formCard}>

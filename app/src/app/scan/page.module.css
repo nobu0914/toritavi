@@ -132,6 +132,37 @@
   font-weight: 700;
 }
 
+.categoryPicker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px;
+  background: white;
+  border: 1px solid var(--mantine-color-gray-2);
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.categoryOption {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  background: var(--mantine-color-gray-0);
+  color: var(--mantine-color-gray-6);
+}
+
+.categoryOption:active {
+  opacity: 0.7;
+}
+
+.categoryOptionActive {
+  background: var(--mantine-color-blue-0);
+  color: var(--mantine-color-blue-7);
+}
+
 .formCard {
   background: white;
   border: 1px solid var(--mantine-color-gray-2);
@@ -170,38 +201,19 @@
   background: white;
 }
 
-.previewAccordion {
+.previewCard {
+  background: white;
   border: 1px solid var(--mantine-color-gray-2);
   border-radius: 8px;
+  padding: 10px;
   overflow: hidden;
   margin-bottom: 12px;
-  cursor: pointer;
 }
 
-.previewCropped {
+.previewThumb {
   width: 100%;
+  border-radius: 6px;
   display: block;
-  object-fit: cover;
-  object-position: top;
-  height: 80px;
-  transition: height 0.3s ease;
-}
-
-.previewCropped.expanded {
-  height: auto;
-}
-
-.previewToggle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 6px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--mantine-color-gray-5);
-  background: var(--mantine-color-gray-0);
-  border-top: 1px solid var(--mantine-color-gray-1);
 }
 
 .ocrDetails {
