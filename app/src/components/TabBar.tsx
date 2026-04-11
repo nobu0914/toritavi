@@ -3,6 +3,7 @@
 import { Box, UnstyledButton, Text } from "@mantine/core";
 import {
   IconPlane,
+  IconScan,
   IconBell,
   IconInbox,
   IconUser,
@@ -12,6 +13,7 @@ import classes from "./TabBar.module.css";
 
 const tabs = [
   { label: "旅程", icon: IconPlane, href: "/" },
+  { label: "スキャン", icon: IconScan, href: "/scan" },
   { label: "通知", icon: IconBell, href: "/alerts" },
   { label: "未整理", icon: IconInbox, href: "/unfiled" },
   { label: "アカウント", icon: IconUser, href: "/account" },
