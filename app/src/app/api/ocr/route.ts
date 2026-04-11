@@ -19,42 +19,55 @@ const SYSTEM_PROMPT = `あなたは旅行・予約文書の情報抽出専門家
 ## 出力形式（JSONのみ返すこと）
 {
   "category": "飛行機|列車|宿泊|病院|商談|食事|バス|観光|その他",
-  "fields": {
-    // カテゴリに応じたフィールドを返す（以下参照）
-  }
+  "fixed": {
+    // カテゴリに応じた基本固定項目（以下参照）
+  },
+  "variable": [
+    // 文書から読み取れた追加の重要情報（固定項目以外）
+    { "label": "項目名（日本語）", "value": "値" }
+  ]
 }
 
+## 固定項目（カテゴリごと）
+
 ### 飛行機
-{ "flightNo": "便名", "departure": "出発空港コード", "departureTime": "出発時刻HH:MM", "arrival": "到着空港コード", "arrivalTime": "到着時刻HH:MM", "gate": "ゲート", "seat": "座席", "confNumber": "確認番号" }
+{ "title": "便名（例: NH225）", "date": "出発日（YYYY-MM-DD）", "startTime": "出発時刻（HH:MM）", "endTime": "到着時刻（HH:MM）", "from": "出発地（空港コードまたは空港名）", "to": "到着地（空港コードまたは空港名）", "confNumber": "確認番号" }
 
 ### 列車
-{ "trainName": "列車名と号数", "fromStation": "乗車駅", "departureTime": "発車時刻HH:MM", "toStation": "降車駅", "arrivalTime": "到着時刻HH:MM", "car": "号車", "seat": "座席", "confNumber": "確認番号" }
+{ "title": "列車名（例: のぞみ225号）", "date": "乗車日（YYYY-MM-DD）", "startTime": "発車時刻（HH:MM）", "endTime": "到着時刻（HH:MM）", "from": "乗車駅", "to": "降車駅", "confNumber": "確認番号" }
 
 ### 宿泊
-{ "hotelName": "施設名", "checkin": "チェックイン時刻HH:MM", "checkout": "チェックアウト時刻HH:MM", "roomType": "部屋タイプ", "confNumber": "確認番号" }
+{ "title": "施設名", "date": "チェックイン日（YYYY-MM-DD）", "startTime": "チェックイン時刻（HH:MM）", "endTime": "チェックアウト時刻（HH:MM）", "confNumber": "確認番号" }
 
 ### 病院
-{ "hospitalName": "病院名", "department": "診療科", "date": "予約日", "time": "予約時刻HH:MM", "cardNo": "診察券番号" }
+{ "title": "病院名", "date": "予約日（YYYY-MM-DD）", "startTime": "予約時刻（HH:MM）", "confNumber": "診察券番号" }
 
 ### 商談
-{ "company": "相手先", "location": "場所", "startTime": "開始時刻HH:MM", "endTime": "終了時刻HH:MM", "confNumber": "確認番号" }
+{ "title": "相手先・件名", "date": "日付（YYYY-MM-DD）", "startTime": "開始時刻（HH:MM）", "endTime": "終了時刻（HH:MM）", "from": "場所", "confNumber": "確認番号" }
 
 ### 食事
-{ "shopName": "店名", "time": "予約時刻HH:MM", "guests": "人数", "confNumber": "確認番号" }
+{ "title": "店名", "date": "予約日（YYYY-MM-DD）", "startTime": "予約時刻（HH:MM）", "confNumber": "確認番号" }
 
 ### バス
-{ "routeName": "路線名", "departureTime": "発車時刻HH:MM", "arrivalTime": "到着時刻HH:MM", "confNumber": "確認番号" }
+{ "title": "路線名", "date": "乗車日（YYYY-MM-DD）", "startTime": "発車時刻（HH:MM）", "endTime": "到着時刻（HH:MM）", "from": "出発地", "to": "到着地", "confNumber": "確認番号" }
 
 ### 観光
-{ "eventName": "イベント名", "venue": "会場", "date": "日付", "time": "開演時刻HH:MM", "seat": "座席", "confNumber": "確認番号" }
+{ "title": "イベント名", "date": "日付（YYYY-MM-DD）", "startTime": "開演時刻（HH:MM）", "from": "会場", "confNumber": "確認番号" }
 
 ### その他
-{ "title": "タイトル", "time": "時刻HH:MM", "detail": "詳細", "confNumber": "確認番号" }
+{ "title": "タイトル", "date": "日付（YYYY-MM-DD）", "startTime": "時刻（HH:MM）", "confNumber": "確認番号" }
+
+## 変動項目（variable）のルール
+- 固定項目以外で、文書に記載されている重要な情報を抽出する
+- 例: 座席、ゲート、号車、部屋タイプ、人数、診療科、料金、備考など
+- labelは日本語で、ユーザーにわかりやすい表記にする
+- 最大10件まで。重要度の高い順に並べる
+- 値が空やnullの項目は含めない
 
 ## 規則
-- 読み取れない項目はnullを返す（推測しない）
+- 読み取れない固定項目はnullを返す（推測しない）
 - JSONのみ返す（説明文不要）
-- 時刻はHH:MM形式で統一
+- 時刻はHH:MM形式、日付はYYYY-MM-DD形式で統一
 `;
 
 export async function POST(request: NextRequest) {
@@ -75,7 +88,6 @@ export async function POST(request: NextRequest) {
     const content: Anthropic.MessageCreateParams["messages"][0]["content"] = [];
 
     for (const img of images) {
-      // img is base64 data URL like "data:image/png;base64,..."
       const match = img.match(/^data:(image\/\w+);base64,(.+)$/);
       if (!match) continue;
       content.push({
@@ -100,7 +112,6 @@ export async function POST(request: NextRequest) {
     const textBlock = response.content.find((b) => b.type === "text");
     const raw = textBlock?.type === "text" ? textBlock.text : "";
 
-    // Extract JSON from response
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       return NextResponse.json({ error: "Failed to parse response", raw }, { status: 500 });

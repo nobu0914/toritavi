@@ -337,6 +337,18 @@ function formToStep(category: StepCategory, values: Record<string, string>): { t
   }
 }
 
+/* ====== 固定フィールド定義（AI OCR用） ====== */
+
+const fixedFieldDefs: { key: string; label: string; placeholder: string }[] = [
+  { key: "title", label: "タイトル", placeholder: "NH225 / のぞみ225号 / ホテル名" },
+  { key: "date", label: "日付", placeholder: "2026-04-15" },
+  { key: "startTime", label: "開始時刻", placeholder: "10:00" },
+  { key: "endTime", label: "終了時刻", placeholder: "12:00" },
+  { key: "from", label: "出発地・場所", placeholder: "NRT / 東京" },
+  { key: "to", label: "到着地", placeholder: "KIX / 新大阪" },
+  { key: "confNumber", label: "確認番号", placeholder: "ABC-123456" },
+];
+
 /* ====== コンポーネント ====== */
 
 type ScanStatus = "idle" | "processing" | "done" | "error";
@@ -359,7 +371,9 @@ export default function ScanPage() {
   const [pasteText, setPasteText] = useState("");
   const [dragging, setDragging] = useState(false);
   const [inputSource, setInputSource] = useState<"撮影" | "アップロード" | "メール">("撮影");
-  const [aiMode, setAiMode] = useState(false);
+  const [aiMode, setAiMode] = useState(true);
+  const [fixedValues, setFixedValues] = useState<Record<string, string>>({});
+  const [variableFields, setVariableFields] = useState<{ label: string; value: string }[]>([]);
 
   const pdfToImages = async (file: File): Promise<Blob[]> => {
     const pdfjsLib = await import("pdfjs-dist");
@@ -482,14 +496,28 @@ export default function ScanPage() {
       const cat = (result.category || "その他") as StepCategory;
       setDetectedCategory(cat);
 
-      // nullを除外してフォーム値に
-      const fields: Record<string, string> = {};
-      if (result.fields) {
-        for (const [k, v] of Object.entries(result.fields)) {
-          if (v != null) fields[k] = String(v);
+      // 固定項目
+      const fixed: Record<string, string> = {};
+      if (result.fixed) {
+        for (const [k, v] of Object.entries(result.fixed)) {
+          if (v != null) fixed[k] = String(v);
         }
       }
-      setFormValues(fields);
+      setFixedValues(fixed);
+
+      // 変動項目
+      const vars: { label: string; value: string }[] = [];
+      if (Array.isArray(result.variable)) {
+        for (const item of result.variable) {
+          if (item?.label && item?.value) {
+            vars.push({ label: String(item.label), value: String(item.value) });
+          }
+        }
+      }
+      setVariableFields(vars);
+
+      // 旧formValuesにもマッピング（Step作成用）
+      setFormValues({ ...fixed });
       setOcrText(`[AI OCR] ${JSON.stringify(result, null, 2)}`);
       setProgress(100);
       setStatus("done");
@@ -573,20 +601,45 @@ export default function ScanPage() {
       try { savedImageUrl = await blobToBase64(imageUrl); } catch { /* ignore */ }
     }
 
-    const stepData = formToStep(detectedCategory, formValues);
     const now = new Date().toISOString();
     const todayStr = new Date().toISOString().split("T")[0];
+
+    let title: string;
+    let time: string;
+    let detail: string | undefined;
+    let confNumber: string | undefined;
+    let stepDate: string | undefined;
+
+    if (aiMode && Object.keys(fixedValues).length > 0) {
+      title = fixedValues.title || getCategoryDef(detectedCategory).label;
+      time = fixedValues.startTime || "";
+      const parts = [fixedValues.from, fixedValues.to].filter(Boolean);
+      detail = parts.length > 0 ? parts.join(" → ") : undefined;
+      confNumber = fixedValues.confNumber || undefined;
+      stepDate = fixedValues.date || undefined;
+    } else {
+      const stepData = formToStep(detectedCategory, formValues);
+      title = stepData.title;
+      time = stepData.time;
+      detail = stepData.detail || undefined;
+      confNumber = stepData.confNumber || undefined;
+    }
+
     const step: Step = {
       id: generateId(),
       category: detectedCategory,
-      title: stepData.title,
-      time: stepData.time,
-      detail: stepData.detail || undefined,
-      confNumber: stepData.confNumber || undefined,
+      title,
+      time,
+      detail,
+      confNumber,
       source: inputSource,
       sourceImageUrl: savedImageUrl,
       status: "未開始",
-      information: [],
+      information: variableFields.map((v, i) => ({
+        id: `var-${i}`,
+        label: v.label,
+        value: v.value,
+      })),
     };
 
     let journeyId: string;
@@ -601,11 +654,12 @@ export default function ScanPage() {
       // 新規Journey作成
       journeyId = generateId();
       const cd = getCategoryDef(detectedCategory);
+      const journeyDate = stepDate || todayStr;
       addJourney({
         id: journeyId,
-        title: `${cd.label} ${new Date().toLocaleDateString("ja-JP")}`,
-        startDate: todayStr,
-        endDate: todayStr,
+        title: `${cd.label} ${new Date(journeyDate).toLocaleDateString("ja-JP")}`,
+        startDate: journeyDate,
+        endDate: journeyDate,
         steps: [step],
         createdAt: now,
         updatedAt: now,
@@ -627,6 +681,8 @@ export default function ScanPage() {
     setShowCategoryPicker(false);
     setShowTextInput(false);
     setPasteText("");
+    setFixedValues({});
+    setVariableFields([]);
   };
 
   const catDef = getCategoryDef(detectedCategory);
@@ -647,12 +703,12 @@ export default function ScanPage() {
         {/* テストモード切替 */}
         {status === "idle" && (
           <Box
-            className={`${classes.testModeBanner} ${aiMode ? classes.testModeActive : ""}`}
+            className={`${classes.testModeBanner} ${!aiMode ? classes.testModeActive : ""}`}
             onClick={() => setAiMode((v) => !v)}
           >
             <IconFlask size={16} />
             <Text size="xs" fw={600}>
-              {aiMode ? "AI OCR（テスト中）" : "テストモード：AI OCR"}
+              {aiMode ? "テストモード：ブラウザOCRに切替" : "テストモード ON（ブラウザOCR）"}
             </Text>
           </Box>
         )}
@@ -854,21 +910,65 @@ export default function ScanPage() {
               </Box>
             )}
 
-            {/* 専用フォーム */}
-            <Box className={classes.formCard}>
-              {fields.map((field) => (
-                <Box key={field.key} className={classes.formRow}>
-                  <Text className={classes.formLabel}>{field.label}</Text>
-                  <TextInput
-                    classNames={{ input: classes.formInput }}
-                    variant="unstyled"
-                    placeholder={field.placeholder}
-                    value={formValues[field.key] || ""}
-                    onChange={(e) => updateField(field.key, e.currentTarget.value)}
-                  />
+            {/* フォーム: AI時は固定+変動、ブラウザ時は従来 */}
+            {aiMode && Object.keys(fixedValues).length > 0 ? (
+              <>
+                {/* 固定項目 */}
+                <Box className={classes.formCard}>
+                  {fixedFieldDefs.map((f) => (
+                    <Box key={f.key} className={classes.formRow}>
+                      <Text className={classes.formLabel}>{f.label}</Text>
+                      <TextInput
+                        classNames={{ input: classes.formInput }}
+                        variant="unstyled"
+                        placeholder={f.placeholder}
+                        value={fixedValues[f.key] || ""}
+                        onChange={(e) => setFixedValues((prev) => ({ ...prev, [f.key]: e.currentTarget.value }))}
+                      />
+                    </Box>
+                  ))}
                 </Box>
-              ))}
-            </Box>
+
+                {/* 変動項目 */}
+                {variableFields.length > 0 && (
+                  <>
+                    <Text size="xs" fw={600} c="dimmed" mt="md" mb={6}>その他の読み取り情報</Text>
+                    <Box className={classes.formCard}>
+                      {variableFields.map((v, i) => (
+                        <Box key={i} className={classes.formRow}>
+                          <Text className={classes.formLabel}>{v.label}</Text>
+                          <TextInput
+                            classNames={{ input: classes.formInput }}
+                            variant="unstyled"
+                            value={v.value}
+                            onChange={(e) => {
+                              setVariableFields((prev) =>
+                                prev.map((item, idx) => idx === i ? { ...item, value: e.currentTarget.value } : item)
+                              );
+                            }}
+                          />
+                        </Box>
+                      ))}
+                    </Box>
+                  </>
+                )}
+              </>
+            ) : (
+              <Box className={classes.formCard}>
+                {fields.map((field) => (
+                  <Box key={field.key} className={classes.formRow}>
+                    <Text className={classes.formLabel}>{field.label}</Text>
+                    <TextInput
+                      classNames={{ input: classes.formInput }}
+                      variant="unstyled"
+                      placeholder={field.placeholder}
+                      value={formValues[field.key] || ""}
+                      onChange={(e) => updateField(field.key, e.currentTarget.value)}
+                    />
+                  </Box>
+                ))}
+              </Box>
+            )}
 
             {/* OCR全文 */}
             <details className={classes.ocrDetails}>
