@@ -327,30 +327,27 @@ export default function TripDetailPage() {
                         <Menu.Label>ステータス変更</Menu.Label>
                         <Menu.Item
                           leftSection={<IconPlayerPlay size={14} />}
-                          onClick={() => setStepStatus(iconIndex, "進行中")}
+                          onClick={(e: React.MouseEvent) => { e.stopPropagation(); setStepStatus(iconIndex, "進行中"); }}
                         >
                           進行中
                         </Menu.Item>
                         <Menu.Item
                           leftSection={<IconCheck size={14} />}
-                          onClick={() => setStepStatus(iconIndex, "完了")}
+                          onClick={(e: React.MouseEvent) => { e.stopPropagation(); setStepStatus(iconIndex, "完了"); }}
                         >
                           完了
                         </Menu.Item>
-                        <Menu.Item onClick={() => setStepStatus(iconIndex, "未開始")}>未開始</Menu.Item>
-                        <Menu.Item onClick={() => setStepStatus(iconIndex, "遅延")}>遅延</Menu.Item>
-                        <Menu.Item onClick={() => setStepStatus(iconIndex, "キャンセル")}>キャンセル</Menu.Item>
+                        <Menu.Item onClick={(e: React.MouseEvent) => { e.stopPropagation(); setStepStatus(iconIndex, "未開始"); }}>未開始</Menu.Item>
+                        <Menu.Item onClick={(e: React.MouseEvent) => { e.stopPropagation(); setStepStatus(iconIndex, "遅延"); }}>遅延</Menu.Item>
+                        <Menu.Item onClick={(e: React.MouseEvent) => { e.stopPropagation(); setStepStatus(iconIndex, "キャンセル"); }}>キャンセル</Menu.Item>
                         <Menu.Divider />
-                        <Menu.Item leftSection={<IconEdit size={14} />} onClick={() => openEdit(iconIndex)}>
+                        <Menu.Item leftSection={<IconEdit size={14} />} onClick={(e: React.MouseEvent) => { e.stopPropagation(); openEdit(iconIndex); }}>
                           編集
                         </Menu.Item>
                         <Menu.Item
                           color="red"
                           leftSection={<IconTrash size={14} />}
-                          onClick={(e: React.MouseEvent) => {
-                            e.stopPropagation();
-                            removeStep(iconIndex);
-                          }}
+                          onClick={(e: React.MouseEvent) => { e.stopPropagation(); removeStep(iconIndex); }}
                         >
                           削除
                         </Menu.Item>
