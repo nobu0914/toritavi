@@ -180,7 +180,6 @@ export default function TripDetailPage() {
   };
 
   const removeStep = (index: number) => {
-    if (!confirm("このステップを削除しますか？")) return;
     const removed = journey.steps[index];
     persist({ ...journey, steps: journey.steps.filter((_, stepIndex) => stepIndex !== index) });
 
