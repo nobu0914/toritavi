@@ -159,9 +159,13 @@ export default function TripDetailPage() {
       category: step.category,
       source: step.source ?? "手入力",
       title: step.title,
+      date: step.date ?? "",
       time: step.time,
-      detail: step.detail ?? "",
+      endTime: step.endTime ?? "",
+      from: step.from ?? "",
+      to: step.to ?? "",
       confNumber: step.confNumber ?? "",
+      information: step.information ?? [],
     });
     setEditingStepId(step.id);
     setEditingIndex(index);
@@ -176,12 +180,16 @@ export default function TripDetailPage() {
       category: draft.category,
       source: draft.source,
       title: draft.title.trim(),
+      date: draft.date.trim() || undefined,
       time: draft.time.trim(),
-      detail: draft.detail.trim() || undefined,
+      endTime: draft.endTime.trim() || undefined,
+      from: draft.from.trim() || undefined,
+      to: draft.to.trim() || undefined,
       confNumber: draft.confNumber.trim() || undefined,
       memo: editingIndex !== null ? journey.steps[editingIndex].memo : undefined,
+      sourceImageUrl: editingIndex !== null ? journey.steps[editingIndex].sourceImageUrl : undefined,
       status: editingIndex !== null ? journey.steps[editingIndex].status : "未開始",
-      information: editingIndex !== null ? journey.steps[editingIndex].information : [],
+      information: draft.information,
     };
 
     const nextSteps =
@@ -384,7 +392,14 @@ export default function TripDetailPage() {
                     <Box className={classes.timelineCardBody}>
                       <Text className={classes.timelineType}>{step.category}</Text>
                       <Text className={classes.timelineTitle}>{step.title}</Text>
-                      {step.detail && <Text className={classes.timelineDetail}>{step.detail}</Text>}
+                      {(step.from || step.to) && (
+                        <Text className={classes.timelineDetail}>
+                          {[step.from, step.to].filter(Boolean).join(" → ")}
+                        </Text>
+                      )}
+                      {step.detail && !step.from && !step.to && (
+                        <Text className={classes.timelineDetail}>{step.detail}</Text>
+                      )}
                       {step.time && step.time !== (step.time.match(/\d{1,2}:\d{2}/)?.[0] || "") && (
                         <Text className={classes.timelineDetail}>{step.time}</Text>
                       )}

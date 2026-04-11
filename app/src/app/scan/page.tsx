@@ -604,19 +604,18 @@ export default function ScanPage() {
     const now = new Date().toISOString();
     const todayStr = new Date().toISOString().split("T")[0];
 
-    let title: string;
-    let time: string;
-    let detail: string | undefined;
-    let confNumber: string | undefined;
-    let stepDate: string | undefined;
+    let title: string, time: string, stepDate: string | undefined;
+    let endTime: string | undefined, from: string | undefined, to: string | undefined;
+    let confNumber: string | undefined, detail: string | undefined;
 
     if (aiMode && Object.keys(fixedValues).length > 0) {
       title = fixedValues.title || getCategoryDef(detectedCategory).label;
-      time = fixedValues.startTime || "";
-      const parts = [fixedValues.from, fixedValues.to].filter(Boolean);
-      detail = parts.length > 0 ? parts.join(" → ") : undefined;
-      confNumber = fixedValues.confNumber || undefined;
       stepDate = fixedValues.date || undefined;
+      time = fixedValues.startTime || "";
+      endTime = fixedValues.endTime || undefined;
+      from = fixedValues.from || undefined;
+      to = fixedValues.to || undefined;
+      confNumber = fixedValues.confNumber || undefined;
     } else {
       const stepData = formToStep(detectedCategory, formValues);
       title = stepData.title;
@@ -629,7 +628,11 @@ export default function ScanPage() {
       id: generateId(),
       category: detectedCategory,
       title,
+      date: stepDate,
       time,
+      endTime,
+      from,
+      to,
       detail,
       confNumber,
       source: inputSource,

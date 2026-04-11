@@ -25,8 +25,12 @@ export type Step = {
   id: string;
   category: StepCategory;
   title: string;
-  time: string;
-  detail?: string;
+  date?: string;         // YYYY-MM-DD
+  time: string;          // 開始時刻 HH:MM
+  endTime?: string;      // 終了時刻 HH:MM
+  from?: string;         // 出発地・場所
+  to?: string;           // 到着地
+  detail?: string;       // 旧互換用
   confNumber?: string;
   memo?: string;
   source?: StepSource;

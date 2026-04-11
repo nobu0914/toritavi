@@ -160,9 +160,13 @@ export default function NewTripPage() {
         category: item.step.category,
         source: item.step.source ?? item.source ?? "手入力",
         title: item.step.title,
+        date: item.step.date ?? "",
         time: item.step.time,
-        detail: item.step.detail ?? "",
+        endTime: item.step.endTime ?? "",
+        from: item.step.from ?? "",
+        to: item.step.to ?? "",
         confNumber: item.step.confNumber ?? "",
+        information: item.step.information ?? [],
       });
     } else {
       setDraft(emptyStepDraft());
@@ -185,11 +189,14 @@ export default function NewTripPage() {
       category: draft.category,
       source: draft.source,
       title: draft.title.trim(),
+      date: draft.date.trim() || undefined,
       time: draft.time.trim(),
-      detail: draft.detail.trim() || undefined,
+      endTime: draft.endTime.trim() || undefined,
+      from: draft.from.trim() || undefined,
+      to: draft.to.trim() || undefined,
       confNumber: draft.confNumber.trim() || undefined,
       status: "未開始",
-      information: [],
+      information: draft.information,
     };
 
     setItems((prev) =>

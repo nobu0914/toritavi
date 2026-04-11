@@ -11,20 +11,11 @@ import {
 } from "@mantine/core";
 import { IconChevronDown, IconChevronUp, IconX } from "@tabler/icons-react";
 import classes from "./StepEditModal.module.css";
-import type { StepCategory, StepSource } from "@/lib/types";
+import type { StepCategory, StepSource, Information } from "@/lib/types";
 
 const categories: StepCategory[] = [
-  "列車",
-  "飛行機",
-  "バス",
-  "車",
-  "徒歩",
-  "宿泊",
-  "商談",
-  "食事",
-  "観光",
-  "病院",
-  "その他",
+  "列車", "飛行機", "バス", "車", "徒歩",
+  "宿泊", "商談", "食事", "観光", "病院", "その他",
 ];
 
 const sources: StepSource[] = ["撮影", "アップロード", "メール", "手入力"];
@@ -33,13 +24,21 @@ export type StepDraft = {
   category: StepCategory;
   source: StepSource;
   title: string;
+  date: string;
   time: string;
-  detail: string;
+  endTime: string;
+  from: string;
+  to: string;
   confNumber: string;
+  information: Information[];
 };
 
 export function emptyStepDraft(): StepDraft {
-  return { category: "列車", source: "手入力", title: "", time: "", detail: "", confNumber: "" };
+  return {
+    category: "列車", source: "手入力",
+    title: "", date: "", time: "", endTime: "",
+    from: "", to: "", confNumber: "", information: [],
+  };
 }
 
 type Props = {
@@ -54,14 +53,7 @@ type Props = {
 };
 
 export function StepEditModal({
-  opened,
-  onClose,
-  draft,
-  onChange,
-  onSave,
-  isEdit,
-  editingTitle,
-  sourceImageUrl,
+  opened, onClose, draft, onChange, onSave, isEdit, editingTitle, sourceImageUrl,
 }: Props) {
   const [editing, setEditing] = useState(!isEdit);
   const [previewExpanded, setPreviewExpanded] = useState(false);
@@ -75,8 +67,17 @@ export function StepEditModal({
     }
   }
 
-  const update = (patch: Partial<StepDraft>) =>
-    onChange({ ...draft, ...patch });
+  const update = (patch: Partial<StepDraft>) => onChange({ ...draft, ...patch });
+
+  const fixedFields: { key: keyof StepDraft; label: string; placeholder: string }[] = [
+    { key: "title", label: "タイトル", placeholder: "NH225 / のぞみ225号" },
+    { key: "date", label: "日付", placeholder: "2026-04-15" },
+    { key: "time", label: "開始時刻", placeholder: "10:00" },
+    { key: "endTime", label: "終了時刻", placeholder: "12:00" },
+    { key: "from", label: "出発地・場所", placeholder: "NRT / 東京" },
+    { key: "to", label: "到着地", placeholder: "KIX / 新大阪" },
+    { key: "confNumber", label: "確認番号", placeholder: "ABC-123456" },
+  ];
 
   return (
     <Modal
@@ -110,11 +111,6 @@ export function StepEditModal({
             <Text className={classes.topTitle}>
               {isEdit ? editingTitle || "ステップ" : "ステップを追加"}
             </Text>
-            {!isEdit && (
-              <Text style={{ fontSize: 9, color: "var(--mantine-color-gray-4)", fontWeight: 600 }}>
-                新規モーダル
-              </Text>
-            )}
           </Box>
           <ActionIcon variant="subtle" color="gray" radius="xl" onClick={onClose}>
             <IconX size={18} />
@@ -144,97 +140,89 @@ export function StepEditModal({
             </Box>
           )}
 
-          <Box className={classes.formSection} key={editing ? "editing" : "readonly"}>
-            <Box className={classes.formRow}>
-              <Text className={classes.formLabel}>カテゴリ</Text>
-              {editing ? (
-                <Select
-                  classNames={{ input: classes.fieldInput }}
-                  data={categories}
-                  value={draft.category}
-                  onChange={(value) =>
-                    value && update({ category: value as StepCategory })
-                  }
-                  allowDeselect={false}
-                />
-              ) : (
-                <Text className={classes.readOnlyValue}>{draft.category || "未設定"}</Text>
-              )}
-            </Box>
-            <Box className={classes.formRow}>
-              <Text className={classes.formLabel}>取り込み元</Text>
-              {editing ? (
-                <Select
-                  classNames={{ input: classes.fieldInput }}
-                  data={sources}
-                  value={draft.source}
-                  onChange={(value) =>
-                    value && update({ source: value as StepSource })
-                  }
-                  allowDeselect={false}
-                />
-              ) : (
-                <Text className={classes.readOnlyValue}>{draft.source || "未設定"}</Text>
-              )}
-            </Box>
-            <Box className={classes.formRow}>
-              <Text className={classes.formLabel}>タイトル</Text>
-              {editing ? (
-                <TextInput
-                  classNames={{ input: classes.fieldInput }}
-                  placeholder="例: のぞみ 225号"
-                  value={draft.title}
-                  onChange={(e) => update({ title: e.currentTarget.value })}
-                  required
-                />
-              ) : (
-                <Text className={classes.readOnlyValue}>{draft.title || "未設定"}</Text>
-              )}
-            </Box>
-            <Box className={classes.formRow}>
-              <Text className={classes.formLabel}>詳細・場所</Text>
-              {editing ? (
-                <TextInput
-                  classNames={{ input: classes.fieldInput }}
-                  placeholder="例: 東京 → 新大阪"
-                  value={draft.detail}
-                  onChange={(e) => update({ detail: e.currentTarget.value })}
-                />
-              ) : (
-                <Text className={classes.readOnlyValue}>{draft.detail || "未設定"}</Text>
-              )}
-            </Box>
+          {/* カテゴリ・取り込み元 */}
+          <Box className={classes.formSection}>
             <Box className={classes.formRow}>
               <Box className={classes.dateGrid}>
                 <Box>
-                  <Text className={classes.formLabel}>時刻</Text>
+                  <Text className={classes.formLabel}>カテゴリ</Text>
                   {editing ? (
-                    <TextInput
+                    <Select
                       classNames={{ input: classes.fieldInput }}
-                      placeholder="10:00"
-                      value={draft.time}
-                      onChange={(e) => update({ time: e.currentTarget.value })}
+                      data={categories}
+                      value={draft.category}
+                      onChange={(value) => value && update({ category: value as StepCategory })}
+                      allowDeselect={false}
                     />
                   ) : (
-                    <Text className={classes.readOnlyValue}>{draft.time || "未設定"}</Text>
+                    <Text className={classes.readOnlyValue}>{draft.category}</Text>
                   )}
                 </Box>
                 <Box>
-                  <Text className={classes.formLabel}>確認番号</Text>
+                  <Text className={classes.formLabel}>取り込み元</Text>
                   {editing ? (
-                    <TextInput
+                    <Select
                       classNames={{ input: classes.fieldInput }}
-                      placeholder="TK-882541"
-                      value={draft.confNumber}
-                      onChange={(e) => update({ confNumber: e.currentTarget.value })}
+                      data={sources}
+                      value={draft.source}
+                      onChange={(value) => value && update({ source: value as StepSource })}
+                      allowDeselect={false}
                     />
                   ) : (
-                    <Text className={classes.readOnlyValue}>{draft.confNumber || "未設定"}</Text>
+                    <Text className={classes.readOnlyValue}>{draft.source}</Text>
                   )}
                 </Box>
               </Box>
             </Box>
           </Box>
+
+          {/* 固定項目 */}
+          <Box className={classes.formSection} style={{ marginTop: 12 }}>
+            {fixedFields.map((f) => (
+              <Box key={f.key} className={classes.formRow}>
+                <Text className={classes.formLabel}>{f.label}</Text>
+                {editing ? (
+                  <TextInput
+                    classNames={{ input: classes.fieldInput }}
+                    placeholder={f.placeholder}
+                    value={String(draft[f.key] || "")}
+                    onChange={(e) => update({ [f.key]: e.currentTarget.value })}
+                  />
+                ) : (
+                  <Text className={classes.readOnlyValue}>
+                    {String(draft[f.key] || "") || "未設定"}
+                  </Text>
+                )}
+              </Box>
+            ))}
+          </Box>
+
+          {/* 変動項目（information） */}
+          {draft.information.length > 0 && (
+            <>
+              <Text size="xs" fw={600} c="dimmed" mt="md" mb={6}>その他の情報</Text>
+              <Box className={classes.formSection}>
+                {draft.information.map((info, i) => (
+                  <Box key={info.id} className={classes.formRow}>
+                    <Text className={classes.formLabel}>{info.label}</Text>
+                    {editing ? (
+                      <TextInput
+                        classNames={{ input: classes.fieldInput }}
+                        value={info.value}
+                        onChange={(e) => {
+                          const newInfo = [...draft.information];
+                          newInfo[i] = { ...info, value: e.currentTarget.value };
+                          update({ information: newInfo });
+                        }}
+                      />
+                    ) : (
+                      <Text className={classes.readOnlyValue}>{info.value || "未設定"}</Text>
+                    )}
+                  </Box>
+                ))}
+              </Box>
+            </>
+          )}
         </Box>
         <Box className={classes.footer}>
           <button
