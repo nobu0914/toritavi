@@ -1,3 +1,38 @@
+.categoryGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.categoryCard {
+  background: white;
+  border: 1px solid var(--mantine-color-gray-2);
+  border-radius: 8px;
+  padding: 16px 12px;
+  text-align: center;
+  cursor: pointer;
+  font-family: inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  transition: border-color 0.15s;
+}
+
+.categoryCard:active {
+  border-color: var(--mantine-color-blue-7);
+}
+
+.categoryIcon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
 .captureArea {
   display: flex;
   flex-direction: column;
@@ -10,8 +45,6 @@
   width: 96px;
   height: 96px;
   border-radius: 50%;
-  background: var(--mantine-color-blue-0);
-  color: var(--mantine-color-blue-7);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -56,6 +89,20 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
+}
+
+.backLink {
+  margin-top: 20px;
+  background: none;
+  border: none;
+  color: var(--mantine-color-gray-5);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .processingArea {
@@ -105,6 +152,43 @@
   border: 1px solid var(--mantine-color-gray-2);
 }
 
+.resultHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.resultCategoryBadge {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.fieldsCard {
+  background: white;
+  border: 1px solid var(--mantine-color-gray-2);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.fieldRow {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--mantine-color-gray-1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.fieldRow:last-child {
+  border-bottom: none;
+}
+
 .sectionLabel {
   font-size: 11px;
   font-weight: 700;
@@ -119,7 +203,7 @@
   border: 1px solid var(--mantine-color-gray-2);
   border-radius: 8px;
   padding: 14px;
-  max-height: 200px;
+  max-height: 160px;
   overflow-y: auto;
 }
 
