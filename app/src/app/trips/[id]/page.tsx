@@ -10,6 +10,7 @@ import {
   Stack,
   Text,
   TextInput,
+  UnstyledButton,
 } from "@mantine/core";
 import {
   IconCheck,
@@ -298,7 +299,7 @@ export default function TripDetailPage() {
                   <Box className={`${classes.timelineDot} ${dotClass}`} />
                   <Box className={`${classes.timelineLine} ${lineClass}`} />
                 </Box>
-                <Box
+                <UnstyledButton
                   className={`${classes.timelineCard} ${isNext ? classes.timelineCardActive : ""}`}
                   onClick={() => openEdit(iconIndex)}
                 >
@@ -371,7 +372,7 @@ export default function TripDetailPage() {
                       {isNext && !isDone ? "次" : step.status}
                     </Box>
                   </Stack>
-                </Box>
+                </UnstyledButton>
               </Box>
             );
           })}

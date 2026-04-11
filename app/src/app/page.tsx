@@ -1,6 +1,6 @@
 "use client";
 
-import { Box, Skeleton, Text } from "@mantine/core";
+import { Box, Skeleton, Text, UnstyledButton } from "@mantine/core";
 import { IconPlus } from "@tabler/icons-react";
 import { startTransition, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -181,16 +181,19 @@ export default function TripsPage() {
                 : "var(--mantine-color-gray-7)";
 
           return (
-            <Box
+            <UnstyledButton
               key={journey.id}
               onClick={() => router.push(`/trips/${journey.id}`)}
               style={{
+                display: "block",
+                width: "auto",
                 background: "white",
                 margin: "6px 16px",
                 borderRadius: 8,
                 overflow: "hidden",
                 border: "1px solid var(--mantine-color-gray-2)",
                 cursor: "pointer",
+                textAlign: "left",
               }}
             >
               {/* Cover */}
@@ -264,14 +267,13 @@ export default function TripsPage() {
                   {daysUntil(journey.startDate)}
                 </Box>
               </Box>
-            </Box>
+            </UnstyledButton>
           );
         })}
       </Box>
 
       {/* FAB */}
-      <Box
-        component="button"
+      <button
         onClick={() => router.push("/trips/new")}
         style={{
           position: "fixed",
@@ -293,7 +295,7 @@ export default function TripsPage() {
         }}
       >
         <IconPlus size={24} />
-      </Box>
+      </button>
 
       <TabBar />
     </>
