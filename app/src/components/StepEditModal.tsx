@@ -81,8 +81,25 @@ export function StepEditModal({
       onClose={onClose}
       centered
       radius="md"
-      classNames={{ content: classes.modalContent, body: classes.modalBody }}
       withCloseButton={false}
+      styles={{
+        content: {
+          borderRadius: 12,
+          maxHeight: "min(90vh, 820px)",
+          display: "flex",
+          flexDirection: "column",
+          overflow: "visible",
+        },
+        body: {
+          padding: 0,
+          background: "var(--mantine-color-gray-0)",
+          display: "flex",
+          flexDirection: "column",
+          flex: 1,
+          minHeight: 0,
+          overflow: "visible",
+        },
+      }}
     >
       <Box className={classes.panel}>
         <Box className={classes.top}>
