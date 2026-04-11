@@ -396,7 +396,10 @@ export default function TripDetailPage() {
                         <Menu.Item
                           color="red"
                           leftSection={<IconTrash size={14} />}
-                          onClick={() => removeStep(iconIndex)}
+                          onClick={(e: React.MouseEvent) => {
+                            e.stopPropagation();
+                            removeStep(iconIndex);
+                          }}
                         >
                           削除
                         </Menu.Item>
