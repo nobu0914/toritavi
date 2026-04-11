@@ -1,6 +1,6 @@
 "use client";
 
-import { Box, Text, Loader } from "@mantine/core";
+import { Box, Text, Loader, TextInput, Select } from "@mantine/core";
 import {
   IconCamera,
   IconUpload,
@@ -13,6 +13,7 @@ import {
   IconTicket,
   IconStethoscope,
   IconDots,
+  IconScan,
   IconCheck,
   IconAlertCircle,
 } from "@tabler/icons-react";
@@ -26,307 +27,330 @@ import classes from "./page.module.css";
 
 /* ====== カテゴリ定義 ====== */
 
-type ScanCategory = {
+type CategoryDef = {
   key: StepCategory;
   label: string;
   icon: typeof IconPlane;
   color: string;
-  description: string;
 };
 
-const scanCategories: ScanCategory[] = [
-  { key: "飛行機", label: "フライト", icon: IconPlane, color: "blue", description: "" },
-  { key: "列車", label: "鉄道", icon: IconTrain, color: "blue", description: "" },
-  { key: "宿泊", label: "ホテル", icon: IconBed, color: "teal", description: "" },
-  { key: "観光", label: "チケット", icon: IconTicket, color: "violet", description: "" },
-  { key: "商談", label: "ビジネス", icon: IconBriefcase, color: "indigo", description: "" },
-  { key: "食事", label: "レストラン", icon: IconToolsKitchen2, color: "orange", description: "" },
-  { key: "バス", label: "バス", icon: IconBus, color: "green", description: "" },
-  { key: "病院", label: "病院", icon: IconStethoscope, color: "red", description: "" },
-  { key: "その他", label: "その他", icon: IconDots, color: "gray", description: "" },
+const categoryDefs: CategoryDef[] = [
+  { key: "飛行機", label: "フライト", icon: IconPlane, color: "blue" },
+  { key: "列車", label: "鉄道", icon: IconTrain, color: "blue" },
+  { key: "宿泊", label: "ホテル", icon: IconBed, color: "teal" },
+  { key: "観光", label: "チケット", icon: IconTicket, color: "violet" },
+  { key: "商談", label: "ビジネス", icon: IconBriefcase, color: "indigo" },
+  { key: "食事", label: "レストラン", icon: IconToolsKitchen2, color: "orange" },
+  { key: "バス", label: "バス", icon: IconBus, color: "green" },
+  { key: "病院", label: "病院", icon: IconStethoscope, color: "red" },
+  { key: "その他", label: "その他", icon: IconDots, color: "gray" },
 ];
 
-/* ====== カテゴリ特化パーサー ====== */
+function getCategoryDef(key: StepCategory): CategoryDef {
+  return categoryDefs.find((c) => c.key === key) ?? categoryDefs[categoryDefs.length - 1];
+}
 
-type ParsedField = { label: string; value: string };
+/* ====== カテゴリ自動判定 ====== */
 
-function parseByCategory(text: string, category: StepCategory): { title: string; time: string; detail: string; confNumber: string; fields: ParsedField[] } {
-  const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
-  const allText = lines.join(" ");
-  const fields: ParsedField[] = [];
-  let title = "";
-  let time = "";
-  let detail = "";
-  let confNumber = "";
+function detectCategory(text: string): StepCategory {
+  const t = text.toLowerCase();
+  if (/NH|JL|ANA|JAL|flight|搭乗|boarding|航空|便名|departure|arrival|gate/i.test(t)) return "飛行機";
+  if (/新幹線|のぞみ|ひかり|こだま|はやぶさ|かがやき|特急|号車|jr|列車/i.test(t)) return "列車";
+  if (/hotel|ホテル|check.?in|check.?out|宿泊|旅館|inn|チェックイン/i.test(t)) return "宿泊";
+  if (/病院|クリニック|医院|診療|診察|内科|外科|歯科|眼科|皮膚科|処方/i.test(t)) return "病院";
+  if (/会議|商談|meeting|打ち合わせ|会議室|アポイント/i.test(t)) return "商談";
+  if (/レストラン|食事|ランチ|ディナー|予約.*名|restaurant|cafe|カフェ/i.test(t)) return "食事";
+  if (/バス|bus|乗車券|高速バス/i.test(t)) return "バス";
+  if (/チケット|ticket|入場|座席|アリーナ|ホール|劇場|開演|開場/i.test(t)) return "観光";
+  return "その他";
+}
 
-  // 共通: 時刻
-  const timeMatch = allText.match(/(\d{1,2}:\d{2})/);
-  if (timeMatch) time = timeMatch[1];
+/* ====== カテゴリ別フィールド定義 ====== */
 
-  // 共通: 確認番号
+type FormField = {
+  key: string;
+  label: string;
+  placeholder: string;
+};
+
+const categoryFields: Record<string, FormField[]> = {
+  飛行機: [
+    { key: "flightNo", label: "便名", placeholder: "NH225" },
+    { key: "departure", label: "出発空港", placeholder: "NRT" },
+    { key: "departureTime", label: "出発時刻", placeholder: "10:00" },
+    { key: "arrival", label: "到着空港", placeholder: "KIX" },
+    { key: "arrivalTime", label: "到着時刻", placeholder: "12:00" },
+    { key: "gate", label: "ゲート", placeholder: "A12" },
+    { key: "seat", label: "座席", placeholder: "32A" },
+    { key: "confNumber", label: "確認番号", placeholder: "ABC123" },
+  ],
+  列車: [
+    { key: "trainName", label: "列車名", placeholder: "のぞみ 225号" },
+    { key: "fromStation", label: "乗車駅", placeholder: "東京" },
+    { key: "departureTime", label: "発車時刻", placeholder: "10:00" },
+    { key: "toStation", label: "降車駅", placeholder: "新大阪" },
+    { key: "arrivalTime", label: "到着時刻", placeholder: "12:30" },
+    { key: "car", label: "号車", placeholder: "7号車" },
+    { key: "seat", label: "座席", placeholder: "A席" },
+    { key: "confNumber", label: "確認番号", placeholder: "TK-882541" },
+  ],
+  宿泊: [
+    { key: "hotelName", label: "施設名", placeholder: "ホテル大阪ベイ" },
+    { key: "checkin", label: "チェックイン", placeholder: "18:00" },
+    { key: "checkout", label: "チェックアウト", placeholder: "11:00" },
+    { key: "roomType", label: "部屋タイプ", placeholder: "シングル 禁煙" },
+    { key: "confNumber", label: "確認番号", placeholder: "H-283901" },
+  ],
+  病院: [
+    { key: "hospitalName", label: "病院名", placeholder: "◯◯病院" },
+    { key: "department", label: "診療科", placeholder: "内科" },
+    { key: "date", label: "予約日", placeholder: "4月15日" },
+    { key: "time", label: "予約時刻", placeholder: "10:00" },
+    { key: "cardNo", label: "診察券番号", placeholder: "12345" },
+  ],
+  商談: [
+    { key: "company", label: "相手先", placeholder: "ABC株式会社" },
+    { key: "location", label: "場所", placeholder: "グランフロント大阪" },
+    { key: "startTime", label: "開始時刻", placeholder: "14:00" },
+    { key: "endTime", label: "終了時刻", placeholder: "16:00" },
+    { key: "confNumber", label: "確認番号", placeholder: "" },
+  ],
+  食事: [
+    { key: "shopName", label: "店名", placeholder: "レストラン◯◯" },
+    { key: "time", label: "予約時刻", placeholder: "19:00" },
+    { key: "guests", label: "人数", placeholder: "2名" },
+    { key: "confNumber", label: "確認番号", placeholder: "" },
+  ],
+  バス: [
+    { key: "routeName", label: "路線名", placeholder: "◯◯バス" },
+    { key: "departureTime", label: "発車時刻", placeholder: "10:00" },
+    { key: "arrivalTime", label: "到着時刻", placeholder: "12:00" },
+    { key: "confNumber", label: "確認番号", placeholder: "" },
+  ],
+  観光: [
+    { key: "eventName", label: "イベント名", placeholder: "◯◯コンサート" },
+    { key: "venue", label: "会場", placeholder: "東京ドーム" },
+    { key: "date", label: "日付", placeholder: "4月15日" },
+    { key: "time", label: "開演時刻", placeholder: "18:00" },
+    { key: "seat", label: "座席", placeholder: "A列 12番" },
+    { key: "confNumber", label: "確認番号", placeholder: "" },
+  ],
+  その他: [
+    { key: "title", label: "タイトル", placeholder: "内容" },
+    { key: "time", label: "時刻", placeholder: "10:00" },
+    { key: "detail", label: "詳細", placeholder: "" },
+    { key: "confNumber", label: "確認番号", placeholder: "" },
+  ],
+};
+
+/* ====== OCRテキストからフィールド値を自動抽出 ====== */
+
+function extractFields(text: string, category: StepCategory): Record<string, string> {
+  const values: Record<string, string> = {};
+  const allText = text.replace(/\n/g, " ");
+
+  const times = allText.match(/(\d{1,2}:\d{2})/g) || [];
   const confMatch = allText.match(/([A-Z]{1,6}[-]?\d{3,})/i);
-  if (confMatch) confNumber = confMatch[1];
 
   switch (category) {
     case "飛行機": {
-      // 便名: NH123, JL456, ANA1234 等
-      const flightMatch = allText.match(/(NH|JL|ANA|JAL|UA|DL|AA|SQ|CX|TG|OZ|KE|CI|BR|HX|MM|JW|BC|GK|7G|APJ|SKY|SNA|ADO|SFJ|FDA|IBX|ORC|AMX|RAC)[\s-]?(\d{1,4})/i);
-      if (flightMatch) {
-        title = `${flightMatch[1].toUpperCase()}${flightMatch[2]}便`;
-        fields.push({ label: "便名", value: `${flightMatch[1].toUpperCase()} ${flightMatch[2]}` });
-      }
-
-      // 空港コード: NRT, HND, KIX 等
-      const airportCodes = allText.match(/\b([A-Z]{3})\b/g);
-      if (airportCodes && airportCodes.length >= 2) {
-        detail = `${airportCodes[0]} → ${airportCodes[1]}`;
-        fields.push({ label: "区間", value: detail });
-      }
-
-      // 出発・到着時刻
-      const times = allText.match(/(\d{1,2}:\d{2})/g);
-      if (times && times.length >= 2) {
-        time = times[0];
-        fields.push({ label: "出発", value: times[0] });
-        fields.push({ label: "到着", value: times[1] });
-      }
-
-      // 座席
-      const seatMatch = allText.match(/(\d{1,3}[A-K])\b/);
-      if (seatMatch) fields.push({ label: "座席", value: seatMatch[1] });
-
-      // ゲート
-      const gateMatch = allText.match(/gate[\s:]*([A-Z]?\d{1,3})/i);
-      if (gateMatch) fields.push({ label: "ゲート", value: gateMatch[1] });
-
-      if (!title) title = "フライト情報";
+      const flight = allText.match(/(NH|JL|ANA|JAL|UA|DL|AA|SQ|CX|MM|GK|BC|SKY)[\s-]?(\d{1,4})/i);
+      if (flight) values.flightNo = `${flight[1].toUpperCase()} ${flight[2]}`;
+      const airports = allText.match(/\b([A-Z]{3})\b/g);
+      if (airports?.[0]) values.departure = airports[0];
+      if (airports?.[1]) values.arrival = airports[1];
+      if (times[0]) values.departureTime = times[0];
+      if (times[1]) values.arrivalTime = times[1];
+      const gate = allText.match(/gate[\s:]*([A-Z]?\d{1,3})/i);
+      if (gate) values.gate = gate[1];
+      const seat = allText.match(/(\d{1,3}[A-K])\b/);
+      if (seat) values.seat = seat[1];
+      if (confMatch) values.confNumber = confMatch[1];
       break;
     }
-
     case "列車": {
-      // 列車名: のぞみ225号, ひかり503号 等
-      const trainMatch = allText.match(/(のぞみ|ひかり|こだま|みずほ|さくら|はやぶさ|かがやき|つばさ|やまびこ|とき|あさま|しらさぎ|サンダーバード|はくたか)\s*(\d{1,4})\s*号?/);
-      if (trainMatch) {
-        title = `${trainMatch[1]} ${trainMatch[2]}号`;
-        fields.push({ label: "列車", value: title });
-      }
-
-      // 駅名
-      const stationMatch = allText.match(/(東京|品川|新横浜|名古屋|京都|新大阪|博多|新神戸|広島|岡山|仙台|盛岡|新青森|新函館北斗|金沢|長野|上野|大宮|小田原|熱海|三島|静岡|浜松|豊橋|米原|新白河|郡山|福島|一ノ関|北上|新花巻|水沢江刺|くりこま高原|古川|上田|佐久平|軽井沢|高崎|越後湯沢|長岡|燕三条|新潟)/g);
-      if (stationMatch && stationMatch.length >= 2) {
-        const unique = [...new Set(stationMatch)];
-        if (unique.length >= 2) {
-          detail = `${unique[0]} → ${unique[1]}`;
-          fields.push({ label: "区間", value: detail });
-        }
-      }
-
-      // 号車・座席
-      const carMatch = allText.match(/(\d{1,2})\s*号車/);
-      if (carMatch) fields.push({ label: "号車", value: `${carMatch[1]}号車` });
-
-      const seatMatch = allText.match(/(\d{1,2})\s*[番]?\s*([A-E])\s*席?/);
-      if (seatMatch) fields.push({ label: "座席", value: `${seatMatch[1]}番${seatMatch[2]}席` });
-
-      // 発着時刻
-      const times = allText.match(/(\d{1,2}:\d{2})/g);
-      if (times && times.length >= 2) {
-        time = times[0];
-        fields.push({ label: "発車", value: times[0] });
-        fields.push({ label: "到着", value: times[1] });
-      }
-
-      if (!title) title = "列車情報";
+      const train = allText.match(/(のぞみ|ひかり|こだま|みずほ|さくら|はやぶさ|かがやき|つばさ|やまびこ|とき|あさま)\s*(\d{1,4})\s*号?/);
+      if (train) values.trainName = `${train[1]} ${train[2]}号`;
+      const stations = allText.match(/(東京|品川|新横浜|名古屋|京都|新大阪|博多|広島|仙台|金沢|新潟|大宮|上野|岡山|新神戸)/g);
+      if (stations?.[0]) values.fromStation = stations[0];
+      if (stations?.[1]) values.toStation = stations[1];
+      if (times[0]) values.departureTime = times[0];
+      if (times[1]) values.arrivalTime = times[1];
+      const car = allText.match(/(\d{1,2})\s*号車/);
+      if (car) values.car = `${car[1]}号車`;
+      const seat = allText.match(/(\d{1,2})\s*番?\s*([A-E])\s*席?/);
+      if (seat) values.seat = `${seat[1]}番${seat[2]}席`;
+      if (confMatch) values.confNumber = confMatch[1];
       break;
     }
-
     case "宿泊": {
-      // ホテル名
-      const hotelMatch = allText.match(/(ホテル[^\s,、。]{2,15}|[^\s,、。]{2,10}(ホテル|inn|hotel|旅館))/i);
-      if (hotelMatch) {
-        title = hotelMatch[0];
-        fields.push({ label: "施設名", value: title });
-      }
-
-      // チェックイン/アウト
-      const checkinMatch = allText.match(/(?:check.?in|チェックイン)[:\s]*(\d{1,2}:\d{2}|\d{1,2}月\d{1,2}日)/i);
-      if (checkinMatch) fields.push({ label: "チェックイン", value: checkinMatch[1] });
-
-      const checkoutMatch = allText.match(/(?:check.?out|チェックアウト)[:\s]*(\d{1,2}:\d{2}|\d{1,2}月\d{1,2}日)/i);
-      if (checkoutMatch) fields.push({ label: "チェックアウト", value: checkoutMatch[1] });
-
-      // 部屋タイプ
-      const roomMatch = allText.match(/(シングル|ダブル|ツイン|スイート|デラックス|スタンダード|禁煙|喫煙)/);
-      if (roomMatch) fields.push({ label: "部屋", value: roomMatch[0] });
-
-      // 宿泊日
-      const dateMatch = allText.match(/(\d{1,2}月\d{1,2}日)/);
-      if (dateMatch) {
-        time = dateMatch[1];
-        fields.push({ label: "日付", value: dateMatch[1] });
-      }
-
-      if (!title) title = "宿泊情報";
+      const hotel = allText.match(/(ホテル[^\s,、。]{2,15}|[^\s,、。]{2,10}(ホテル|inn|hotel|旅館))/i);
+      if (hotel) values.hotelName = hotel[0];
+      const ci = allText.match(/(?:check.?in|チェックイン)[:\s]*(\d{1,2}:\d{2})/i);
+      if (ci) values.checkin = ci[1];
+      const co = allText.match(/(?:check.?out|チェックアウト)[:\s]*(\d{1,2}:\d{2})/i);
+      if (co) values.checkout = co[1];
+      const room = allText.match(/(シングル|ダブル|ツイン|スイート|デラックス|禁煙|喫煙)/);
+      if (room) values.roomType = room[0];
+      if (confMatch) values.confNumber = confMatch[1];
       break;
     }
-
-    case "商談": {
-      // 会社名
-      const companyMatch = allText.match(/([^\s]{2,10}(株式会社|(株)|社|Corp|Inc))/);
-      if (companyMatch) {
-        title = companyMatch[0];
-        fields.push({ label: "相手先", value: title });
-      }
-
-      // 場所
-      const placeMatch = allText.match(/([\u4e00-\u9faf]{2,6}(ビル|センター|ホール|会議室))/);
-      if (placeMatch) {
-        detail = placeMatch[0];
-        fields.push({ label: "場所", value: detail });
-      }
-
-      // 時刻
-      const times = allText.match(/(\d{1,2}:\d{2})/g);
-      if (times) {
-        time = times[0];
-        if (times.length >= 2) {
-          fields.push({ label: "時間", value: `${times[0]} - ${times[1]}` });
-        }
-      }
-
-      if (!title) title = "商談・会議";
-      break;
-    }
-
-    case "食事": {
-      // 店名
-      const shopMatch = allText.match(/(レストラン[^\s,]{2,10}|[^\s,]{2,10}(レストラン|食堂|カフェ|Cafe|ダイニング))/i);
-      if (shopMatch) {
-        title = shopMatch[0];
-        fields.push({ label: "店名", value: title });
-      }
-
-      // 予約時刻
-      if (timeMatch) fields.push({ label: "予約時刻", value: timeMatch[1] });
-
-      // 人数
-      const guestMatch = allText.match(/(\d{1,2})\s*名/);
-      if (guestMatch) fields.push({ label: "人数", value: `${guestMatch[1]}名` });
-
-      if (!title) title = "食事予約";
-      break;
-    }
-
-    case "バス": {
-      // バス会社・路線名
-      const busMatch = allText.match(/([\u4e00-\u9faf]{2,8}(バス|交通|ライナー))/);
-      if (busMatch) {
-        title = busMatch[0];
-        fields.push({ label: "路線", value: title });
-      }
-
-      const times = allText.match(/(\d{1,2}:\d{2})/g);
-      if (times && times.length >= 2) {
-        time = times[0];
-        fields.push({ label: "発車", value: times[0] });
-        fields.push({ label: "到着", value: times[1] });
-      }
-
-      if (!title) title = "バス情報";
-      break;
-    }
-
     case "病院": {
-      // 病院: 病院名、診療科、予約日時、診察券番号
-      const hospitalMatch = allText.match(/([\u4e00-\u9faf]{2,10}(病院|クリニック|医院|診療所))/);
-      if (hospitalMatch) {
-        title = hospitalMatch[0];
-        fields.push({ label: "病院名", value: title });
-      }
-
-      const deptMatch = allText.match(/(内科|外科|眼科|歯科|皮膚科|整形外科|耳鼻科|小児科|産婦人科|泌尿器科|精神科|神経科|循環器|消化器|呼吸器)/);
-      if (deptMatch) fields.push({ label: "診療科", value: deptMatch[0] });
-
-      const dateMatch2 = allText.match(/(\d{1,2}月\d{1,2}日|\d{4}[年/.]\d{1,2}[月/.]\d{1,2}日?)/);
-      if (dateMatch2) fields.push({ label: "予約日", value: dateMatch2[1] });
-
-      if (timeMatch) fields.push({ label: "予約時刻", value: timeMatch[1] });
-
-      const cardMatch = allText.match(/(\d{4,10})/);
-      if (cardMatch) fields.push({ label: "診察券番号", value: cardMatch[1] });
-
-      if (!title) title = "病院予約";
+      const hosp = allText.match(/([\u4e00-\u9faf]{2,10}(病院|クリニック|医院|診療所))/);
+      if (hosp) values.hospitalName = hosp[0];
+      const dept = allText.match(/(内科|外科|眼科|歯科|皮膚科|整形外科|耳鼻科|小児科|産婦人科)/);
+      if (dept) values.department = dept[0];
+      const dateM = allText.match(/(\d{1,2}月\d{1,2}日)/);
+      if (dateM) values.date = dateM[1];
+      if (times[0]) values.time = times[0];
+      const card = allText.match(/(\d{4,10})/);
+      if (card) values.cardNo = card[1];
       break;
     }
-
+    case "商談": {
+      const comp = allText.match(/([^\s]{2,10}(株式会社|(株)|社))/);
+      if (comp) values.company = comp[0];
+      const loc = allText.match(/([\u4e00-\u9faf]{2,6}(ビル|センター|ホール|会議室))/);
+      if (loc) values.location = loc[0];
+      if (times[0]) values.startTime = times[0];
+      if (times[1]) values.endTime = times[1];
+      if (confMatch) values.confNumber = confMatch[1];
+      break;
+    }
+    case "食事": {
+      const shop = allText.match(/(レストラン[^\s,]{2,10}|[^\s,]{2,10}(レストラン|食堂|カフェ|ダイニング))/i);
+      if (shop) values.shopName = shop[0];
+      if (times[0]) values.time = times[0];
+      const guests = allText.match(/(\d{1,2})\s*名/);
+      if (guests) values.guests = `${guests[1]}名`;
+      if (confMatch) values.confNumber = confMatch[1];
+      break;
+    }
+    case "バス": {
+      const bus = allText.match(/([\u4e00-\u9faf]{2,8}(バス|交通|ライナー))/);
+      if (bus) values.routeName = bus[0];
+      if (times[0]) values.departureTime = times[0];
+      if (times[1]) values.arrivalTime = times[1];
+      if (confMatch) values.confNumber = confMatch[1];
+      break;
+    }
     case "観光": {
-      // チケット: イベント名、会場、日付、座席、番号
-      const eventMatch = allText.match(/([\u4e00-\u9faf\u3040-\u309f\u30a0-\u30ff]{3,20})/);
-      if (eventMatch) {
-        title = eventMatch[0];
-        fields.push({ label: "イベント", value: title });
-      }
-
-      const venueMatch = allText.match(/([\u4e00-\u9faf]{2,10}(ホール|アリーナ|スタジアム|ドーム|劇場|センター|会場|シアター))/);
-      if (venueMatch) {
-        detail = venueMatch[0];
-        fields.push({ label: "会場", value: detail });
-      }
-
-      const dateMatch = allText.match(/(\d{4}[年/.]\d{1,2}[月/.]\d{1,2}日?|\d{1,2}月\d{1,2}日)/);
-      if (dateMatch) fields.push({ label: "日付", value: dateMatch[1] });
-
-      const seatMatch = allText.match(/([\u4e00-\u9faf]?\d{1,3}\s*列\s*\d{1,3}\s*番|[A-Z]?\d{1,3}\s*番)/);
-      if (seatMatch) fields.push({ label: "座席", value: seatMatch[0] });
-
-      if (timeMatch) fields.push({ label: "開場/開演", value: timeMatch[1] });
-
-      if (!title) title = "チケット情報";
+      const venue = allText.match(/([\u4e00-\u9faf]{2,10}(ホール|アリーナ|スタジアム|ドーム|劇場|シアター|会場))/);
+      if (venue) values.venue = venue[0];
+      const dateM = allText.match(/(\d{1,2}月\d{1,2}日)/);
+      if (dateM) values.date = dateM[1];
+      if (times[0]) values.time = times[0];
+      const seat = allText.match(/([A-Z]?\d{1,3}\s*列\s*\d{1,3}\s*番|\d{1,3}\s*番)/);
+      if (seat) values.seat = seat[0];
+      if (confMatch) values.confNumber = confMatch[1];
+      // タイトルは最初の日本語テキスト
+      const ev = allText.match(/([\u4e00-\u9faf\u3040-\u309f\u30a0-\u30ff]{3,20})/);
+      if (ev) values.eventName = ev[0];
       break;
     }
-
     default: {
-      // その他: 全文から要点だけ
-      title = lines[0]?.substring(0, 30) || "スキャンデータ";
-      if (lines.length > 1) detail = lines.slice(1).join(" ").substring(0, 60);
+      const lines = text.split("\n").filter(Boolean);
+      if (lines[0]) values.title = lines[0].substring(0, 30);
+      if (times[0]) values.time = times[0];
+      if (lines.length > 1) values.detail = lines.slice(1).join(" ").substring(0, 60);
+      if (confMatch) values.confNumber = confMatch[1];
       break;
     }
   }
 
-  if (confNumber) fields.push({ label: "確認番号", value: confNumber });
-
-  return { title, time, detail, confNumber, fields };
+  return values;
 }
 
-/* ====== ステータス型 ====== */
+/* ====== フォーム値 → Step変換 ====== */
 
-type ScanStatus = "idle" | "processing" | "done" | "error";
+function formToStep(category: StepCategory, values: Record<string, string>): { title: string; time: string; detail: string; confNumber: string } {
+  switch (category) {
+    case "飛行機":
+      return {
+        title: values.flightNo || "フライト",
+        time: values.departureTime || "",
+        detail: [values.departure, values.arrival].filter(Boolean).join(" → "),
+        confNumber: values.confNumber || "",
+      };
+    case "列車":
+      return {
+        title: values.trainName || "列車",
+        time: values.departureTime || "",
+        detail: [values.fromStation, values.toStation].filter(Boolean).join(" → "),
+        confNumber: values.confNumber || "",
+      };
+    case "宿泊":
+      return {
+        title: values.hotelName || "宿泊",
+        time: values.checkin ? `Check-in ${values.checkin}` : "",
+        detail: values.roomType || "",
+        confNumber: values.confNumber || "",
+      };
+    case "病院":
+      return {
+        title: values.hospitalName || "病院",
+        time: values.time || "",
+        detail: [values.department, values.date].filter(Boolean).join(" / "),
+        confNumber: values.cardNo || "",
+      };
+    case "商談":
+      return {
+        title: values.company || "商談",
+        time: [values.startTime, values.endTime].filter(Boolean).join(" - "),
+        detail: values.location || "",
+        confNumber: values.confNumber || "",
+      };
+    case "食事":
+      return {
+        title: values.shopName || "食事",
+        time: values.time || "",
+        detail: values.guests || "",
+        confNumber: values.confNumber || "",
+      };
+    case "バス":
+      return {
+        title: values.routeName || "バス",
+        time: values.departureTime || "",
+        detail: "",
+        confNumber: values.confNumber || "",
+      };
+    case "観光":
+      return {
+        title: values.eventName || "チケット",
+        time: values.time || "",
+        detail: values.venue || "",
+        confNumber: values.confNumber || "",
+      };
+    default:
+      return {
+        title: values.title || "スキャンデータ",
+        time: values.time || "",
+        detail: values.detail || "",
+        confNumber: values.confNumber || "",
+      };
+  }
+}
 
 /* ====== コンポーネント ====== */
+
+type ScanStatus = "idle" | "processing" | "done" | "error";
 
 export default function ScanPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
-  const [selectedCategory, setSelectedCategory] = useState<ScanCategory | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [status, setStatus] = useState<ScanStatus>("idle");
+  const [detectedCategory, setDetectedCategory] = useState<StepCategory>("その他");
+  const [formValues, setFormValues] = useState<Record<string, string>>({});
   const [ocrText, setOcrText] = useState("");
-  const [parsedResult, setParsedResult] = useState<ReturnType<typeof parseByCategory> | null>(null);
   const [progress, setProgress] = useState(0);
 
-  const selectCategory = (cat: ScanCategory) => {
-    setSelectedCategory((prev) => (prev?.key === cat.key ? null : cat));
-  };
-
   const handleFile = async (file: File) => {
-    if (!selectedCategory) return;
     const url = URL.createObjectURL(file);
     setImageUrl(url);
     setStatus("processing");
     setProgress(0);
-    setOcrText("");
-    setParsedResult(null);
 
     try {
       const Tesseract = await import("tesseract.js");
@@ -340,7 +364,9 @@ export default function ScanPage() {
 
       const text = result.data.text;
       setOcrText(text);
-      setParsedResult(parseByCategory(text, selectedCategory.key));
+      const cat = detectCategory(text);
+      setDetectedCategory(cat);
+      setFormValues(extractFields(text, cat));
       setStatus("done");
     } catch {
       setStatus("error");
@@ -350,30 +376,45 @@ export default function ScanPage() {
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) handleFile(file);
-    // inputをリセットして同じファイルを再選択可能に
     e.target.value = "";
   };
 
-  const createStep = () => {
-    if (!parsedResult || !selectedCategory) return;
+  const updateField = (key: string, value: string) => {
+    setFormValues((prev) => ({ ...prev, [key]: value }));
+  };
 
+  const changeCategory = (cat: string | null) => {
+    if (!cat) return;
+    const newCat = cat as StepCategory;
+    setDetectedCategory(newCat);
+    // 既存値を保持しつつカテゴリ変更
+    setFormValues((prev) => {
+      const reExtracted = extractFields(ocrText, newCat);
+      // ユーザーが編集した値は上書きしない
+      return { ...reExtracted, ...prev };
+    });
+  };
+
+  const createStep = () => {
+    const stepData = formToStep(detectedCategory, formValues);
     const now = new Date().toISOString();
     const today = new Date().toISOString().split("T")[0];
     const step: Step = {
       id: generateId(),
-      category: selectedCategory.key,
-      title: parsedResult.title,
-      time: parsedResult.time,
-      detail: parsedResult.detail || undefined,
-      confNumber: parsedResult.confNumber || undefined,
+      category: detectedCategory,
+      title: stepData.title,
+      time: stepData.time,
+      detail: stepData.detail || undefined,
+      confNumber: stepData.confNumber || undefined,
       source: "撮影",
       status: "未開始",
       information: [],
     };
 
+    const catDef = getCategoryDef(detectedCategory);
     addJourney({
       id: generateId(),
-      title: `${selectedCategory.label} ${new Date().toLocaleDateString("ja-JP")}`,
+      title: `${catDef.label} ${new Date().toLocaleDateString("ja-JP")}`,
       startDate: today,
       endDate: today,
       steps: [step],
@@ -386,78 +427,39 @@ export default function ScanPage() {
   };
 
   const reset = () => {
-    setSelectedCategory(null);
     setImageUrl(null);
     setStatus("idle");
     setOcrText("");
-    setParsedResult(null);
+    setFormValues({});
     setProgress(0);
   };
 
-  const backToIdle = () => {
-    setImageUrl(null);
-    setStatus("idle");
-    setOcrText("");
-    setParsedResult(null);
-    setProgress(0);
-  };
-
-  const isActive = selectedCategory !== null;
+  const catDef = getCategoryDef(detectedCategory);
+  const fields = categoryFields[detectedCategory] || categoryFields["その他"];
 
   return (
     <>
-      <AppHeader
-        title="スキャン"
-        back={status !== "idle"}
-        backHref="/scan"
-        action={undefined}
-      />
+      <AppHeader title="スキャン" />
 
       <Box pb={110} px="md" pt="md">
-        {/* メイン画面: カテゴリ選択 + 撮影ボタン */}
+        {/* 初期画面: 撮影/アップロード */}
         {status === "idle" && (
-          <>
-            <Text fw={700} size="sm" mb={8}>
-              種類を選択
+          <Box className={classes.captureArea}>
+            <Box className={classes.iconWrap}>
+              <IconScan size={48} stroke={1.5} />
+            </Box>
+            <Text fw={700} size="lg" mt="md">
+              書類をスキャン
+            </Text>
+            <Text size="sm" c="dimmed" ta="center" mt={4} lh={1.6}>
+              撮影またはアップロードするだけで
+              <br />
+              種類を自動判定し、情報を読み取ります
             </Text>
 
-            <Box className={classes.categoryGrid}>
-              {scanCategories.map((cat) => {
-                const selected = selectedCategory?.key === cat.key;
-                return (
-                  <button
-                    key={cat.key}
-                    className={`${classes.categoryCard} ${selected ? classes.categorySelected : ""}`}
-                    onClick={() => selectCategory(cat)}
-                  >
-                    <Box className={`${classes.radio} ${selected ? classes.radioChecked : ""}`}>
-                      {selected && <Box className={classes.radioDot} />}
-                    </Box>
-                    <Box
-                      className={classes.categoryIcon}
-                      style={{
-                        background: selected
-                          ? `var(--mantine-color-${cat.color}-7)`
-                          : `var(--mantine-color-${cat.color}-0)`,
-                        color: selected
-                          ? "white"
-                          : `var(--mantine-color-${cat.color}-7)`,
-                      }}
-                    >
-                      <cat.icon size={20} />
-                    </Box>
-                    <Text fw={600} size="xs">
-                      {cat.label}
-                    </Text>
-                  </button>
-                );
-              })}
-            </Box>
-
-            <Box className={classes.buttons} style={{ marginTop: 20 }}>
+            <Box className={classes.buttons}>
               <button
                 className={classes.captureButton}
-                disabled={!isActive}
                 onClick={() => cameraInputRef.current?.click()}
               >
                 <IconCamera size={22} />
@@ -465,19 +467,16 @@ export default function ScanPage() {
               </button>
               <button
                 className={classes.uploadButton}
-                disabled={!isActive}
                 onClick={() => fileInputRef.current?.click()}
               >
-                <IconUpload size={22} />
-                画像を選択
+                <IconUpload size={20} />
+                ファイル・画像を選択
               </button>
             </Box>
 
-            {!isActive && (
-              <Text size="xs" c="dimmed" ta="center" mt={12}>
-                種類を選ぶと撮影・アップロードできます
-              </Text>
-            )}
+            <Text size="xs" c="dimmed" mt="md">
+              対応: フライト・鉄道・ホテル・病院・チケット 他
+            </Text>
 
             <input
               ref={cameraInputRef}
@@ -494,7 +493,7 @@ export default function ScanPage() {
               style={{ display: "none" }}
               onChange={onFileChange}
             />
-          </>
+          </Box>
         )}
 
         {/* OCR処理中 */}
@@ -507,7 +506,7 @@ export default function ScanPage() {
             <Box className={classes.processingOverlay}>
               <Loader size="md" color="white" />
               <Text size="sm" fw={600} c="white" mt="sm">
-                {selectedCategory?.label}の情報を読み取り中... {progress}%
+                読み取り中... {progress}%
               </Text>
               <Box className={classes.progressBar}>
                 <Box
@@ -519,70 +518,73 @@ export default function ScanPage() {
           </Box>
         )}
 
-        {/* ステップ4: 結果表示 */}
-        {status === "done" && parsedResult && selectedCategory && (
+        {/* 結果: カテゴリ別専用フォーム */}
+        {status === "done" && (
           <>
+            {/* 画像プレビュー */}
             {imageUrl && (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={imageUrl} alt="スキャン結果" className={classes.resultImage} />
             )}
 
-            <Box className={classes.resultHeader}>
+            {/* カテゴリ表示 + 変更 */}
+            <Box className={classes.categoryHeader}>
               <Box
-                className={classes.resultCategoryBadge}
+                className={classes.categoryBadge}
                 style={{
-                  background: `var(--mantine-color-${selectedCategory.color}-0)`,
-                  color: `var(--mantine-color-${selectedCategory.color}-7)`,
+                  background: `var(--mantine-color-${catDef.color}-0)`,
+                  color: `var(--mantine-color-${catDef.color}-7)`,
                 }}
               >
-                <selectedCategory.icon size={14} />
-                {selectedCategory.label}
+                <catDef.icon size={14} />
+                {catDef.label}
               </Box>
-              <Text fw={700} size="lg">
-                {parsedResult.title}
-              </Text>
+              <Select
+                size="xs"
+                variant="unstyled"
+                value={detectedCategory}
+                onChange={changeCategory}
+                data={categoryDefs.map((c) => ({ value: c.key, label: c.label }))}
+                styles={{ input: { color: "var(--mantine-color-gray-5)", fontSize: 12, textAlign: "right" as const } }}
+                rightSection={null}
+                allowDeselect={false}
+              />
             </Box>
 
-            {parsedResult.fields.length > 0 && (
-              <Box className={classes.fieldsCard}>
-                {parsedResult.fields.map((f, i) => (
-                  <Box key={i} className={classes.fieldRow}>
-                    <Text size="xs" c="dimmed">
-                      {f.label}
-                    </Text>
-                    <Text
-                      size="sm"
-                      fw={600}
-                      style={
-                        f.label === "確認番号"
-                          ? { fontFamily: "monospace", color: "var(--mantine-color-blue-7)" }
-                          : undefined
-                      }
-                    >
-                      {f.value}
-                    </Text>
-                  </Box>
-                ))}
-              </Box>
-            )}
-
-            <Text className={classes.sectionLabel}>OCR全文</Text>
-            <Box className={classes.ocrTextBox}>
-              <Text size="xs" style={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }} c="dimmed">
-                {ocrText || "テキストを検出できませんでした"}
-              </Text>
+            {/* 専用フォーム */}
+            <Box className={classes.formCard}>
+              {fields.map((field) => (
+                <Box key={field.key} className={classes.formRow}>
+                  <Text className={classes.formLabel}>{field.label}</Text>
+                  <TextInput
+                    classNames={{ input: classes.formInput }}
+                    variant="unstyled"
+                    placeholder={field.placeholder}
+                    value={formValues[field.key] || ""}
+                    onChange={(e) => updateField(field.key, e.currentTarget.value)}
+                  />
+                </Box>
+              ))}
             </Box>
 
+            {/* OCR全文 */}
+            <details className={classes.ocrDetails}>
+              <summary className={classes.ocrSummary}>OCR全文を表示</summary>
+              <Box className={classes.ocrTextBox}>
+                <Text size="xs" style={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }} c="dimmed">
+                  {ocrText || "テキストなし"}
+                </Text>
+              </Box>
+            </details>
+
+            {/* アクションボタン */}
             <Box className={classes.resultButtons}>
               <button className={classes.createButton} onClick={createStep}>
                 <IconCheck size={18} />
                 Journeyとして追加
               </button>
-              <button className={classes.retryButton} onClick={backToIdle}>
-                撮り直す
-              </button>
               <button className={classes.retryButton} onClick={reset}>
-                種類を変更
+                やり直す
               </button>
             </Box>
           </>
@@ -599,7 +601,7 @@ export default function ScanPage() {
               画像が不鮮明か、対応していない形式です。
             </Text>
             <Box className={classes.buttons} style={{ marginTop: 24 }}>
-              <button className={classes.captureButton} onClick={backToIdle}>
+              <button className={classes.captureButton} onClick={reset}>
                 やり直す
               </button>
             </Box>

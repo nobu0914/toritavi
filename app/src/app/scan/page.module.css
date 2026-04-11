@@ -1,71 +1,20 @@
-.categoryGrid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-}
-
-.categoryCard {
-  background: white;
-  border: 1px solid var(--mantine-color-gray-2);
-  border-radius: 8px;
-  padding: 10px 8px 10px;
-  text-align: center;
-  cursor: pointer;
-  font-family: inherit;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  transition: border-color 0.15s, box-shadow 0.15s;
-  position: relative;
-}
-
-.radio {
-  position: absolute;
-  top: 6px;
-  left: 6px;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  border: 2px solid var(--mantine-color-gray-3);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: border-color 0.15s;
-}
-
-.radioChecked {
-  border-color: var(--mantine-color-blue-7);
-}
-
-.radioDot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--mantine-color-blue-7);
-}
-
-.categorySelected {
-  border-color: var(--mantine-color-blue-7);
-  box-shadow: 0 0 0 1px var(--mantine-color-blue-7);
-}
-
-.categoryIcon {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.15s, color 0.15s;
-}
-
 .captureArea {
   display: flex;
   flex-direction: column;
   align-items: center;
   padding: 32px 24px;
   text-align: center;
+}
+
+.iconWrap {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: var(--mantine-color-blue-0);
+  color: var(--mantine-color-blue-7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .buttons {
@@ -90,7 +39,6 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  transition: opacity 0.15s;
 }
 
 .captureButton:disabled {
@@ -105,34 +53,19 @@
   border: 1px solid var(--mantine-color-gray-3);
   background: white;
   color: var(--mantine-color-gray-7);
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   font-family: inherit;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  transition: opacity 0.15s;
+  gap: 6px;
 }
 
 .uploadButton:disabled {
   opacity: 0.35;
   cursor: not-allowed;
-}
-
-.backLink {
-  margin-top: 20px;
-  background: none;
-  border: none;
-  color: var(--mantine-color-gray-5);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  font-family: inherit;
-  display: flex;
-  align-items: center;
-  gap: 4px;
 }
 
 .processingArea {
@@ -182,82 +115,75 @@
   border: 1px solid var(--mantine-color-gray-2);
 }
 
-.resultHeader {
+.categoryHeader {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  align-items: center;
+  justify-content: space-between;
   margin-bottom: 12px;
 }
 
-.resultCategoryBadge {
+.categoryBadge {
   display: inline-flex;
-  align-self: flex-start;
   align-items: center;
   gap: 4px;
-  padding: 3px 10px;
+  padding: 4px 12px;
   border-radius: 6px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
 }
 
-.fieldsCard {
+.formCard {
   background: white;
   border: 1px solid var(--mantine-color-gray-2);
   border-radius: 8px;
   overflow: hidden;
 }
 
-.fieldRow {
+.formRow {
   padding: 10px 14px;
   border-bottom: 1px solid var(--mantine-color-gray-1);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
 }
 
-.fieldRow:last-child {
+.formRow:last-child {
   border-bottom: none;
 }
 
-.sectionLabel {
+.formLabel {
   font-size: 11px;
-  font-weight: 700;
-  color: var(--mantine-color-gray-6);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  padding: 16px 0 8px;
+  font-weight: 600;
+  color: var(--mantine-color-gray-5);
+  margin-bottom: 2px;
+}
+
+.formInput {
+  border: none;
+  background: transparent;
+  padding: 4px 0;
+  font-size: 15px;
+  color: var(--mantine-color-gray-9);
+  font-weight: 600;
+}
+
+.ocrDetails {
+  margin-top: 16px;
+}
+
+.ocrSummary {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--mantine-color-gray-5);
+  cursor: pointer;
+  padding: 4px 0;
 }
 
 .ocrTextBox {
   background: white;
   border: 1px solid var(--mantine-color-gray-2);
   border-radius: 8px;
-  padding: 14px;
-  max-height: 160px;
+  padding: 12px;
+  margin-top: 8px;
+  max-height: 140px;
   overflow-y: auto;
-}
-
-.stepCard {
-  background: white;
-  border: 1px solid var(--mantine-color-gray-2);
-  border-radius: 8px;
-  padding: 12px 14px;
-  margin-bottom: 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.stepBadge {
-  display: inline-flex;
-  align-self: flex-start;
-  padding: 2px 8px;
-  border-radius: 4px;
-  background: var(--mantine-color-blue-0);
-  color: var(--mantine-color-blue-7);
-  font-size: 11px;
-  font-weight: 700;
-  margin-bottom: 2px;
 }
 
 .resultButtons {
