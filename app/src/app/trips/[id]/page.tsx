@@ -13,11 +13,9 @@ import {
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import {
-  IconCamera,
   IconCheck,
   IconDotsVertical,
   IconEdit,
-  IconUpload,
   IconInfoCircle,
   IconPlayerPlay,
   IconTrash,
@@ -368,18 +366,19 @@ export default function TripDetailPage() {
                 : "";
             return (
               <Box key={step.id} className={classes.timelineItem}>
-                {/* 時間ラベル（上段・全幅） */}
-                <Box className={classes.timelineTime}>
+                {/* 時間行: ●  時間 */}
+                <Box className={classes.timelineTimeRow}>
+                  <Box className={`${classes.timelineDot} ${dotClass}`} />
                   <Text className={classes.timelineTimeText}>
                     {step.time?.match(/\d{1,2}:\d{2}/)?.[0] || "--:--"}
                   </Text>
                 </Box>
 
-                {/* レール（左カラム） */}
-                <Box className={classes.timelineRail}>
-                  <Box className={`${classes.timelineDot} ${dotClass}`} />
-                  <Box className={`${classes.timelineLine} ${lineClass}`} />
-                </Box>
+                {/* カード行: 線 | カード */}
+                <Box className={classes.timelineCardRow}>
+                  <Box className={classes.timelineRail}>
+                    <Box className={`${classes.timelineLine} ${lineClass}`} />
+                  </Box>
                 <Box
                   className={`${classes.timelineCard} ${isNext ? classes.timelineCardActive : ""}`}
                   onClick={() => openEdit(iconIndex)}
@@ -396,38 +395,6 @@ export default function TripDetailPage() {
                     )}
                     {step.confNumber && (
                       <Text className={classes.timelineConf}>Conf# {step.confNumber}</Text>
-                    )}
-                    {(step.source === "撮影" || step.source === "アップロード") && (
-                      <Box className={classes.timelinePreview}>
-                        <Box className={classes.timelinePreviewThumb}>
-                          <Box className={classes.timelinePreviewTop}>
-                            {step.source === "撮影" ? <IconCamera size={12} /> : <IconUpload size={12} />}
-                            <Text span className={classes.timelinePreviewMeta}>
-                              {step.source === "撮影" ? "IMG_2404" : "ticket.pdf"}
-                            </Text>
-                          </Box>
-                          <Box className={classes.timelinePreviewPaper}>
-                            <Box className={classes.timelinePreviewLineShort} />
-                            <Box className={classes.timelinePreviewLineLong} />
-                            <Box className={classes.timelinePreviewLineLong} />
-                          </Box>
-                        </Box>
-                        {step.source === "アップロード" && (
-                          <Box className={classes.timelinePreviewThumb}>
-                            <Box className={classes.timelinePreviewTop}>
-                              <IconUpload size={12} />
-                              <Text span className={classes.timelinePreviewMeta}>
-                                page-2.pdf
-                              </Text>
-                            </Box>
-                            <Box className={classes.timelinePreviewPaper}>
-                              <Box className={classes.timelinePreviewLineShort} />
-                              <Box className={classes.timelinePreviewLineLong} />
-                              <Box className={classes.timelinePreviewStamp}>PDF</Box>
-                            </Box>
-                          </Box>
-                        )}
-                      </Box>
                     )}
                   </Box>
                   <Stack gap={6} align="flex-end">
@@ -506,6 +473,7 @@ export default function TripDetailPage() {
                       {isNext && !isDone ? "次" : step.status}
                     </Box>
                   </Stack>
+                </Box>
                 </Box>
               </Box>
             );

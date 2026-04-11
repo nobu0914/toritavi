@@ -46,34 +46,22 @@
 }
 
 .timelineItem {
-  display: grid;
-  grid-template-columns: 32px 1fr;
-  grid-template-rows: auto auto;
+  display: flex;
+  flex-direction: column;
 }
 
-/* 時間ラベル: Rail左 + カード上 */
-.timelineTime {
-  grid-column: 1 / -1;
+/* 時間行: ● 時間 */
+.timelineTimeRow {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 12px 0 6px 4px;
+  gap: 10px;
+  padding: 8px 0 0;
 }
 
 .timelineTimeText {
   font-size: 13px;
   font-weight: 700;
   color: var(--mantine-color-gray-7);
-}
-
-/* Rail: 左カラムにドット＋線 */
-.timelineRail {
-  grid-column: 1;
-  grid-row: 2;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  position: relative;
 }
 
 .timelineDot {
@@ -85,7 +73,7 @@
   flex-shrink: 0;
   position: relative;
   z-index: 1;
-  margin-top: 12px;
+  margin-left: 4px;
 }
 
 .timelineDotDone {
@@ -99,11 +87,22 @@
   box-shadow: 0 0 0 4px rgba(28, 126, 214, 0.15);
 }
 
+/* カード行: 線 | カード */
+.timelineCardRow {
+  display: flex;
+  align-items: stretch;
+}
+
+.timelineRail {
+  width: 20px;
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+}
+
 .timelineLine {
-  flex: 1;
   width: 2px;
   background: var(--mantine-color-gray-3);
-  min-height: 8px;
 }
 
 .timelineLineDone {
@@ -118,15 +117,14 @@
   background: transparent;
 }
 
-/* カード: Rail の右 */
+/* カード */
 .timelineCard {
-  grid-column: 2;
-  grid-row: 2;
+  flex: 1;
   background: white;
   border: 1px solid var(--mantine-color-gray-2);
   border-radius: 8px;
   padding: 10px 12px;
-  margin: 0 0 0 8px;
+  margin: 6px 0 6px 6px;
   cursor: pointer;
   display: flex;
   gap: 10px;
@@ -184,75 +182,6 @@
   font-weight: 600;
   margin-top: 3px;
   font-family: monospace;
-}
-
-.timelinePreview {
-  margin-top: 10px;
-  display: flex;
-  gap: 6px;
-}
-
-.timelinePreviewThumb {
-  width: 56px;
-  height: 56px;
-  border-radius: 6px;
-  background: var(--mantine-color-gray-1);
-  border: 1px solid var(--mantine-color-gray-2);
-  color: var(--mantine-color-gray-5);
-  padding: 5px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.timelinePreviewTop {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  color: var(--mantine-color-gray-6);
-}
-
-.timelinePreviewMeta {
-  font-size: 8px;
-  font-weight: 700;
-  line-height: 1;
-}
-
-.timelinePreviewPaper {
-  flex: 1;
-  border-radius: 4px;
-  background: white;
-  border: 1px solid var(--mantine-color-gray-2);
-  padding: 5px 4px;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.timelinePreviewLineShort,
-.timelinePreviewLineLong {
-  height: 3px;
-  border-radius: 999px;
-  background: var(--mantine-color-gray-3);
-}
-
-.timelinePreviewLineShort {
-  width: 55%;
-}
-
-.timelinePreviewLineLong {
-  width: 100%;
-}
-
-.timelinePreviewStamp {
-  margin-top: auto;
-  align-self: flex-start;
-  font-size: 7px;
-  font-weight: 800;
-  color: var(--mantine-color-red-6);
-  background: rgba(250, 82, 82, 0.1);
-  border-radius: 999px;
-  padding: 1px 4px;
 }
 
 .timelineBadge {
