@@ -17,6 +17,8 @@ import {
   IconCheck,
   IconAlertCircle,
   IconChevronDown,
+  IconChevronLeft,
+  IconChevronRight,
   IconDragDrop,
   IconClipboardText,
 } from "@tabler/icons-react";
@@ -343,6 +345,8 @@ export default function ScanPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [pageUrls, setPageUrls] = useState<string[]>([]);
+  const [currentPage, setCurrentPage] = useState(0);
   const [status, setStatus] = useState<ScanStatus>("idle");
   const [detectedCategory, setDetectedCategory] = useState<StepCategory>("その他");
   const [formValues, setFormValues] = useState<Record<string, string>>({});
@@ -355,49 +359,66 @@ export default function ScanPage() {
   const [dragging, setDragging] = useState(false);
   const [inputSource, setInputSource] = useState<"撮影" | "アップロード" | "メール">("撮影");
 
-  const pdfToImage = async (file: File): Promise<Blob> => {
+  const pdfToImages = async (file: File): Promise<Blob[]> => {
     const pdfjsLib = await import("pdfjs-dist");
     pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
     const arrayBuffer = await file.arrayBuffer();
-    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
-    const pdf = await loadingTask.promise;
-    const page = await pdf.getPage(1);
-    const scale = 2;
-    const viewport = page.getViewport({ scale });
-    const canvas = document.createElement("canvas");
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
-    const ctx = canvas.getContext("2d")!;
-    await page.render({ canvas, canvasContext: ctx, viewport }).promise;
-    return new Promise((resolve) => canvas.toBlob((b) => resolve(b!), "image/png"));
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    const blobs: Blob[] = [];
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const scale = 2;
+      const viewport = page.getViewport({ scale });
+      const canvas = document.createElement("canvas");
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      const ctx = canvas.getContext("2d")!;
+      await page.render({ canvas, canvasContext: ctx, viewport }).promise;
+      const blob = await new Promise<Blob>((resolve) =>
+        canvas.toBlob((b) => resolve(b!), "image/png")
+      );
+      blobs.push(blob);
+    }
+    return blobs;
   };
 
   const handleFile = async (file: File) => {
     setStatus("processing");
     setProgress(0);
+    setCurrentPage(0);
 
     try {
-      let ocrTarget: File | Blob = file;
+      let ocrTargets: (File | Blob)[] = [];
 
-      // PDFの場合は画像に変換
       if (file.type === "application/pdf") {
-        const imageBlob = await pdfToImage(file);
-        ocrTarget = imageBlob;
-        setImageUrl(URL.createObjectURL(imageBlob));
+        const imageBlobs = await pdfToImages(file);
+        const urls = imageBlobs.map((b) => URL.createObjectURL(b));
+        setPageUrls(urls);
+        setImageUrl(urls[0]);
+        ocrTargets = imageBlobs;
       } else {
-        setImageUrl(URL.createObjectURL(file));
+        const url = URL.createObjectURL(file);
+        setImageUrl(url);
+        setPageUrls([url]);
+        ocrTargets = [file];
       }
 
       const Tesseract = await import("tesseract.js");
-      const result = await Tesseract.recognize(ocrTarget, "jpn+eng", {
-        logger: (m) => {
-          if (m.status === "recognizing text" && typeof m.progress === "number") {
-            setProgress(Math.round(m.progress * 100));
-          }
-        },
-      });
+      const allTexts: string[] = [];
 
-      const text = result.data.text;
+      for (let i = 0; i < ocrTargets.length; i++) {
+        const result = await Tesseract.recognize(ocrTargets[i], "jpn+eng", {
+          logger: (m) => {
+            if (m.status === "recognizing text" && typeof m.progress === "number") {
+              const pageProgress = (i + m.progress) / ocrTargets.length;
+              setProgress(Math.round(pageProgress * 100));
+            }
+          },
+        });
+        allTexts.push(result.data.text);
+      }
+
+      const text = allTexts.join("\n");
       setOcrText(text);
       const cat = detectCategory(text);
       setDetectedCategory(cat);
@@ -522,6 +543,8 @@ export default function ScanPage() {
 
   const reset = () => {
     setImageUrl(null);
+    setPageUrls([]);
+    setCurrentPage(0);
     setStatus("idle");
     setOcrText("");
     setFormValues({});
@@ -675,10 +698,39 @@ export default function ScanPage() {
         {status === "done" && (
           <>
             {/* スキャン元プレビュー */}
-            {imageUrl && (
+            {pageUrls.length > 0 && (
               <Box className={classes.previewCard}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={imageUrl} alt="スキャン元" className={classes.previewThumb} />
+                <Box className={classes.previewSlider}>
+                  {pageUrls.length > 1 && (
+                    <button
+                      className={classes.previewArrow}
+                      onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
+                      disabled={currentPage === 0}
+                    >
+                      <IconChevronLeft size={20} />
+                    </button>
+                  )}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={pageUrls[currentPage]}
+                    alt={`ページ ${currentPage + 1}`}
+                    className={classes.previewThumb}
+                  />
+                  {pageUrls.length > 1 && (
+                    <button
+                      className={classes.previewArrow}
+                      onClick={() => setCurrentPage((p) => Math.min(pageUrls.length - 1, p + 1))}
+                      disabled={currentPage === pageUrls.length - 1}
+                    >
+                      <IconChevronRight size={20} />
+                    </button>
+                  )}
+                </Box>
+                {pageUrls.length > 1 && (
+                  <Text size="xs" c="dimmed" ta="center" mt={6}>
+                    {currentPage + 1} / {pageUrls.length} ページ
+                  </Text>
+                )}
               </Box>
             )}
 
