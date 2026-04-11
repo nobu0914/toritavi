@@ -9,23 +9,6 @@
   background: var(--mantine-color-gray-0);
   max-height: min(88vh, 820px);
   overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(134, 142, 150, 0.75) transparent;
-}
-
-.modalBody::-webkit-scrollbar {
-  width: 8px;
-}
-
-.modalBody::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.modalBody::-webkit-scrollbar-thumb {
-  background: rgba(134, 142, 150, 0.7);
-  border-radius: 999px;
-  border: 2px solid transparent;
-  background-clip: padding-box;
 }
 
 .panel {
