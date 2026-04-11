@@ -374,7 +374,8 @@ function createSampleJourneys(): Journey[] {
           title: "みなとみらいへ移動",
           time: "10:30",
           detail: "渋谷 → みなとみらい",
-          source: "手入力",
+          confNumber: "MM-2401",
+          source: "アップロード",
           status: "未開始",
         },
         {
@@ -732,6 +733,11 @@ export function seedSampleJourneys(): Journey[] {
     existing.filter(isSampleJourney).map((journey) => journey.id)
   );
   const missingSamples = samples.filter((journey) => !existingSampleIds.has(journey.id));
+
+  if (hasOnlySamples && existing.length === samples.length) {
+    save(samples);
+    return samples;
+  }
 
   if (hasOnlySamples && missingSamples.length > 0) {
     const nextJourneys = [...existing, ...missingSamples];

@@ -1,12 +1,12 @@
 .hero {
-  background: var(--mantine-color-blue-7);
+  background: linear-gradient(180deg, var(--mantine-color-blue-7), var(--mantine-color-blue-8));
   color: white;
-  padding: 24px 16px 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
 }
 
 .heroTitle {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 700;
 }
 
@@ -19,7 +19,7 @@
 .heroSummary {
   display: flex;
   gap: 12px;
-  margin-top: 12px;
+  margin-top: 10px;
   font-size: 12px;
   opacity: 0.8;
 }
@@ -42,12 +42,18 @@
 }
 
 .timeline {
-  padding: 0 16px;
+  padding: 12px 12px 6px;
+  margin: 0 16px;
+  background: white;
+  border: 1px solid var(--mantine-color-gray-2);
+  border-radius: 0 0 8px 8px;
+  border-top: none;
 }
 
 .timelineItem {
   display: flex;
   gap: 0;
+  align-items: stretch;
 }
 
 .timelineTime {
@@ -62,12 +68,10 @@
 }
 
 .timelineRail {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  position: relative;
   width: 32px;
   flex-shrink: 0;
-  padding-top: 2px;
+  padding-top: 14px;
 }
 
 .timelineDot {
@@ -77,7 +81,8 @@
   border: 2px solid var(--mantine-color-gray-4);
   background: white;
   flex-shrink: 0;
-  margin-top: 14px;
+  margin: 0 auto;
+  position: relative;
   z-index: 1;
 }
 
@@ -93,10 +98,14 @@
 }
 
 .timelineLine {
+  position: absolute;
+  left: 50%;
+  top: 26px;
+  bottom: -8px;
+  transform: translateX(-50%);
   width: 2px;
-  flex: 1;
   background: var(--mantine-color-gray-3);
-  min-height: 8px;
+  min-height: 0;
 }
 
 .timelineLineDone {
@@ -177,6 +186,75 @@
   font-family: monospace;
 }
 
+.timelinePreview {
+  margin-top: 10px;
+  display: flex;
+  gap: 6px;
+}
+
+.timelinePreviewThumb {
+  width: 56px;
+  height: 56px;
+  border-radius: 6px;
+  background: var(--mantine-color-gray-1);
+  border: 1px solid var(--mantine-color-gray-2);
+  color: var(--mantine-color-gray-5);
+  padding: 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.timelinePreviewTop {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--mantine-color-gray-6);
+}
+
+.timelinePreviewMeta {
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.timelinePreviewPaper {
+  flex: 1;
+  border-radius: 4px;
+  background: white;
+  border: 1px solid var(--mantine-color-gray-2);
+  padding: 5px 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.timelinePreviewLineShort,
+.timelinePreviewLineLong {
+  height: 3px;
+  border-radius: 999px;
+  background: var(--mantine-color-gray-3);
+}
+
+.timelinePreviewLineShort {
+  width: 55%;
+}
+
+.timelinePreviewLineLong {
+  width: 100%;
+}
+
+.timelinePreviewStamp {
+  margin-top: auto;
+  align-self: flex-start;
+  font-size: 7px;
+  font-weight: 800;
+  color: var(--mantine-color-red-6);
+  background: rgba(250, 82, 82, 0.1);
+  border-radius: 999px;
+  padding: 1px 4px;
+}
+
 .timelineBadge {
   font-size: 10px;
   font-weight: 700;
@@ -222,6 +300,23 @@
   font-size: 14px;
   color: var(--mantine-color-gray-7);
   line-height: 1.6;
+}
+
+.dangerZone {
+  margin: 20px 16px 0;
+}
+
+.deleteScheduleButton {
+  width: 100%;
+  padding: 11px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(250, 82, 82, 0.2);
+  background: rgba(255, 245, 245, 0.96);
+  color: var(--mantine-color-red-6);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
 }
 
 .editModal :global(.mantine-Modal-content) {

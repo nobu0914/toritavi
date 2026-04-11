@@ -1,0 +1,340 @@
+.screen {
+  background: #ffffff;
+  color: #1a1a1a;
+  font-family: "Noto Sans JP", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.headerPanel {
+  padding: 18px 16px 14px;
+  background: linear-gradient(180deg, #0031d8 0%, #264af4 100%);
+  color: white;
+}
+
+.headerMeta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.kicker {
+  font-size: 11px;
+  font-weight: 700;
+  opacity: 0.82;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+.headerIcons {
+  display: flex;
+  gap: 8px;
+}
+
+.headerIcon {
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.pageTitle {
+  margin-top: 14px;
+  font-size: 28px;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.pageDescription {
+  margin-top: 10px;
+  font-size: 14px;
+  line-height: 1.7;
+  opacity: 0.88;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 16px;
+  background: #f2f2f2;
+}
+
+.summaryCard {
+  border: 1px solid #e6e6e6;
+  border-radius: 12px;
+  background: white;
+  padding: 14px 12px;
+}
+
+.summaryValue {
+  font-size: 24px;
+  line-height: 1;
+  font-weight: 700;
+  color: #0031d8;
+}
+
+.summaryLabel {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #666666;
+}
+
+.section {
+  padding: 18px 16px 0;
+}
+
+.sectionTitle {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: #1a1a1a;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tripCard {
+  border: 1px solid #e6e6e6;
+  border-radius: 12px;
+  overflow: hidden;
+  background: white;
+}
+
+.tripCardHeader {
+  background: #0031d8;
+  color: white;
+  padding: 14px 16px;
+}
+
+.tripCardTitle {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.tripCardDate {
+  margin-top: 2px;
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.tripCardBody {
+  padding: 14px 16px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.tripCardDetail {
+  font-size: 14px;
+  color: #666666;
+}
+
+.badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.badge[data-state="Upcoming"] {
+  background: #e8f1fe;
+  color: #0031d8;
+}
+
+.badge[data-state="On Time"] {
+  background: #e6f5ec;
+  color: #197a4b;
+}
+
+.tripHero {
+  background: #0031d8;
+  color: white;
+  border-radius: 12px;
+  padding: 18px 16px;
+}
+
+.tripHeroTitle {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.tripHeroDate {
+  margin-top: 4px;
+  font-size: 14px;
+  opacity: 0.82;
+}
+
+.tripHeroSummary {
+  margin-top: 12px;
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  opacity: 0.82;
+}
+
+.dayHeader {
+  margin-top: 12px;
+  padding: 8px 0;
+  border-bottom: 2px solid #0031d8;
+  font-size: 14px;
+  font-weight: 700;
+  color: #0031d8;
+}
+
+.planCard {
+  display: flex;
+  gap: 12px;
+  border: 1px solid #e6e6e6;
+  border-radius: 12px;
+  padding: 14px;
+  background: white;
+}
+
+.planIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: #e8f1fe;
+  color: #0031d8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.planBody {
+  flex: 1;
+}
+
+.planType {
+  font-size: 11px;
+  color: #7f7f7f;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.planTitle {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.planDetail {
+  margin-top: 2px;
+  font-size: 14px;
+  color: #666666;
+}
+
+.planConf {
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #0031d8;
+}
+
+.sheetCard {
+  border: 1px solid #e6e6e6;
+  border-radius: 12px;
+  overflow: hidden;
+  background: white;
+}
+
+.sheetItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  border-bottom: 1px solid #e6e6e6;
+  font-size: 14px;
+}
+
+.sheetItem:last-child {
+  border-bottom: none;
+}
+
+.sheetDanger {
+  color: #ec0000;
+}
+
+.infoCard {
+  border: 1px solid #e6e6e6;
+  border-radius: 12px;
+  overflow: hidden;
+  background: white;
+}
+
+.infoRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+}
+
+.infoRow[data-border] {
+  border-bottom: 1px solid #e6e6e6;
+}
+
+.infoLabelWrap {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  flex: 1;
+}
+
+.infoIcon {
+  color: #4d4d4d;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.infoTitle {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.infoDetail {
+  margin-top: 2px;
+  font-size: 13px;
+  color: #666666;
+  line-height: 1.5;
+}
+
+.infoArrow {
+  color: #999999;
+}
+
+.emptyCard {
+  border: 1px solid #e6e6e6;
+  border-radius: 12px;
+  background: white;
+  text-align: center;
+  padding: 28px 16px;
+}
+
+.emptyIcon {
+  color: #b3b3b3;
+}
+
+.emptyTitle {
+  margin-top: 12px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #4d4d4d;
+}
+
+.emptyDescription {
+  margin-top: 6px;
+  font-size: 14px;
+  line-height: 1.7;
+  color: #7f7f7f;
+}

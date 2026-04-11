@@ -46,6 +46,8 @@ const actions: { icon: typeof IconCamera; label: string; key: StepSource }[] = [
   { icon: IconTypography, label: "手入力", key: "手入力" },
 ];
 
+const REMOVE_ANIMATION_MS = 260;
+
 function getPrimaryStepIcon(category?: StepCategory) {
   return getCategoryIcon(category ?? "その他");
 }
@@ -143,16 +145,20 @@ export default function NewTripPage() {
   const [cameraOpened, { open: openCamera, close: closeCamera }] = useDisclosure(false);
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] =
     useDisclosure(false);
+  const [scheduleDeleteModalOpened, { open: openScheduleDeleteModal, close: closeScheduleDeleteModal }] =
+    useDisclosure(false);
   const [draft, setDraft] = useState<StepDraft>(emptyStepDraft());
   const [targetItemId, setTargetItemId] = useState<string | null>(null);
   const [targetSource, setTargetSource] = useState<StepSource>("手入力");
   const [pendingDeleteItemId, setPendingDeleteItemId] = useState<string | null>(null);
+  const [removingItemId, setRemovingItemId] = useState<string | null>(null);
 
   const openManualInput = (itemId: string) => {
     const item = items.find((entry) => entry.id === itemId);
     if (item?.registered && item.step) {
       setDraft({
         category: item.step.category,
+        source: item.step.source ?? item.source ?? "手入力",
         title: item.step.title,
         time: item.step.time,
         detail: item.step.detail ?? "",
@@ -177,11 +183,11 @@ export default function NewTripPage() {
     const step: Step = {
       id: targetItemId,
       category: draft.category,
+      source: draft.source,
       title: draft.title.trim(),
       time: draft.time.trim(),
       detail: draft.detail.trim() || undefined,
       confNumber: draft.confNumber.trim() || undefined,
-      source: targetSource,
       status: "未開始",
       information: [],
     };
@@ -189,7 +195,7 @@ export default function NewTripPage() {
     setItems((prev) =>
       prev.map((item) =>
         item.id === targetItemId
-          ? { ...item, registered: true, source: targetSource, step }
+          ? { ...item, registered: true, source: draft.source, step }
           : item
       )
     );
@@ -219,22 +225,27 @@ export default function NewTripPage() {
 
   const confirmRemoveStep = () => {
     if (!pendingDeleteItemId) return;
-    removeStep(pendingDeleteItemId);
+    const itemId = pendingDeleteItemId;
+    setRemovingItemId(itemId);
     setPendingDeleteItemId(null);
     closeDeleteModal();
-    notifications.show({
-      message: "Step を削除しました",
-      icon: <IconInfoCircle size={18} />,
-      autoClose: 3000,
-      withBorder: false,
-      style: { background: "var(--mantine-color-gray-8)", color: "white" },
-      styles: {
-        root: { color: "white" },
-        body: { color: "white" },
-        description: { color: "white" },
-        icon: { color: "white", background: "transparent" },
-      },
-    });
+    window.setTimeout(() => {
+      removeStep(itemId);
+      setRemovingItemId((current) => (current === itemId ? null : current));
+      notifications.show({
+        message: "Step を削除しました",
+        icon: <IconInfoCircle size={18} />,
+        autoClose: 3000,
+        withBorder: false,
+        style: { background: "var(--mantine-color-gray-8)", color: "white" },
+        styles: {
+          root: { color: "white" },
+          body: { color: "white" },
+          description: { color: "white" },
+          icon: { color: "white", background: "transparent" },
+        },
+      });
+    }, REMOVE_ANIMATION_MS);
   };
 
   const handleCreate = () => {
@@ -277,6 +288,12 @@ export default function NewTripPage() {
     router.push("/");
   };
 
+  const handleDeleteSchedule = () => {
+    clearJourneyDraft();
+    sessionStorage.setItem("toritavi_toast", "schedule_deleted");
+    router.push("/");
+  };
+
   return (
     <>
       <AppHeader title="新規作成" back backHref="/" />
@@ -299,12 +316,21 @@ export default function NewTripPage() {
 
         <Box className={classes.stepList}>
           {items.map((item, i) => (
-            <Box key={item.id}>
+            <Box
+              key={item.id}
+              className={classes.stepItem}
+              data-removing={removingItemId === item.id || undefined}
+            >
               <Box className={`${classes.stepCard} ${item.registered ? classes.stepDone : ""}`}>
                 <Box className={classes.stepHead}>
                   <Box className={classes.stepHeadMeta}>
                     <Box className={classes.stepNum}>{i + 1}</Box>
                     <Text className={classes.stepLabel}>{item.step?.category ?? ""}</Text>
+                    {!item.registered && (
+                      <Text style={{ fontSize: 9, color: "var(--mantine-color-gray-4)", fontWeight: 600, marginLeft: "auto" }}>
+                        新規個別カード
+                      </Text>
+                    )}
                   </Box>
                   <button
                     className={classes.stepRemove}
@@ -361,11 +387,29 @@ export default function NewTripPage() {
                     {(item.source === "撮影" || item.source === "アップロード") && (
                       <Box className={classes.stepThumb}>
                         <Box className={classes.stepThumbImg}>
-                          {item.source === "撮影" ? <IconCamera size={20} /> : <IconUpload size={20} />}
+                          <Box className={classes.stepThumbTop}>
+                            {item.source === "撮影" ? <IconCamera size={12} /> : <IconUpload size={12} />}
+                            <Text span className={classes.stepThumbMeta}>
+                              {item.source === "撮影" ? "IMG_2404" : "ticket.pdf"}
+                            </Text>
+                          </Box>
+                          <Box className={classes.stepThumbPaper}>
+                            <Box className={classes.stepThumbLineShort} />
+                            <Box className={classes.stepThumbLineLong} />
+                            <Box className={classes.stepThumbLineLong} />
+                          </Box>
                         </Box>
                         {item.source === "アップロード" && (
                           <Box className={classes.stepThumbImg}>
-                            <IconUpload size={20} />
+                            <Box className={classes.stepThumbTop}>
+                              <IconUpload size={12} />
+                              <Text span className={classes.stepThumbMeta}>page-2.pdf</Text>
+                            </Box>
+                            <Box className={classes.stepThumbPaper}>
+                              <Box className={classes.stepThumbLineShort} />
+                              <Box className={classes.stepThumbLineLong} />
+                              <Box className={classes.stepThumbStamp}>PDF</Box>
+                            </Box>
                           </Box>
                         )}
                       </Box>
@@ -450,6 +494,12 @@ export default function NewTripPage() {
             <IconDeviceFloppy size={16} />
             下書き保存
           </button>
+          <button
+            className={classes.deleteScheduleButton}
+            onClick={openScheduleDeleteModal}
+          >
+            スケジュールを削除
+          </button>
         </Box>
       </Box>
 
@@ -460,6 +510,7 @@ export default function NewTripPage() {
         onChange={setDraft}
         onSave={saveDraft}
         isEdit={!!items.find((item) => item.id === targetItemId)?.registered}
+        editingTitle={items.find((item) => item.id === targetItemId)?.step?.title}
       />
 
       <Modal opened={cameraOpened} onClose={closeCamera} withCloseButton={false} centered radius="md">
@@ -554,6 +605,32 @@ export default function NewTripPage() {
               キャンセル
             </button>
             <button className={classes.confirmDelete} onClick={confirmRemoveStep}>
+              削除する
+            </button>
+          </Box>
+        </Box>
+      </Modal>
+
+      <Modal
+        opened={scheduleDeleteModalOpened}
+        onClose={closeScheduleDeleteModal}
+        centered
+        radius="md"
+        classNames={{ content: classes.confirmModal }}
+        withCloseButton={false}
+      >
+        <Box className={classes.confirmPanel}>
+          <Text className={classes.confirmTitle}>スケジュールを削除しますか？</Text>
+          <Text className={classes.confirmBody}>
+            {title.trim()
+              ? `「${title.trim()}」の作成内容が削除されます。この操作は取り消せません。`
+              : "この作成中スケジュールが削除されます。この操作は取り消せません。"}
+          </Text>
+          <Box className={classes.confirmFooter}>
+            <button className={classes.confirmCancel} onClick={closeScheduleDeleteModal}>
+              キャンセル
+            </button>
+            <button className={classes.confirmDelete} onClick={handleDeleteSchedule}>
               削除する
             </button>
           </Box>

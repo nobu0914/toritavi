@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   ActionIcon,
   Box,
@@ -8,9 +9,9 @@ import {
   Text,
   TextInput,
 } from "@mantine/core";
-import { IconX } from "@tabler/icons-react";
+import { IconCamera, IconUpload, IconX } from "@tabler/icons-react";
 import classes from "./StepEditModal.module.css";
-import type { StepCategory } from "@/lib/types";
+import type { StepCategory, StepSource } from "@/lib/types";
 
 const categories: StepCategory[] = [
   "列車",
@@ -25,8 +26,11 @@ const categories: StepCategory[] = [
   "その他",
 ];
 
+const sources: StepSource[] = ["撮影", "アップロード", "メール", "手入力"];
+
 export type StepDraft = {
   category: StepCategory;
+  source: StepSource;
   title: string;
   time: string;
   detail: string;
@@ -34,7 +38,7 @@ export type StepDraft = {
 };
 
 export function emptyStepDraft(): StepDraft {
-  return { category: "列車", title: "", time: "", detail: "", confNumber: "" };
+  return { category: "列車", source: "手入力", title: "", time: "", detail: "", confNumber: "" };
 }
 
 type Props = {
@@ -44,6 +48,7 @@ type Props = {
   onChange: (draft: StepDraft) => void;
   onSave: () => void;
   isEdit: boolean;
+  editingTitle?: string;
 };
 
 export function StepEditModal({
@@ -53,7 +58,20 @@ export function StepEditModal({
   onChange,
   onSave,
   isEdit,
+  editingTitle,
 }: Props) {
+  // opened+isEdit をキーにして、モーダルが開くたびに editing を初期化
+  const [editing, setEditing] = useState(!isEdit);
+
+  // opened が変化したときだけリセット（useEffect の代わりにprev比較）
+  const [prevOpened, setPrevOpened] = useState(false);
+  if (opened !== prevOpened) {
+    setPrevOpened(opened);
+    if (opened) {
+      setEditing(!isEdit);
+    }
+  }
+
   const update = (patch: Partial<StepDraft>) =>
     onChange({ ...draft, ...patch });
 
@@ -63,84 +81,136 @@ export function StepEditModal({
       onClose={onClose}
       centered
       radius="md"
-      classNames={{ content: classes.modal }}
+      classNames={{ content: classes.modalContent, body: classes.modalBody }}
       withCloseButton={false}
     >
       <Box className={classes.panel}>
         <Box className={classes.top}>
           <Text className={classes.topTitle}>
-            {isEdit ? "ステップを編集" : "ステップを追加"}
+            {isEdit ? editingTitle || "ステップ" : "ステップを追加"}
           </Text>
           <ActionIcon variant="subtle" color="gray" radius="xl" onClick={onClose}>
             <IconX size={18} />
           </ActionIcon>
         </Box>
         <Box className={classes.body}>
-          <Text className={classes.sectionLabel}>Basic Info</Text>
-          <Box className={classes.formSection}>
+          <Box className={classes.formSection} key={editing ? "editing" : "readonly"}>
             <Box className={classes.formRow}>
               <Text className={classes.formLabel}>カテゴリ</Text>
-              <Select
-                data={categories}
-                value={draft.category}
-                onChange={(value) =>
-                  value && update({ category: value as StepCategory })
-                }
-                allowDeselect={false}
-              />
+              {editing ? (
+                <Select
+                  classNames={{ input: classes.fieldInput }}
+                  data={categories}
+                  value={draft.category}
+                  onChange={(value) =>
+                    value && update({ category: value as StepCategory })
+                  }
+                  allowDeselect={false}
+                />
+              ) : (
+                <Text className={classes.readOnlyValue}>{draft.category || "未設定"}</Text>
+              )}
+            </Box>
+            <Box className={classes.formRow}>
+              <Text className={classes.formLabel}>取り込み元</Text>
+              {editing ? (
+                <Select
+                  classNames={{ input: classes.fieldInput }}
+                  data={sources}
+                  value={draft.source}
+                  onChange={(value) =>
+                    value && update({ source: value as StepSource })
+                  }
+                  allowDeselect={false}
+                />
+              ) : (
+                <Text className={classes.readOnlyValue}>{draft.source || "未設定"}</Text>
+              )}
             </Box>
             <Box className={classes.formRow}>
               <Text className={classes.formLabel}>タイトル</Text>
-              <TextInput
-                className={classes.plainInput}
-                variant="unstyled"
-                placeholder="例: のぞみ 225号"
-                value={draft.title}
-                onChange={(e) => update({ title: e.currentTarget.value })}
-                required
-              />
+              {editing ? (
+                <TextInput
+                  classNames={{ input: classes.fieldInput }}
+                  placeholder="例: のぞみ 225号"
+                  value={draft.title}
+                  onChange={(e) => update({ title: e.currentTarget.value })}
+                  required
+                />
+              ) : (
+                <Text className={classes.readOnlyValue}>{draft.title || "未設定"}</Text>
+              )}
             </Box>
             <Box className={classes.formRow}>
               <Text className={classes.formLabel}>詳細・場所</Text>
-              <TextInput
-                className={classes.plainInput}
-                variant="unstyled"
-                placeholder="例: 東京 → 新大阪"
-                value={draft.detail}
-                onChange={(e) => update({ detail: e.currentTarget.value })}
-              />
+              {editing ? (
+                <TextInput
+                  classNames={{ input: classes.fieldInput }}
+                  placeholder="例: 東京 → 新大阪"
+                  value={draft.detail}
+                  onChange={(e) => update({ detail: e.currentTarget.value })}
+                />
+              ) : (
+                <Text className={classes.readOnlyValue}>{draft.detail || "未設定"}</Text>
+              )}
             </Box>
             <Box className={classes.formRow}>
               <Box className={classes.dateGrid}>
                 <Box>
                   <Text className={classes.formLabel}>時刻</Text>
-                  <TextInput
-                    className={classes.plainInput}
-                    variant="unstyled"
-                    placeholder="10:00"
-                    value={draft.time}
-                    onChange={(e) => update({ time: e.currentTarget.value })}
-                  />
+                  {editing ? (
+                    <TextInput
+                      classNames={{ input: classes.fieldInput }}
+                      placeholder="10:00"
+                      value={draft.time}
+                      onChange={(e) => update({ time: e.currentTarget.value })}
+                    />
+                  ) : (
+                    <Text className={classes.readOnlyValue}>{draft.time || "未設定"}</Text>
+                  )}
                 </Box>
                 <Box>
                   <Text className={classes.formLabel}>確認番号</Text>
-                  <TextInput
-                    className={classes.plainInput}
-                    variant="unstyled"
-                    placeholder="TK-882541"
-                    value={draft.confNumber}
-                    onChange={(e) => update({ confNumber: e.currentTarget.value })}
-                  />
+                  {editing ? (
+                    <TextInput
+                      classNames={{ input: classes.fieldInput }}
+                      placeholder="TK-882541"
+                      value={draft.confNumber}
+                      onChange={(e) => update({ confNumber: e.currentTarget.value })}
+                    />
+                  ) : (
+                    <Text className={classes.readOnlyValue}>{draft.confNumber || "未設定"}</Text>
+                  )}
                 </Box>
               </Box>
             </Box>
           </Box>
+          {(draft.source === "撮影" || draft.source === "アップロード") && (
+            <Box className={classes.previewSection}>
+              <Text className={classes.sectionLabel}>Preview</Text>
+              <Box className={classes.previewPanel}>
+                <Box className={classes.previewThumbs}>
+                  <Box className={classes.previewThumb}>
+                    {draft.source === "撮影" ? <IconCamera size={24} /> : <IconUpload size={24} />}
+                  </Box>
+                  {draft.source === "アップロード" && (
+                    <Box className={classes.previewThumb}>
+                      <IconUpload size={24} />
+                    </Box>
+                  )}
+                </Box>
+                <Text className={classes.previewCaption}>
+                  {draft.source === "撮影" ? "撮影した書類プレビュー" : "アップロードしたPDFプレビュー"}
+                </Text>
+              </Box>
+            </Box>
+          )}
           <button
             className={classes.saveButton}
-            onClick={onSave}
-            disabled={!draft.title.trim()}
+            onClick={editing ? onSave : () => setEditing(true)}
+            disabled={editing && !draft.title.trim()}
           >
-            {isEdit ? "更新" : "保存"}
+            {editing ? (isEdit ? "更新" : "保存") : "編集する"}
           </button>
         </Box>
       </Box>

@@ -1,5 +1,8 @@
 .screen {
   padding-bottom: 72px;
+  background:
+    radial-gradient(circle at top right, rgba(208, 235, 255, 0.9), transparent 28%),
+    linear-gradient(180deg, #f8fbff 0%, #f8f9fa 22%, #f8f9fa 100%);
 }
 
 .sectionLabel {
@@ -54,6 +57,28 @@
 .stepList {
   margin: 0 16px;
   position: relative;
+}
+
+.stepItem {
+  overflow: hidden;
+  transform-origin: top center;
+  transition:
+    max-height 260ms ease,
+    opacity 220ms ease,
+    transform 220ms ease,
+    margin 260ms ease,
+    filter 220ms ease;
+  max-height: 480px;
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  filter: blur(0);
+}
+
+.stepItem[data-removing] {
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-8px) scale(0.96);
+  filter: blur(2px);
 }
 
 /* 縦ラインはコネクター内で表示するため、全体ラインは削除 */
@@ -170,10 +195,61 @@
   border-radius: 6px;
   background: var(--mantine-color-gray-1);
   border: 1px solid var(--mantine-color-gray-2);
+  color: var(--mantine-color-gray-5);
+  padding: 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stepThumbTop {
   display: flex;
   align-items: center;
-  justify-content: center;
-  color: var(--mantine-color-gray-4);
+  gap: 3px;
+  color: var(--mantine-color-gray-6);
+}
+
+.stepThumbMeta {
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.stepThumbPaper {
+  flex: 1;
+  border-radius: 4px;
+  background: white;
+  border: 1px solid var(--mantine-color-gray-2);
+  padding: 5px 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.stepThumbLineShort,
+.stepThumbLineLong {
+  height: 3px;
+  border-radius: 999px;
+  background: var(--mantine-color-gray-3);
+}
+
+.stepThumbLineShort {
+  width: 55%;
+}
+
+.stepThumbLineLong {
+  width: 100%;
+}
+
+.stepThumbStamp {
+  margin-top: auto;
+  align-self: flex-start;
+  font-size: 7px;
+  font-weight: 800;
+  color: var(--mantine-color-red-6);
+  background: rgba(250, 82, 82, 0.1);
+  border-radius: 999px;
+  padding: 1px 4px;
 }
 
 .stepSource {
@@ -318,6 +394,19 @@
   align-items: center;
   justify-content: center;
   gap: 4px;
+}
+
+.deleteScheduleButton {
+  width: 100%;
+  padding: 11px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(250, 82, 82, 0.2);
+  background: rgba(255, 245, 245, 0.96);
+  color: var(--mantine-color-red-6);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
 }
 
 .confirmModal :global(.mantine-Modal-content) {

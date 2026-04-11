@@ -13,16 +13,17 @@ import {
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import {
+  IconCamera,
   IconCheck,
   IconDotsVertical,
   IconEdit,
+  IconUpload,
   IconInfoCircle,
-  IconMinus,
   IconPlayerPlay,
   IconTrash,
   IconX,
 } from "@tabler/icons-react";
-import { useEffect, useState } from "react";
+import { startTransition, useEffect, useState } from "react";
 import { useDisclosure } from "@mantine/hooks";
 import { useParams, useRouter } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
@@ -96,9 +97,11 @@ export default function TripDetailPage() {
   const [pendingStepDeleteIndex, setPendingStepDeleteIndex] = useState<number | null>(null);
 
   useEffect(() => {
-    const nextPageData = loadPageData(id, today);
-    setPageData(nextPageData);
-    setJourneyForm(nextPageData.journeyForm);
+    startTransition(() => {
+      const nextPageData = loadPageData(id, today);
+      setPageData(nextPageData);
+      setJourneyForm(nextPageData.journeyForm);
+    });
   }, [id, today]);
 
   useEffect(() => {
@@ -137,6 +140,7 @@ export default function TripDetailPage() {
     const step = journey.steps[index];
     setDraft({
       category: step.category,
+      source: step.source ?? "手入力",
       title: step.title,
       time: step.time,
       detail: step.detail ?? "",
@@ -153,12 +157,12 @@ export default function TripDetailPage() {
     const step: Step = {
       id: editingStepId,
       category: draft.category,
+      source: draft.source,
       title: draft.title.trim(),
       time: draft.time.trim(),
       detail: draft.detail.trim() || undefined,
       confNumber: draft.confNumber.trim() || undefined,
       memo: editingIndex !== null ? journey.steps[editingIndex].memo : undefined,
-      source: editingIndex !== null ? journey.steps[editingIndex].source : undefined,
       status: editingIndex !== null ? journey.steps[editingIndex].status : "未開始",
       information: editingIndex !== null ? journey.steps[editingIndex].information : [],
     };
@@ -368,6 +372,38 @@ export default function TripDetailPage() {
                     {step.confNumber && (
                       <Text className={classes.timelineConf}>Conf# {step.confNumber}</Text>
                     )}
+                    {(step.source === "撮影" || step.source === "アップロード") && (
+                      <Box className={classes.timelinePreview}>
+                        <Box className={classes.timelinePreviewThumb}>
+                          <Box className={classes.timelinePreviewTop}>
+                            {step.source === "撮影" ? <IconCamera size={12} /> : <IconUpload size={12} />}
+                            <Text span className={classes.timelinePreviewMeta}>
+                              {step.source === "撮影" ? "IMG_2404" : "ticket.pdf"}
+                            </Text>
+                          </Box>
+                          <Box className={classes.timelinePreviewPaper}>
+                            <Box className={classes.timelinePreviewLineShort} />
+                            <Box className={classes.timelinePreviewLineLong} />
+                            <Box className={classes.timelinePreviewLineLong} />
+                          </Box>
+                        </Box>
+                        {step.source === "アップロード" && (
+                          <Box className={classes.timelinePreviewThumb}>
+                            <Box className={classes.timelinePreviewTop}>
+                              <IconUpload size={12} />
+                              <Text span className={classes.timelinePreviewMeta}>
+                                page-2.pdf
+                              </Text>
+                            </Box>
+                            <Box className={classes.timelinePreviewPaper}>
+                              <Box className={classes.timelinePreviewLineShort} />
+                              <Box className={classes.timelinePreviewLineLong} />
+                              <Box className={classes.timelinePreviewStamp}>PDF</Box>
+                            </Box>
+                          </Box>
+                        )}
+                      </Box>
+                    )}
                   </Box>
                   <Stack gap={6} align="flex-end">
                     <Menu position="bottom-end" withArrow>
@@ -457,6 +493,15 @@ export default function TripDetailPage() {
             <Text className={classes.notesBody}>{journey.memo}</Text>
           </Box>
         )}
+
+        <Box className={classes.dangerZone}>
+          <button
+            className={classes.deleteScheduleButton}
+            onClick={requestJourneyDelete}
+          >
+            スケジュールを削除
+          </button>
+        </Box>
       </Box>
 
       <StepEditModal
@@ -466,6 +511,7 @@ export default function TripDetailPage() {
         onChange={setDraft}
         onSave={handleSaveStep}
         isEdit={editingIndex !== null}
+        editingTitle={editingIndex !== null ? journey.steps[editingIndex]?.title : undefined}
       />
 
       <Modal
@@ -611,8 +657,6 @@ export default function TripDetailPage() {
           </Box>
         </Box>
       </Modal>
-
-
 
       <TabBar />
     </>

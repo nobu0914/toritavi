@@ -1,19 +1,38 @@
-.modal :global(.mantine-Modal-content) {
+.modalContent {
   border-radius: 12px;
   overflow: hidden;
+  max-height: min(88vh, 820px);
 }
 
-.modal :global(.mantine-Modal-header) {
-  display: none;
-}
-
-.modal :global(.mantine-Modal-body) {
+.modalBody {
   padding: 0;
   background: var(--mantine-color-gray-0);
+  max-height: min(88vh, 820px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(134, 142, 150, 0.75) transparent;
+}
+
+.modalBody::-webkit-scrollbar {
+  width: 8px;
+}
+
+.modalBody::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modalBody::-webkit-scrollbar-thumb {
+  background: rgba(134, 142, 150, 0.7);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
 
 .panel {
   background: var(--mantine-color-gray-0);
+  display: flex;
+  flex-direction: column;
+  max-height: min(88vh, 820px);
 }
 
 .top {
@@ -23,6 +42,10 @@
   align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid var(--mantine-color-gray-2);
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
 .topTitle {
@@ -33,6 +56,8 @@
 
 .body {
   padding: 16px;
+  overflow-y: auto;
+  flex: 1;
 }
 
 .sectionLabel {
@@ -68,16 +93,27 @@
   display: block;
 }
 
-.plainInput :global(input) {
-  border: none;
-  background: transparent;
+.fieldInput {
+  border: 1px solid var(--mantine-color-gray-3);
+  border-radius: 8px;
+  background: white;
+  padding: 10px 14px;
+  font-size: 16px;
+  color: var(--mantine-color-gray-9);
+  min-height: 44px;
+}
+
+.fieldInput:focus,
+.fieldInput:focus-within {
+  border-color: var(--mantine-color-blue-6);
+}
+
+.readOnlyValue {
+  min-height: 24px;
   padding: 8px 0;
   font-size: 16px;
   color: var(--mantine-color-gray-9);
-}
-
-.plainInput :global(input:focus) {
-  outline: none;
+  line-height: 1.4;
 }
 
 .dateGrid {
@@ -103,4 +139,38 @@
 .saveButton:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.previewSection {
+  margin-top: 16px;
+}
+
+.previewPanel {
+  background: white;
+  border: 1px solid var(--mantine-color-gray-2);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.previewThumbs {
+  display: flex;
+  gap: 8px;
+}
+
+.previewThumb {
+  width: 72px;
+  height: 72px;
+  border-radius: 8px;
+  background: var(--mantine-color-gray-1);
+  border: 1px solid var(--mantine-color-gray-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--mantine-color-gray-5);
+}
+
+.previewCaption {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--mantine-color-gray-5);
 }
