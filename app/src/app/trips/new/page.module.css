@@ -56,17 +56,7 @@
   position: relative;
 }
 
-.stepList::before {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 24px;
-  bottom: 24px;
-  width: 2px;
-  background: var(--mantine-color-gray-3);
-  transform: translateX(-50%);
-  z-index: 0;
-}
+/* 縦ラインはコネクター内で表示するため、全体ラインは削除 */
 
 .stepCard {
   background: white;
@@ -206,6 +196,18 @@
   height: 40px;
   position: relative;
   z-index: 2;
+}
+
+.connector::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--mantine-color-gray-3);
+  transform: translateX(-50%);
+  z-index: 0;
 }
 
 .connectorButton {

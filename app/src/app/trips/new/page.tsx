@@ -372,14 +372,16 @@ export default function NewTripPage() {
                 )}
               </Box>
 
-              <Box className={classes.connector}>
-                <button
-                  className={classes.connectorButton}
-                  onClick={() => insertStep(i)}
-                >
-                  <IconPlus size={14} />
-                </button>
-              </Box>
+              {i < items.length - 1 && (
+                <Box className={classes.connector}>
+                  <button
+                    className={classes.connectorButton}
+                    onClick={() => insertStep(i)}
+                  >
+                    <IconPlus size={14} />
+                  </button>
+                </Box>
+              )}
             </Box>
           ))}
         </Box>
