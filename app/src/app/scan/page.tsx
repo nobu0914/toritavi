@@ -589,7 +589,7 @@ export default function ScanPage() {
             <Box className={classes.resultButtons}>
               <button className={classes.createButton} onClick={createStep}>
                 <IconCheck size={18} />
-                Journeyとして追加
+                登録
               </button>
               <button className={classes.retryButton} onClick={reset}>
                 やり直す
