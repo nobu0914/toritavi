@@ -1,6 +1,6 @@
 "use client";
 
-import { Box, Text, Loader, TextInput } from "@mantine/core";
+import { Box, Text, Loader, TextInput, Checkbox } from "@mantine/core";
 import {
   IconCamera,
   IconUpload,
@@ -22,7 +22,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
 import { TabBar } from "@/components/TabBar";
-import { addJourney, generateId } from "@/lib/store";
+import { addJourney, getJourneys, updateJourney, generateId } from "@/lib/store";
 import type { Step, StepCategory } from "@/lib/types";
 import classes from "./page.module.css";
 
@@ -347,6 +347,7 @@ export default function ScanPage() {
   const [ocrText, setOcrText] = useState("");
   const [progress, setProgress] = useState(0);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+  const [addToExisting, setAddToExisting] = useState(true);
 
   const handleFile = async (file: File) => {
     const url = URL.createObjectURL(file);
@@ -395,7 +396,7 @@ export default function ScanPage() {
   const createStep = () => {
     const stepData = formToStep(detectedCategory, formValues);
     const now = new Date().toISOString();
-    const today = new Date().toISOString().split("T")[0];
+    const todayStr = new Date().toISOString().split("T")[0];
     const step: Step = {
       id: generateId(),
       category: detectedCategory,
@@ -408,16 +409,24 @@ export default function ScanPage() {
       information: [],
     };
 
-    const catDef = getCategoryDef(detectedCategory);
-    addJourney({
-      id: generateId(),
-      title: `${catDef.label} ${new Date().toLocaleDateString("ja-JP")}`,
-      startDate: today,
-      endDate: today,
-      steps: [step],
-      createdAt: now,
-      updatedAt: now,
-    });
+    if (addToExisting && sameDayTarget) {
+      // 既存Journeyに追加
+      updateJourney(sameDayTarget.id, {
+        steps: [...sameDayTarget.steps, step],
+      });
+    } else {
+      // 新規Journey作成
+      const cd = getCategoryDef(detectedCategory);
+      addJourney({
+        id: generateId(),
+        title: `${cd.label} ${new Date().toLocaleDateString("ja-JP")}`,
+        startDate: todayStr,
+        endDate: todayStr,
+        steps: [step],
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
 
     sessionStorage.setItem("toritavi_toast", "journey_created");
     router.push("/");
@@ -434,6 +443,13 @@ export default function ScanPage() {
 
   const catDef = getCategoryDef(detectedCategory);
   const fields = categoryFields[detectedCategory] || categoryFields["その他"];
+
+  // 同じ日のJourneyを検索
+  const today = new Date().toISOString().split("T")[0];
+  const sameDayJourneys = status === "done"
+    ? getJourneys().filter((j) => j.startDate <= today && j.endDate >= today)
+    : [];
+  const sameDayTarget = sameDayJourneys[0]; // 最初の一致を使用
 
   return (
     <>
@@ -584,6 +600,17 @@ export default function ScanPage() {
                 </Text>
               </Box>
             </details>
+
+            {/* 同じ日の予定に追加チェック */}
+            {sameDayTarget && (
+              <Checkbox
+                label={`同じ日の予定に追加する（${sameDayTarget.title}）`}
+                checked={addToExisting}
+                onChange={(e) => setAddToExisting(e.currentTarget.checked)}
+                mt="md"
+                size="sm"
+              />
+            )}
 
             {/* アクションボタン */}
             <Box className={classes.resultButtons}>
