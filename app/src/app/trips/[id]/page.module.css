@@ -46,16 +46,44 @@
 }
 
 .timelineItem {
-  display: flex;
-  flex-direction: column;
+  position: relative;
+  padding-left: 20px;
 }
 
-/* 時間行: ● 時間 */
+/* 縦線: アイテム全体の左を通る */
+.timelineItem::before {
+  content: "";
+  position: absolute;
+  left: 9px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--mantine-color-gray-3);
+}
+
+.timelineItem:first-child::before {
+  top: 14px;
+}
+
+.timelineItem:last-child::before {
+  bottom: auto;
+  height: 14px;
+}
+
+.timelineItemDone::before {
+  background: var(--mantine-color-teal-6);
+}
+
+.timelineItemActive::before {
+  background: var(--mantine-color-blue-7);
+}
+
+/* 時間行: ● 時間 ... ステータス */
 .timelineTimeRow {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 0 0;
+  padding: 12px 0 0;
 }
 
 .timelineTimeText {
@@ -73,7 +101,7 @@
   flex-shrink: 0;
   position: relative;
   z-index: 1;
-  margin-left: 4px;
+  margin-left: -16px;
 }
 
 .timelineDotDone {
@@ -87,44 +115,13 @@
   box-shadow: 0 0 0 4px rgba(28, 126, 214, 0.15);
 }
 
-/* カード行: 線 | カード */
-.timelineCardRow {
-  display: flex;
-  align-items: stretch;
-}
-
-.timelineRail {
-  width: 20px;
-  flex-shrink: 0;
-  display: flex;
-  justify-content: center;
-}
-
-.timelineLine {
-  width: 2px;
-  background: var(--mantine-color-gray-3);
-}
-
-.timelineLineDone {
-  background: var(--mantine-color-teal-6);
-}
-
-.timelineLineActive {
-  background: var(--mantine-color-blue-7);
-}
-
-.timelineLineLast {
-  background: transparent;
-}
-
 /* カード */
 .timelineCard {
-  flex: 1;
   background: white;
   border: 1px solid var(--mantine-color-gray-2);
   border-radius: 8px;
   padding: 10px 12px;
-  margin: 6px 0 6px 6px;
+  margin: 6px 0 0 0;
   cursor: pointer;
   display: flex;
   gap: 10px;
@@ -189,8 +186,6 @@
   font-weight: 700;
   padding: 2px 8px;
   border-radius: 20px;
-  align-self: flex-start;
-  margin-top: 12px;
   white-space: nowrap;
 }
 

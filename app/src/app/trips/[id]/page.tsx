@@ -7,7 +7,6 @@ import {
   Menu,
   Modal,
   Skeleton,
-  Stack,
   Text,
   TextInput,
 } from "@mantine/core";
@@ -311,24 +310,6 @@ export default function TripDetailPage() {
         }
       />
 
-      <Box className={classes.hero}>
-        <Text className={classes.heroTitle}>{journey.title}</Text>
-        <Text className={classes.heroDate}>{formatDateRange(journey.startDate, journey.endDate)}</Text>
-        <Box className={classes.heroSummary}>
-          {(() => {
-            const counts: Record<string, number> = {};
-            journey.steps.forEach((s) => {
-              counts[s.category] = (counts[s.category] || 0) + 1;
-            });
-            return Object.entries(counts).map(([cat, count]) => (
-              <Text key={cat} span>
-                {count} {cat}
-              </Text>
-            ));
-          })()}
-        </Box>
-      </Box>
-
       <Box pb={110}>
         <Box className={classes.dayHeader}>
           {formatDateJP(journey.startDate)}
@@ -352,52 +333,65 @@ export default function TripDetailPage() {
             const isDone = step.status === "完了";
             const isNext = nextAction?.id === step.id;
             const isLast = index === sortedSteps.length - 1;
-            const lineClass = isLast
-              ? classes.timelineLineLast
-              : isDone
-                ? classes.timelineLineDone
-                : isActive
-                  ? classes.timelineLineActive
-                  : "";
             const dotClass = isDone
               ? classes.timelineDotDone
               : isActive
                 ? classes.timelineDotActive
                 : "";
+            const itemClass = isLast
+              ? ""
+              : isDone
+                ? classes.timelineItemDone
+                : isActive
+                  ? classes.timelineItemActive
+                  : "";
             return (
-              <Box key={step.id} className={classes.timelineItem}>
-                {/* 時間行: ●  時間 */}
+              <Box key={step.id} className={`${classes.timelineItem} ${itemClass}`}>
+                {/* 時間行: ● 時間 ... ステータス */}
                 <Box className={classes.timelineTimeRow}>
                   <Box className={`${classes.timelineDot} ${dotClass}`} />
                   <Text className={classes.timelineTimeText}>
                     {step.time?.match(/\d{1,2}:\d{2}/)?.[0] || "--:--"}
                   </Text>
+                  <Box style={{ flex: 1 }} />
+                  <Box
+                    className={classes.timelineBadge}
+                    style={{
+                      background: isDone
+                        ? "var(--mantine-color-teal-0)"
+                        : isActive || isNext
+                          ? "var(--mantine-color-blue-0)"
+                          : "var(--mantine-color-gray-1)",
+                      color: isDone
+                        ? "var(--mantine-color-teal-8)"
+                        : isActive || isNext
+                          ? "var(--mantine-color-blue-7)"
+                          : "var(--mantine-color-gray-7)",
+                    }}
+                  >
+                    {isNext && !isDone ? "次" : step.status}
+                  </Box>
                 </Box>
 
-                {/* カード行: 線 | カード */}
-                <Box className={classes.timelineCardRow}>
-                  <Box className={classes.timelineRail}>
-                    <Box className={`${classes.timelineLine} ${lineClass}`} />
-                  </Box>
-                <Box
-                  className={`${classes.timelineCard} ${isNext ? classes.timelineCardActive : ""}`}
-                  onClick={() => openEdit(iconIndex)}
-                >
-                  <Box className={`${classes.timelineCardIcon} ${isDone ? classes.timelineCardIconDone : ""}`}>
-                    <Icon size={20} />
-                  </Box>
-                  <Box className={classes.timelineCardBody}>
-                    <Text className={classes.timelineType}>{step.category}</Text>
-                    <Text className={classes.timelineTitle}>{step.title}</Text>
-                    {step.detail && <Text className={classes.timelineDetail}>{step.detail}</Text>}
-                    {step.time && step.time !== (step.time.match(/\d{1,2}:\d{2}/)?.[0] || "") && (
-                      <Text className={classes.timelineDetail}>{step.time}</Text>
-                    )}
-                    {step.confNumber && (
-                      <Text className={classes.timelineConf}>Conf# {step.confNumber}</Text>
-                    )}
-                  </Box>
-                  <Stack gap={6} align="flex-end">
+                {/* カード */}
+                  <Box
+                    className={`${classes.timelineCard} ${isNext ? classes.timelineCardActive : ""}`}
+                    onClick={() => openEdit(iconIndex)}
+                  >
+                    <Box className={`${classes.timelineCardIcon} ${isDone ? classes.timelineCardIconDone : ""}`}>
+                      <Icon size={20} />
+                    </Box>
+                    <Box className={classes.timelineCardBody}>
+                      <Text className={classes.timelineType}>{step.category}</Text>
+                      <Text className={classes.timelineTitle}>{step.title}</Text>
+                      {step.detail && <Text className={classes.timelineDetail}>{step.detail}</Text>}
+                      {step.time && step.time !== (step.time.match(/\d{1,2}:\d{2}/)?.[0] || "") && (
+                        <Text className={classes.timelineDetail}>{step.time}</Text>
+                      )}
+                      {step.confNumber && (
+                        <Text className={classes.timelineConf}>Conf# {step.confNumber}</Text>
+                      )}
+                    </Box>
                     <Menu position="bottom-end" withArrow>
                       <Menu.Target>
                         <ActionIcon variant="subtle" color="gray" onClick={(e) => e.stopPropagation()}>
@@ -408,73 +402,27 @@ export default function TripDetailPage() {
                         <Menu.Label>ステータス変更</Menu.Label>
                         <Menu.Item
                           leftSection={<IconPlayerPlay size={14} />}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setStepStatus(iconIndex, "進行中");
-                          }}
-                        >
-                          進行中
-                        </Menu.Item>
+                          onClick={(e) => { e.stopPropagation(); setStepStatus(iconIndex, "進行中"); }}
+                        >進行中</Menu.Item>
                         <Menu.Item
                           leftSection={<IconCheck size={14} />}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setStepStatus(iconIndex, "完了");
-                          }}
-                        >
-                          完了
-                        </Menu.Item>
-                        <Menu.Item onClick={(e) => {
-                          e.stopPropagation();
-                          setStepStatus(iconIndex, "未開始");
-                        }}>未開始</Menu.Item>
-                        <Menu.Item onClick={(e) => {
-                          e.stopPropagation();
-                          setStepStatus(iconIndex, "遅延");
-                        }}>遅延</Menu.Item>
-                        <Menu.Item onClick={(e) => {
-                          e.stopPropagation();
-                          setStepStatus(iconIndex, "キャンセル");
-                        }}>キャンセル</Menu.Item>
+                          onClick={(e) => { e.stopPropagation(); setStepStatus(iconIndex, "完了"); }}
+                        >完了</Menu.Item>
+                        <Menu.Item onClick={(e) => { e.stopPropagation(); setStepStatus(iconIndex, "未開始"); }}>未開始</Menu.Item>
+                        <Menu.Item onClick={(e) => { e.stopPropagation(); setStepStatus(iconIndex, "遅延"); }}>遅延</Menu.Item>
+                        <Menu.Item onClick={(e) => { e.stopPropagation(); setStepStatus(iconIndex, "キャンセル"); }}>キャンセル</Menu.Item>
                         <Menu.Divider />
-                        <Menu.Item leftSection={<IconEdit size={14} />} onClick={(e) => {
-                          e.stopPropagation();
-                          openEdit(iconIndex);
-                        }}>
+                        <Menu.Item leftSection={<IconEdit size={14} />} onClick={(e) => { e.stopPropagation(); openEdit(iconIndex); }}>
                           編集
                         </Menu.Item>
                         <Menu.Item
                           color="red"
                           leftSection={<IconTrash size={14} />}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            requestStepDelete(iconIndex);
-                          }}
-                        >
-                          削除
-                        </Menu.Item>
+                          onClick={(e) => { e.stopPropagation(); requestStepDelete(iconIndex); }}
+                        >削除</Menu.Item>
                       </Menu.Dropdown>
                     </Menu>
-                    <Box
-                      className={classes.timelineBadge}
-                      style={{
-                        background: isDone
-                          ? "var(--mantine-color-teal-0)"
-                          : isActive || isNext
-                            ? "var(--mantine-color-blue-0)"
-                            : "var(--mantine-color-gray-1)",
-                        color: isDone
-                          ? "var(--mantine-color-teal-8)"
-                          : isActive || isNext
-                            ? "var(--mantine-color-blue-7)"
-                            : "var(--mantine-color-gray-7)",
-                      }}
-                    >
-                      {isNext && !isDone ? "次" : step.status}
-                    </Box>
-                  </Stack>
-                </Box>
-                </Box>
+                  </Box>
               </Box>
             );
           })}
