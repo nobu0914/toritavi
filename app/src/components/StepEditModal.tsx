@@ -86,9 +86,16 @@ export function StepEditModal({
     >
       <Box className={classes.panel}>
         <Box className={classes.top}>
-          <Text className={classes.topTitle}>
-            {isEdit ? editingTitle || "ステップ" : "ステップを追加"}
-          </Text>
+          <Box style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+            <Text className={classes.topTitle}>
+              {isEdit ? editingTitle || "ステップ" : "ステップを追加"}
+            </Text>
+            {!isEdit && (
+              <Text style={{ fontSize: 9, color: "var(--mantine-color-gray-4)", fontWeight: 600 }}>
+                新規モーダル
+              </Text>
+            )}
+          </Box>
           <ActionIcon variant="subtle" color="gray" radius="xl" onClick={onClose}>
             <IconX size={18} />
           </ActionIcon>

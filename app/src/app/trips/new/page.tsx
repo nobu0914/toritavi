@@ -513,7 +513,17 @@ export default function NewTripPage() {
         editingTitle={items.find((item) => item.id === targetItemId)?.step?.title}
       />
 
-      <Modal opened={cameraOpened} onClose={closeCamera} withCloseButton={false} centered radius="md">
+      <Modal
+        opened={cameraOpened}
+        onClose={closeCamera}
+        withCloseButton={false}
+        centered
+        radius="md"
+        styles={{
+          content: { maxHeight: "min(90vh, 820px)", display: "flex", flexDirection: "column" as const },
+          body: { flex: 1, minHeight: 0, overflowY: "auto" as const },
+        }}
+      >
         <Box ta="center" py="sm">
           <Box
             w={72}
