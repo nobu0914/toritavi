@@ -1,53 +1,71 @@
 .categoryGrid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
 }
 
 .categoryCard {
   background: white;
   border: 1px solid var(--mantine-color-gray-2);
   border-radius: 8px;
-  padding: 16px 12px;
+  padding: 10px 8px 10px;
   text-align: center;
   cursor: pointer;
   font-family: inherit;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  transition: border-color 0.15s;
+  gap: 4px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  position: relative;
 }
 
-.categoryCard:active {
-  border-color: var(--mantine-color-blue-7);
-}
-
-.categoryIcon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
+.radio {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--mantine-color-gray-3);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 4px;
+  transition: border-color 0.15s;
+}
+
+.radioChecked {
+  border-color: var(--mantine-color-blue-7);
+}
+
+.radioDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--mantine-color-blue-7);
+}
+
+.categorySelected {
+  border-color: var(--mantine-color-blue-7);
+  box-shadow: 0 0 0 1px var(--mantine-color-blue-7);
+}
+
+.categoryIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
 }
 
 .captureArea {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 48px 24px;
+  padding: 32px 24px;
   text-align: center;
-}
-
-.iconWrap {
-  width: 96px;
-  height: 96px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .buttons {
@@ -72,6 +90,12 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
+  transition: opacity 0.15s;
+}
+
+.captureButton:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 
 .uploadButton {
@@ -89,6 +113,12 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
+  transition: opacity 0.15s;
+}
+
+.uploadButton:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 
 .backLink {

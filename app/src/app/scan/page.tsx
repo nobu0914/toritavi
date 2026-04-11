@@ -10,10 +10,10 @@ import {
   IconBriefcase,
   IconToolsKitchen2,
   IconBus,
+  IconTicket,
   IconDots,
   IconCheck,
   IconAlertCircle,
-  IconChevronLeft,
 } from "@tabler/icons-react";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -34,13 +34,14 @@ type ScanCategory = {
 };
 
 const scanCategories: ScanCategory[] = [
-  { key: "飛行機", label: "フライト", icon: IconPlane, color: "blue", description: "搭乗券・Eチケット" },
-  { key: "列車", label: "鉄道", icon: IconTrain, color: "blue", description: "新幹線・特急券" },
-  { key: "宿泊", label: "ホテル", icon: IconBed, color: "teal", description: "予約確認書" },
-  { key: "商談", label: "ビジネス", icon: IconBriefcase, color: "indigo", description: "会議・アポイント" },
-  { key: "食事", label: "レストラン", icon: IconToolsKitchen2, color: "orange", description: "予約確認" },
-  { key: "バス", label: "バス", icon: IconBus, color: "green", description: "乗車券" },
-  { key: "その他", label: "その他", icon: IconDots, color: "gray", description: "汎用スキャン" },
+  { key: "飛行機", label: "フライト", icon: IconPlane, color: "blue", description: "" },
+  { key: "列車", label: "鉄道", icon: IconTrain, color: "blue", description: "" },
+  { key: "宿泊", label: "ホテル", icon: IconBed, color: "teal", description: "" },
+  { key: "観光", label: "チケット", icon: IconTicket, color: "violet", description: "" },
+  { key: "商談", label: "ビジネス", icon: IconBriefcase, color: "indigo", description: "" },
+  { key: "食事", label: "レストラン", icon: IconToolsKitchen2, color: "orange", description: "" },
+  { key: "バス", label: "バス", icon: IconBus, color: "green", description: "" },
+  { key: "その他", label: "その他", icon: IconDots, color: "gray", description: "" },
 ];
 
 /* ====== カテゴリ特化パーサー ====== */
@@ -233,6 +234,32 @@ function parseByCategory(text: string, category: StepCategory): { title: string;
       break;
     }
 
+    case "観光": {
+      // チケット: イベント名、会場、日付、座席、番号
+      const eventMatch = allText.match(/([\u4e00-\u9faf\u3040-\u309f\u30a0-\u30ff]{3,20})/);
+      if (eventMatch) {
+        title = eventMatch[0];
+        fields.push({ label: "イベント", value: title });
+      }
+
+      const venueMatch = allText.match(/([\u4e00-\u9faf]{2,10}(ホール|アリーナ|スタジアム|ドーム|劇場|センター|会場|シアター))/);
+      if (venueMatch) {
+        detail = venueMatch[0];
+        fields.push({ label: "会場", value: detail });
+      }
+
+      const dateMatch = allText.match(/(\d{4}[年/.]\d{1,2}[月/.]\d{1,2}日?|\d{1,2}月\d{1,2}日)/);
+      if (dateMatch) fields.push({ label: "日付", value: dateMatch[1] });
+
+      const seatMatch = allText.match(/([\u4e00-\u9faf]?\d{1,3}\s*列\s*\d{1,3}\s*番|[A-Z]?\d{1,3}\s*番)/);
+      if (seatMatch) fields.push({ label: "座席", value: seatMatch[0] });
+
+      if (timeMatch) fields.push({ label: "開場/開演", value: timeMatch[1] });
+
+      if (!title) title = "チケット情報";
+      break;
+    }
+
     default: {
       // その他: 全文から要点だけ
       title = lines[0]?.substring(0, 30) || "スキャンデータ";
@@ -248,7 +275,7 @@ function parseByCategory(text: string, category: StepCategory): { title: string;
 
 /* ====== ステータス型 ====== */
 
-type ScanStatus = "select" | "capture" | "processing" | "done" | "error";
+type ScanStatus = "idle" | "processing" | "done" | "error";
 
 /* ====== コンポーネント ====== */
 
@@ -258,14 +285,13 @@ export default function ScanPage() {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const [selectedCategory, setSelectedCategory] = useState<ScanCategory | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [status, setStatus] = useState<ScanStatus>("select");
+  const [status, setStatus] = useState<ScanStatus>("idle");
   const [ocrText, setOcrText] = useState("");
   const [parsedResult, setParsedResult] = useState<ReturnType<typeof parseByCategory> | null>(null);
   const [progress, setProgress] = useState(0);
 
   const selectCategory = (cat: ScanCategory) => {
-    setSelectedCategory(cat);
-    setStatus("capture");
+    setSelectedCategory((prev) => (prev?.key === cat.key ? null : cat));
   };
 
   const handleFile = async (file: File) => {
@@ -337,92 +363,76 @@ export default function ScanPage() {
   const reset = () => {
     setSelectedCategory(null);
     setImageUrl(null);
-    setStatus("select");
+    setStatus("idle");
     setOcrText("");
     setParsedResult(null);
     setProgress(0);
   };
 
-  const backToCapture = () => {
+  const backToIdle = () => {
     setImageUrl(null);
-    setStatus("capture");
+    setStatus("idle");
     setOcrText("");
     setParsedResult(null);
     setProgress(0);
   };
+
+  const isActive = selectedCategory !== null;
 
   return (
     <>
       <AppHeader
         title="スキャン"
-        back={status !== "select"}
+        back={status !== "idle"}
         backHref="/scan"
         action={undefined}
       />
 
       <Box pb={110} px="md" pt="md">
-        {/* ステップ1: カテゴリ選択 */}
-        {status === "select" && (
+        {/* メイン画面: カテゴリ選択 + 撮影ボタン */}
+        {status === "idle" && (
           <>
-            <Text fw={700} size="lg" mb={4}>
-              スキャンの種類を選択
-            </Text>
-            <Text size="sm" c="dimmed" mb="md" lh={1.6}>
-              書類の種類を選ぶと、読み取り精度が上がります
+            <Text fw={700} size="sm" mb={8}>
+              種類を選択
             </Text>
 
             <Box className={classes.categoryGrid}>
-              {scanCategories.map((cat) => (
-                <button
-                  key={cat.key}
-                  className={classes.categoryCard}
-                  onClick={() => selectCategory(cat)}
-                >
-                  <Box
-                    className={classes.categoryIcon}
-                    style={{
-                      background: `var(--mantine-color-${cat.color}-0)`,
-                      color: `var(--mantine-color-${cat.color}-7)`,
-                    }}
+              {scanCategories.map((cat) => {
+                const selected = selectedCategory?.key === cat.key;
+                return (
+                  <button
+                    key={cat.key}
+                    className={`${classes.categoryCard} ${selected ? classes.categorySelected : ""}`}
+                    onClick={() => selectCategory(cat)}
                   >
-                    <cat.icon size={24} />
-                  </Box>
-                  <Text fw={600} size="sm">
-                    {cat.label}
-                  </Text>
-                  <Text size="xs" c="dimmed">
-                    {cat.description}
-                  </Text>
-                </button>
-              ))}
+                    <Box className={`${classes.radio} ${selected ? classes.radioChecked : ""}`}>
+                      {selected && <Box className={classes.radioDot} />}
+                    </Box>
+                    <Box
+                      className={classes.categoryIcon}
+                      style={{
+                        background: selected
+                          ? `var(--mantine-color-${cat.color}-7)`
+                          : `var(--mantine-color-${cat.color}-0)`,
+                        color: selected
+                          ? "white"
+                          : `var(--mantine-color-${cat.color}-7)`,
+                      }}
+                    >
+                      <cat.icon size={20} />
+                    </Box>
+                    <Text fw={600} size="xs">
+                      {cat.label}
+                    </Text>
+                  </button>
+                );
+              })}
             </Box>
-          </>
-        )}
 
-        {/* ステップ2: 撮影・アップロード */}
-        {status === "capture" && selectedCategory && (
-          <Box className={classes.captureArea}>
-            <Box
-              className={classes.iconWrap}
-              style={{
-                background: `var(--mantine-color-${selectedCategory.color}-0)`,
-                color: `var(--mantine-color-${selectedCategory.color}-7)`,
-              }}
-            >
-              <selectedCategory.icon size={48} stroke={1.5} />
-            </Box>
-            <Text fw={700} size="lg" mt="md">
-              {selectedCategory.label}をスキャン
-            </Text>
-            <Text size="sm" c="dimmed" ta="center" mt={4} lh={1.6}>
-              {selectedCategory.description}を
-              <br />
-              撮影またはアップロードしてください
-            </Text>
-
-            <Box className={classes.buttons}>
+            <Box className={classes.buttons} style={{ marginTop: 20 }}>
               <button
                 className={classes.captureButton}
+                disabled={!isActive}
                 onClick={() => cameraInputRef.current?.click()}
               >
                 <IconCamera size={22} />
@@ -430,6 +440,7 @@ export default function ScanPage() {
               </button>
               <button
                 className={classes.uploadButton}
+                disabled={!isActive}
                 onClick={() => fileInputRef.current?.click()}
               >
                 <IconUpload size={22} />
@@ -437,10 +448,11 @@ export default function ScanPage() {
               </button>
             </Box>
 
-            <button className={classes.backLink} onClick={reset}>
-              <IconChevronLeft size={14} />
-              種類を選び直す
-            </button>
+            {!isActive && (
+              <Text size="xs" c="dimmed" ta="center" mt={12}>
+                種類を選ぶと撮影・アップロードできます
+              </Text>
+            )}
 
             <input
               ref={cameraInputRef}
@@ -457,10 +469,10 @@ export default function ScanPage() {
               style={{ display: "none" }}
               onChange={onFileChange}
             />
-          </Box>
+          </>
         )}
 
-        {/* ステップ3: OCR処理中 */}
+        {/* OCR処理中 */}
         {status === "processing" && (
           <Box className={classes.processingArea}>
             {imageUrl && (
@@ -541,7 +553,7 @@ export default function ScanPage() {
                 <IconCheck size={18} />
                 Journeyとして追加
               </button>
-              <button className={classes.retryButton} onClick={backToCapture}>
+              <button className={classes.retryButton} onClick={backToIdle}>
                 撮り直す
               </button>
               <button className={classes.retryButton} onClick={reset}>
@@ -562,7 +574,7 @@ export default function ScanPage() {
               画像が不鮮明か、対応していない形式です。
             </Text>
             <Box className={classes.buttons} style={{ marginTop: 24 }}>
-              <button className={classes.captureButton} onClick={backToCapture}>
+              <button className={classes.captureButton} onClick={backToIdle}>
                 やり直す
               </button>
             </Box>
