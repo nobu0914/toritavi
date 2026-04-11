@@ -45,9 +45,28 @@ type JourneyForm = {
   memo: string;
 };
 
-function loadJourney(id: string): Journey | null {
-  if (typeof window === "undefined") return null;
-  return getJourney(id) ?? null;
+type PageData = {
+  journey: Journey | null;
+  journeyForm: JourneyForm;
+  loaded: boolean;
+};
+
+function loadPageData(id: string, today: string): PageData {
+  if (typeof window === "undefined") {
+    return {
+      journey: null,
+      journeyForm: { title: "", startDate: today, endDate: today, memo: "" },
+      loaded: false,
+    };
+  }
+  const found = getJourney(id) ?? null;
+  return {
+    journey: found,
+    journeyForm: found
+      ? { title: found.title, startDate: found.startDate, endDate: found.endDate, memo: found.memo ?? "" }
+      : { title: "", startDate: today, endDate: today, memo: "" },
+    loaded: true,
+  };
 }
 
 export default function TripDetailPage() {
@@ -55,30 +74,22 @@ export default function TripDetailPage() {
   const params = useParams();
   const id = params.id as string;
   const today = getTodayDateString();
-  const [journey, setJourney] = useState<Journey | null>(() => loadJourney(id));
+  const [pageData, setPageData] = useState<PageData>(() => loadPageData(id, today));
+  const { journey, loaded } = pageData;
+  const setJourney = (j: Journey | null) => setPageData((d) => ({ ...d, journey: j }));
+  const [journeyForm, setJourneyForm] = useState<JourneyForm>(pageData.journeyForm);
   const [modalOpened, { open: openModal, close: closeModal }] = useDisclosure(false);
   const [journeyModalOpened, { open: openJourneyModal, close: closeJourneyModal }] =
     useDisclosure(false);
   const [draft, setDraft] = useState<StepDraft>(emptyStepDraft());
   const [editingStepId, setEditingStepId] = useState<string>("new");
-  const [journeyForm, setJourneyForm] = useState<JourneyForm>(() => {
-    const found = loadJourney(id);
-    return found
-      ? {
-          title: found.title,
-          startDate: found.startDate,
-          endDate: found.endDate,
-          memo: found.memo ?? "",
-        }
-      : { title: "", startDate: today, endDate: today, memo: "" };
-  });
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!journey) router.replace("/");
-  }, [journey, router]);
+    if (loaded && !journey) router.replace("/");
+  }, [loaded, journey, router]);
 
-  if (!journey) {
+  if (!loaded || !journey) {
     return (
       <Box>
         <Skeleton height={52} radius={0} />
