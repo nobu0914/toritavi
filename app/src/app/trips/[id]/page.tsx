@@ -368,9 +368,14 @@ export default function TripDetailPage() {
                 : "";
             return (
               <Box key={step.id} className={classes.timelineItem}>
+                {/* 時間ラベル（上段・全幅） */}
                 <Box className={classes.timelineTime}>
-                  {step.time?.match(/\d{1,2}:\d{2}/)?.[0] || "--:--"}
+                  <Text className={classes.timelineTimeText}>
+                    {step.time?.match(/\d{1,2}:\d{2}/)?.[0] || "--:--"}
+                  </Text>
                 </Box>
+
+                {/* レール（左カラム） */}
                 <Box className={classes.timelineRail}>
                   <Box className={`${classes.timelineDot} ${dotClass}`} />
                   <Box className={`${classes.timelineLine} ${lineClass}`} />
