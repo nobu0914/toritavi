@@ -80,7 +80,7 @@ export default function TripsPage() {
 
     if (toast === "journey_created") {
       notifications.show({
-        message: "Journeyを作成しました",
+        message: "登録が完了しました",
         color: "teal",
         icon: <IconCheck size={18} />,
         autoClose: 3000,

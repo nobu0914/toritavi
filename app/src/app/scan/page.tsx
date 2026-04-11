@@ -481,16 +481,20 @@ export default function ScanPage() {
       information: [],
     };
 
+    let journeyId: string;
+
     if (addToExisting && sameDayTarget) {
       // 既存Journeyに追加
       updateJourney(sameDayTarget.id, {
         steps: [...sameDayTarget.steps, step],
       });
+      journeyId = sameDayTarget.id;
     } else {
       // 新規Journey作成
+      journeyId = generateId();
       const cd = getCategoryDef(detectedCategory);
       addJourney({
-        id: generateId(),
+        id: journeyId,
         title: `${cd.label} ${new Date().toLocaleDateString("ja-JP")}`,
         startDate: todayStr,
         endDate: todayStr,
@@ -501,7 +505,7 @@ export default function ScanPage() {
     }
 
     sessionStorage.setItem("toritavi_toast", "journey_created");
-    router.push("/");
+    router.push(`/trips/${journeyId}`);
   };
 
   const reset = () => {

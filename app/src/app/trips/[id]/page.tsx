@@ -108,6 +108,26 @@ export default function TripDetailPage() {
     if (loaded && !journey) router.replace("/");
   }, [loaded, journey, router]);
 
+  useEffect(() => {
+    const toast = sessionStorage.getItem("toritavi_toast");
+    if (!toast) return;
+    sessionStorage.removeItem("toritavi_toast");
+    if (toast === "journey_created") {
+      notifications.show({
+        message: "登録が完了しました",
+        color: "teal",
+        icon: <IconCheck size={18} />,
+        autoClose: 3000,
+        withBorder: false,
+        style: { background: "var(--mantine-color-teal-6)", color: "white" },
+        styles: {
+          description: { color: "white" },
+          icon: { color: "white", background: "transparent" },
+        },
+      });
+    }
+  }, []);
+
   if (!loaded || !journey) {
     return (
       <Box>
