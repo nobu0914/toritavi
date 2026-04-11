@@ -9,7 +9,6 @@ import {
   IconCheck,
   IconChevronRight,
   IconInfoCircle,
-  IconPlus,
   IconTrain,
 } from "@tabler/icons-react";
 import { startTransition, useEffect, useState } from "react";
@@ -345,10 +344,6 @@ export default function TripsPage() {
           </Box>
         )}
       </Box>
-
-      <button className={classes.fab} onClick={() => router.push("/trips/new")}>
-        <IconPlus size={24} />
-      </button>
 
       <TabBar />
     </>

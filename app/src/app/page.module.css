@@ -354,21 +354,3 @@
   color: var(--mantine-color-gray-6);
   line-height: 1.6;
 }
-
-.fab {
-  position: fixed;
-  bottom: calc(68px + env(safe-area-inset-bottom));
-  right: max(16px, calc(50% - 199px));
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: #f76707;
-  color: white;
-  border: none;
-  cursor: pointer;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.05) 0 20px 25px -5px, rgba(0, 0, 0, 0.04) 0 10px 10px -5px;
-  z-index: 150;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
