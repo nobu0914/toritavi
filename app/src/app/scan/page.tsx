@@ -356,15 +356,11 @@ export default function ScanPage() {
   const [inputSource, setInputSource] = useState<"撮影" | "アップロード" | "メール">("撮影");
 
   const pdfToImage = async (file: File): Promise<Blob> => {
-    const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
-    pdfjsLib.GlobalWorkerOptions.workerSrc = "";
+    const pdfjsLib = await import("pdfjs-dist");
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
     const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({
-      data: arrayBuffer,
-      useWorkerFetch: false,
-      isEvalSupported: false,
-      useSystemFonts: true,
-    }).promise;
+    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+    const pdf = await loadingTask.promise;
     const page = await pdf.getPage(1);
     const scale = 2;
     const viewport = page.getViewport({ scale });
