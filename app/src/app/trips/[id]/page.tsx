@@ -453,6 +453,7 @@ export default function TripDetailPage() {
         onSave={handleSaveStep}
         isEdit={editingIndex !== null}
         editingTitle={editingIndex !== null ? journey.steps[editingIndex]?.title : undefined}
+        sourceImageUrl={editingIndex !== null ? journey.steps[editingIndex]?.sourceImageUrl : undefined}
       />
 
       <Modal

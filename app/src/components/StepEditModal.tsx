@@ -9,7 +9,7 @@ import {
   Text,
   TextInput,
 } from "@mantine/core";
-import { IconCamera, IconUpload, IconX } from "@tabler/icons-react";
+import { IconChevronDown, IconChevronUp, IconX } from "@tabler/icons-react";
 import classes from "./StepEditModal.module.css";
 import type { StepCategory, StepSource } from "@/lib/types";
 
@@ -50,6 +50,7 @@ type Props = {
   onSave: () => void;
   isEdit: boolean;
   editingTitle?: string;
+  sourceImageUrl?: string;
 };
 
 export function StepEditModal({
@@ -60,16 +61,17 @@ export function StepEditModal({
   onSave,
   isEdit,
   editingTitle,
+  sourceImageUrl,
 }: Props) {
-  // opened+isEdit をキーにして、モーダルが開くたびに editing を初期化
   const [editing, setEditing] = useState(!isEdit);
+  const [previewExpanded, setPreviewExpanded] = useState(false);
 
-  // opened が変化したときだけリセット（useEffect の代わりにprev比較）
   const [prevOpened, setPrevOpened] = useState(false);
   if (opened !== prevOpened) {
     setPrevOpened(opened);
     if (opened) {
       setEditing(!isEdit);
+      setPreviewExpanded(false);
     }
   }
 
@@ -119,6 +121,29 @@ export function StepEditModal({
           </ActionIcon>
         </Box>
         <Box className={classes.body}>
+          {/* スキャン元アコーディオンプレビュー */}
+          {sourceImageUrl && (
+            <Box
+              className={classes.sourceAccordion}
+              onClick={() => setPreviewExpanded((v) => !v)}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={sourceImageUrl}
+                alt="スキャン元"
+                className={classes.sourceImage}
+                style={{ height: previewExpanded ? "auto" : 60 }}
+              />
+              <Box className={classes.sourceToggle}>
+                {previewExpanded ? (
+                  <><IconChevronUp size={14} />閉じる</>
+                ) : (
+                  <><IconChevronDown size={14} />スキャン元データを表示</>
+                )}
+              </Box>
+            </Box>
+          )}
+
           <Box className={classes.formSection} key={editing ? "editing" : "readonly"}>
             <Box className={classes.formRow}>
               <Text className={classes.formLabel}>カテゴリ</Text>
@@ -210,26 +235,6 @@ export function StepEditModal({
               </Box>
             </Box>
           </Box>
-          {(draft.source === "撮影" || draft.source === "アップロード") && (
-            <Box className={classes.previewSection}>
-              <Text className={classes.sectionLabel}>Preview</Text>
-              <Box className={classes.previewPanel}>
-                <Box className={classes.previewThumbs}>
-                  <Box className={classes.previewThumb}>
-                    {draft.source === "撮影" ? <IconCamera size={24} /> : <IconUpload size={24} />}
-                  </Box>
-                  {draft.source === "アップロード" && (
-                    <Box className={classes.previewThumb}>
-                      <IconUpload size={24} />
-                    </Box>
-                  )}
-                </Box>
-                <Text className={classes.previewCaption}>
-                  {draft.source === "撮影" ? "撮影した書類プレビュー" : "アップロードしたPDFプレビュー"}
-                </Text>
-              </Box>
-            </Box>
-          )}
         </Box>
         <Box className={classes.footer}>
           <button

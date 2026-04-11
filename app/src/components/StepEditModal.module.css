@@ -132,36 +132,31 @@
   cursor: not-allowed;
 }
 
-.previewSection {
-  margin-top: 16px;
-}
-
-.previewPanel {
-  background: white;
+.sourceAccordion {
   border: 1px solid var(--mantine-color-gray-2);
   border-radius: 8px;
-  padding: 12px;
+  overflow: hidden;
+  margin-bottom: 12px;
+  cursor: pointer;
 }
 
-.previewThumbs {
-  display: flex;
-  gap: 8px;
+.sourceImage {
+  width: 100%;
+  display: block;
+  object-fit: cover;
+  object-position: top;
+  transition: height 0.3s ease;
 }
 
-.previewThumb {
-  width: 72px;
-  height: 72px;
-  border-radius: 8px;
-  background: var(--mantine-color-gray-1);
-  border: 1px solid var(--mantine-color-gray-2);
+.sourceToggle {
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 4px;
+  padding: 6px;
+  font-size: 11px;
+  font-weight: 600;
   color: var(--mantine-color-gray-5);
-}
-
-.previewCaption {
-  margin-top: 8px;
-  font-size: 12px;
-  color: var(--mantine-color-gray-5);
+  background: var(--mantine-color-gray-0);
+  border-top: 1px solid var(--mantine-color-gray-1);
 }

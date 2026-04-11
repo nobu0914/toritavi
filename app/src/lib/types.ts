@@ -30,6 +30,7 @@ export type Step = {
   confNumber?: string;
   memo?: string;
   source?: StepSource;
+  sourceImageUrl?: string;
   status: StepStatus;
   information: Information[];
 };

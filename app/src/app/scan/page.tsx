@@ -465,7 +465,22 @@ export default function ScanPage() {
   };
 
 
-  const createStep = () => {
+  const blobToBase64 = async (blobUrl: string): Promise<string> => {
+    const res = await fetch(blobUrl);
+    const blob = await res.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.readAsDataURL(blob);
+    });
+  };
+
+  const createStep = async () => {
+    let savedImageUrl: string | undefined;
+    if (imageUrl) {
+      try { savedImageUrl = await blobToBase64(imageUrl); } catch { /* ignore */ }
+    }
+
     const stepData = formToStep(detectedCategory, formValues);
     const now = new Date().toISOString();
     const todayStr = new Date().toISOString().split("T")[0];
@@ -477,6 +492,7 @@ export default function ScanPage() {
       detail: stepData.detail || undefined,
       confNumber: stepData.confNumber || undefined,
       source: inputSource,
+      sourceImageUrl: savedImageUrl,
       status: "未開始",
       information: [],
     };
