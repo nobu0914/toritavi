@@ -19,7 +19,7 @@ import {
   IconTrash,
   IconX,
 } from "@tabler/icons-react";
-import { useEffect, useState } from "react";
+import { startTransition, useEffect, useState } from "react";
 import { useDisclosure } from "@mantine/hooks";
 import { useParams, useRouter } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
@@ -45,45 +45,38 @@ type JourneyForm = {
   memo: string;
 };
 
-type PageData = {
-  journey: Journey | null;
-  journeyForm: JourneyForm;
-  loaded: boolean;
-};
-
-function loadPageData(id: string, today: string): PageData {
-  if (typeof window === "undefined") {
-    return {
-      journey: null,
-      journeyForm: { title: "", startDate: today, endDate: today, memo: "" },
-      loaded: false,
-    };
-  }
-  const found = getJourney(id) ?? null;
-  return {
-    journey: found,
-    journeyForm: found
-      ? { title: found.title, startDate: found.startDate, endDate: found.endDate, memo: found.memo ?? "" }
-      : { title: "", startDate: today, endDate: today, memo: "" },
-    loaded: true,
-  };
-}
-
 export default function TripDetailPage() {
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
   const today = getTodayDateString();
-  const [pageData, setPageData] = useState<PageData>(() => loadPageData(id, today));
-  const { journey, loaded } = pageData;
-  const setJourney = (j: Journey | null) => setPageData((d) => ({ ...d, journey: j }));
-  const [journeyForm, setJourneyForm] = useState<JourneyForm>(pageData.journeyForm);
+  const [journey, setJourney] = useState<Journey | null>(null);
+  const [journeyForm, setJourneyForm] = useState<JourneyForm>({
+    title: "", startDate: today, endDate: today, memo: "",
+  });
+  const [loaded, setLoaded] = useState(false);
   const [modalOpened, { open: openModal, close: closeModal }] = useDisclosure(false);
   const [journeyModalOpened, { open: openJourneyModal, close: closeJourneyModal }] =
     useDisclosure(false);
   const [draft, setDraft] = useState<StepDraft>(emptyStepDraft());
   const [editingStepId, setEditingStepId] = useState<string>("new");
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    startTransition(() => {
+      const found = getJourney(id) ?? null;
+      setJourney(found);
+      if (found) {
+        setJourneyForm({
+          title: found.title,
+          startDate: found.startDate,
+          endDate: found.endDate,
+          memo: found.memo ?? "",
+        });
+      }
+      setLoaded(true);
+    });
+  }, [id]);
 
   useEffect(() => {
     if (loaded && !journey) router.replace("/");
