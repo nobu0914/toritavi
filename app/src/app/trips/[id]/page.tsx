@@ -16,7 +16,7 @@ import {
   IconDotsVertical,
   IconEdit,
   IconInfoCircle,
-  IconMap,
+  IconMapPin,
   IconPhone,
   IconPlayerPlay,
   IconPlus,
@@ -397,7 +397,15 @@ export default function TripDetailPage() {
                       <Text className={classes.timelineType}>{step.category}</Text>
                       <Text className={classes.timelineTitle}>{step.title}</Text>
                       {(step.from || step.to) && (
-                        <Text className={classes.timelineDetail}>
+                        <Text
+                          className={classes.timelineLocation}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const q = [step.from, step.to].filter(Boolean).pop() || "";
+                            window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`, "_blank", "noopener");
+                          }}
+                        >
+                          <IconMapPin size={12} />
                           {[step.from, step.to].filter(Boolean).join(" → ")}
                         </Text>
                       )}
@@ -444,26 +452,45 @@ export default function TripDetailPage() {
                   </Box>
 
                 {/* カード間アクションバー */}
-                {!isLast && (
-                  <Box className={classes.actionBar}>
-                    <button className={classes.actionBtn} onClick={(e) => { e.stopPropagation(); /* TODO */ }}>
-                      <IconPlus size={14} />
-                      <span>予定追加</span>
-                    </button>
-                    <button className={classes.actionBtn} onClick={(e) => { e.stopPropagation(); /* TODO */ }}>
-                      <IconMap size={14} />
-                      <span>マップ</span>
-                    </button>
-                    <button className={classes.actionBtn} onClick={(e) => { e.stopPropagation(); /* TODO */ }}>
-                      <IconRoute size={14} />
-                      <span>経路</span>
-                    </button>
-                    <button className={classes.actionBtn} onClick={(e) => { e.stopPropagation(); /* TODO */ }}>
-                      <IconPhone size={14} />
-                      <span>タクシー</span>
-                    </button>
-                  </Box>
-                )}
+                {!isLast && (() => {
+                  const nextStep = sortedSteps[index + 1];
+                  const origin = step.to || step.from || step.title;
+                  const dest = nextStep?.from || nextStep?.to || nextStep?.title || "";
+                  return (
+                    <Box className={classes.actionBar}>
+                      <button className={classes.actionBtn} onClick={(e) => { e.stopPropagation(); /* TODO */ }}>
+                        <IconPlus size={14} />
+                        <span>予定追加</span>
+                      </button>
+                      <button
+                        className={classes.actionBtn}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          window.open(
+                            `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(dest)}&travelmode=transit`,
+                            "_blank", "noopener"
+                          );
+                        }}
+                      >
+                        <IconRoute size={14} />
+                        <span>経路</span>
+                      </button>
+                      <button
+                        className={classes.actionBtn}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          window.open(
+                            `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(dest)}&travelmode=driving`,
+                            "_blank", "noopener"
+                          );
+                        }}
+                      >
+                        <IconPhone size={14} />
+                        <span>タクシー</span>
+                      </button>
+                    </Box>
+                  );
+                })()}
               </Box>
             );
           })}
