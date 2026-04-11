@@ -68,6 +68,53 @@
   cursor: not-allowed;
 }
 
+.inputGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.inputCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 20px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--mantine-color-gray-2);
+  background: white;
+  color: var(--mantine-color-blue-7);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.inputCard:active {
+  background: var(--mantine-color-blue-0);
+}
+
+.dropZone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 16px;
+  border: 2px dashed var(--mantine-color-gray-3);
+  border-radius: 10px;
+  background: var(--mantine-color-gray-0);
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.dropZoneActive {
+  border-color: var(--mantine-color-blue-5);
+  background: var(--mantine-color-blue-0);
+}
+
+.textInputArea {
+  margin-top: 16px;
+}
+
 .processingArea {
   position: relative;
   border-radius: 12px;

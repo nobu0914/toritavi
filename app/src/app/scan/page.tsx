@@ -1,6 +1,6 @@
 "use client";
 
-import { Box, Text, Loader, TextInput, Checkbox } from "@mantine/core";
+import { Box, Text, Loader, TextInput, Checkbox, Textarea } from "@mantine/core";
 import {
   IconCamera,
   IconUpload,
@@ -17,6 +17,8 @@ import {
   IconCheck,
   IconAlertCircle,
   IconChevronDown,
+  IconDragDrop,
+  IconClipboardText,
 } from "@tabler/icons-react";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -348,6 +350,10 @@ export default function ScanPage() {
   const [progress, setProgress] = useState(0);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [addToExisting, setAddToExisting] = useState(true);
+  const [showTextInput, setShowTextInput] = useState(false);
+  const [pasteText, setPasteText] = useState("");
+  const [dragging, setDragging] = useState(false);
+  const [inputSource, setInputSource] = useState<"撮影" | "アップロード" | "メール">("撮影");
 
   const pdfToImage = async (file: File): Promise<Blob> => {
     const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
@@ -416,6 +422,42 @@ export default function ScanPage() {
     setFormValues((prev) => ({ ...prev, [key]: value }));
   };
 
+  const handleTextSubmit = () => {
+    if (!pasteText.trim()) return;
+    setInputSource("メール");
+    setStatus("processing");
+    setProgress(0);
+    setImageUrl(null);
+    // テキストは直接解析（OCR不要）
+    setTimeout(() => {
+      const text = pasteText.trim();
+      setOcrText(text);
+      const cat = detectCategory(text);
+      setDetectedCategory(cat);
+      setFormValues(extractFields(text, cat));
+      setProgress(100);
+      setStatus("done");
+    }, 300);
+  };
+
+  const onDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragging(true);
+  };
+
+  const onDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragging(false);
+  };
+
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragging(false);
+    setInputSource("アップロード");
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleFile(file);
+  };
+
   const changeCategory = (cat: StepCategory) => {
     setDetectedCategory(cat);
     setFormValues(extractFields(ocrText, cat));
@@ -434,7 +476,7 @@ export default function ScanPage() {
       time: stepData.time,
       detail: stepData.detail || undefined,
       confNumber: stepData.confNumber || undefined,
-      source: "撮影",
+      source: inputSource,
       status: "未開始",
       information: [],
     };
@@ -469,6 +511,8 @@ export default function ScanPage() {
     setFormValues({});
     setProgress(0);
     setShowCategoryPicker(false);
+    setShowTextInput(false);
+    setPasteText("");
   };
 
   const catDef = getCategoryDef(detectedCategory);
@@ -486,39 +530,88 @@ export default function ScanPage() {
       <AppHeader title="予定登録" />
 
       <Box pb={110} px="md" pt="md">
-        {/* 初期画面: 撮影/アップロード */}
+        {/* 初期画面 */}
         {status === "idle" && (
-          <Box className={classes.captureArea}>
-            <Box className={classes.iconWrap}>
-              <IconScan size={48} stroke={1.5} />
-            </Box>
-            <Text fw={700} size="lg" mt="md">
-              予定の自動登録
-            </Text>
-            <Text size="sm" c="dimmed" ta="center" mt={4} lh={1.6}>
-              撮影またはアップロードするだけで
-              <br />
-              種類を自動判定し、情報を読み取ります
-            </Text>
-
-            <Box className={classes.buttons}>
-              <button
-                className={classes.captureButton}
-                onClick={() => cameraInputRef.current?.click()}
-              >
-                <IconCamera size={22} />
-                撮影する
-              </button>
-              <button
-                className={classes.uploadButton}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <IconUpload size={20} />
-                ファイル・画像を選択
-              </button>
+          <>
+            <Box className={classes.captureArea}>
+              <Box className={classes.iconWrap}>
+                <IconScan size={48} stroke={1.5} />
+              </Box>
+              <Text fw={700} size="lg" mt="md">
+                予定の自動登録
+              </Text>
+              <Text size="sm" c="dimmed" ta="center" mt={4} lh={1.6}>
+                種類を自動判定し、情報を読み取ります
+              </Text>
             </Box>
 
-            <Text size="xs" c="dimmed" mt="md">
+            {/* 入力方法グリッド */}
+            <Box className={classes.inputGrid}>
+              <button
+                className={classes.inputCard}
+                onClick={() => { setInputSource("撮影"); cameraInputRef.current?.click(); }}
+              >
+                <IconCamera size={28} stroke={1.5} />
+                <Text size="sm" fw={600}>撮影する</Text>
+              </button>
+              <button
+                className={classes.inputCard}
+                onClick={() => { setInputSource("アップロード"); fileInputRef.current?.click(); }}
+              >
+                <IconUpload size={28} stroke={1.5} />
+                <Text size="sm" fw={600}>ファイル・画像</Text>
+              </button>
+              <button
+                className={classes.inputCard}
+                onClick={() => setShowTextInput(true)}
+              >
+                <IconClipboardText size={28} stroke={1.5} />
+                <Text size="sm" fw={600}>テキスト入力</Text>
+              </button>
+            </Box>
+
+            {/* ドラッグ&ドロップエリア */}
+            <Box
+              className={`${classes.dropZone} ${dragging ? classes.dropZoneActive : ""}`}
+              onDragOver={onDragOver}
+              onDragLeave={onDragLeave}
+              onDrop={onDrop}
+            >
+              <IconDragDrop size={24} stroke={1.5} color="var(--mantine-color-gray-5)" />
+              <Text size="xs" c="dimmed">ここにファイルをドロップ</Text>
+            </Box>
+
+            {/* テキスト入力エリア */}
+            {showTextInput && (
+              <Box className={classes.textInputArea}>
+                <Textarea
+                  placeholder="メールや予約確認の文面を貼り付け..."
+                  autosize
+                  minRows={4}
+                  maxRows={10}
+                  value={pasteText}
+                  onChange={(e) => setPasteText(e.currentTarget.value)}
+                />
+                <Box className={classes.buttons} style={{ marginTop: 12 }}>
+                  <button
+                    className={classes.captureButton}
+                    onClick={handleTextSubmit}
+                    disabled={!pasteText.trim()}
+                  >
+                    <IconScan size={18} />
+                    読み取る
+                  </button>
+                  <button
+                    className={classes.uploadButton}
+                    onClick={() => { setShowTextInput(false); setPasteText(""); }}
+                  >
+                    キャンセル
+                  </button>
+                </Box>
+              </Box>
+            )}
+
+            <Text size="xs" c="dimmed" ta="center" mt="md">
               対応: フライト・鉄道・ホテル・病院・チケット 他
             </Text>
 
@@ -537,7 +630,7 @@ export default function ScanPage() {
               style={{ display: "none" }}
               onChange={onFileChange}
             />
-          </Box>
+          </>
         )}
 
         {/* OCR処理中 */}
