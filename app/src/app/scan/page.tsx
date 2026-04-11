@@ -1,6 +1,6 @@
 "use client";
 
-import { Box, Text, Loader, TextInput, Select } from "@mantine/core";
+import { Box, Text, Loader, TextInput } from "@mantine/core";
 import {
   IconCamera,
   IconUpload,
@@ -383,17 +383,6 @@ export default function ScanPage() {
     setFormValues((prev) => ({ ...prev, [key]: value }));
   };
 
-  const changeCategory = (cat: string | null) => {
-    if (!cat) return;
-    const newCat = cat as StepCategory;
-    setDetectedCategory(newCat);
-    // 既存値を保持しつつカテゴリ変更
-    setFormValues((prev) => {
-      const reExtracted = extractFields(ocrText, newCat);
-      // ユーザーが編集した値は上書きしない
-      return { ...reExtracted, ...prev };
-    });
-  };
 
   const createStep = () => {
     const stepData = formToStep(detectedCategory, formValues);
@@ -521,13 +510,7 @@ export default function ScanPage() {
         {/* 結果: カテゴリ別専用フォーム */}
         {status === "done" && (
           <>
-            {/* 画像プレビュー */}
-            {imageUrl && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={imageUrl} alt="スキャン結果" className={classes.resultImage} />
-            )}
-
-            {/* カテゴリ表示 + 変更 */}
+            {/* カテゴリ表示 */}
             <Box className={classes.categoryHeader}>
               <Box
                 className={classes.categoryBadge}
@@ -539,16 +522,6 @@ export default function ScanPage() {
                 <catDef.icon size={14} />
                 {catDef.label}
               </Box>
-              <Select
-                size="xs"
-                variant="unstyled"
-                value={detectedCategory}
-                onChange={changeCategory}
-                data={categoryDefs.map((c) => ({ value: c.key, label: c.label }))}
-                styles={{ input: { color: "var(--mantine-color-gray-5)", fontSize: 12, textAlign: "right" as const } }}
-                rightSection={null}
-                allowDeselect={false}
-              />
             </Box>
 
             {/* 専用フォーム */}
@@ -566,6 +539,17 @@ export default function ScanPage() {
                 </Box>
               ))}
             </Box>
+
+            {/* スキャン元プレビュー */}
+            {imageUrl && (
+              <>
+                <Text className={classes.sectionLabel}>スキャン元データ</Text>
+                <Box className={classes.previewCard}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={imageUrl} alt="スキャン元" className={classes.previewThumb} />
+                </Box>
+              </>
+            )}
 
             {/* OCR全文 */}
             <details className={classes.ocrDetails}>

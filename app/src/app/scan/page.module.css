@@ -156,12 +156,32 @@
 }
 
 .formInput {
-  border: none;
-  background: transparent;
-  padding: 4px 0;
+  border: 1px solid var(--mantine-color-gray-3);
+  border-radius: 6px;
+  background: var(--mantine-color-gray-0);
+  padding: 8px 10px;
   font-size: 15px;
   color: var(--mantine-color-gray-9);
   font-weight: 600;
+}
+
+.formInput:focus {
+  border-color: var(--mantine-color-blue-6);
+  background: white;
+}
+
+.previewCard {
+  background: white;
+  border: 1px solid var(--mantine-color-gray-2);
+  border-radius: 8px;
+  padding: 10px;
+  overflow: hidden;
+}
+
+.previewThumb {
+  width: 100%;
+  border-radius: 6px;
+  display: block;
 }
 
 .ocrDetails {
