@@ -1,4 +1,4 @@
-const CACHE_NAME = "toritavi-v2";
+const CACHE_NAME = "toritavi-v3";
 const PRECACHE_URLS = ["/", "/scan", "/alerts", "/unfiled", "/account"];
 
 self.addEventListener("install", (event) => {
