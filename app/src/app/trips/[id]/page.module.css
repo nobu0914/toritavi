@@ -132,6 +132,33 @@
   border-width: 2px;
 }
 
+.actionBar {
+  display: flex;
+  gap: 6px;
+  padding: 8px 0;
+  justify-content: center;
+}
+
+.actionBtn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border-radius: 16px;
+  border: 1px solid var(--mantine-color-gray-3);
+  background: white;
+  color: var(--mantine-color-gray-6);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.actionBtn:active {
+  background: var(--mantine-color-gray-0);
+}
+
 .timelineCardIcon {
   width: 36px;
   height: 36px;

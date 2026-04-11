@@ -16,7 +16,11 @@ import {
   IconDotsVertical,
   IconEdit,
   IconInfoCircle,
+  IconMap,
+  IconPhone,
   IconPlayerPlay,
+  IconPlus,
+  IconRoute,
   IconTrash,
   IconX,
 } from "@tabler/icons-react";
@@ -438,6 +442,28 @@ export default function TripDetailPage() {
                       </Menu.Dropdown>
                     </Menu>
                   </Box>
+
+                {/* カード間アクションバー */}
+                {!isLast && (
+                  <Box className={classes.actionBar}>
+                    <button className={classes.actionBtn} onClick={(e) => { e.stopPropagation(); /* TODO */ }}>
+                      <IconPlus size={14} />
+                      <span>予定追加</span>
+                    </button>
+                    <button className={classes.actionBtn} onClick={(e) => { e.stopPropagation(); /* TODO */ }}>
+                      <IconMap size={14} />
+                      <span>マップ</span>
+                    </button>
+                    <button className={classes.actionBtn} onClick={(e) => { e.stopPropagation(); /* TODO */ }}>
+                      <IconRoute size={14} />
+                      <span>経路</span>
+                    </button>
+                    <button className={classes.actionBtn} onClick={(e) => { e.stopPropagation(); /* TODO */ }}>
+                      <IconPhone size={14} />
+                      <span>タクシー</span>
+                    </button>
+                  </Box>
+                )}
               </Box>
             );
           })}
