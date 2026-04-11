@@ -21,6 +21,7 @@ import {
   IconChevronRight,
   IconDragDrop,
   IconClipboardText,
+  IconFlask,
 } from "@tabler/icons-react";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -358,6 +359,7 @@ export default function ScanPage() {
   const [pasteText, setPasteText] = useState("");
   const [dragging, setDragging] = useState(false);
   const [inputSource, setInputSource] = useState<"撮影" | "アップロード" | "メール">("撮影");
+  const [aiMode, setAiMode] = useState(false);
 
   const pdfToImages = async (file: File): Promise<Blob[]> => {
     const pdfjsLib = await import("pdfjs-dist");
@@ -429,9 +431,79 @@ export default function ScanPage() {
     }
   };
 
+  const handleFileAI = async (file: File) => {
+    setStatus("processing");
+    setProgress(0);
+    setCurrentPage(0);
+
+    try {
+      // 画像化
+      let imageBlobs: Blob[];
+      if (file.type === "application/pdf") {
+        imageBlobs = await pdfToImages(file);
+        const urls = imageBlobs.map((b) => URL.createObjectURL(b));
+        setPageUrls(urls);
+        setImageUrl(urls[0]);
+      } else {
+        const url = URL.createObjectURL(file);
+        setImageUrl(url);
+        setPageUrls([url]);
+        imageBlobs = [file];
+      }
+
+      setProgress(30);
+
+      // base64変換
+      const base64Images: string[] = [];
+      for (const blob of imageBlobs) {
+        const b64 = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(blob);
+        });
+        base64Images.push(b64);
+      }
+
+      setProgress(50);
+
+      // Claude API呼び出し
+      const res = await fetch("/api/ocr", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ images: base64Images }),
+      });
+
+      if (!res.ok) throw new Error("API error");
+
+      const result = await res.json();
+      setProgress(90);
+
+      // カテゴリとフィールドをセット
+      const cat = (result.category || "その他") as StepCategory;
+      setDetectedCategory(cat);
+
+      // nullを除外してフォーム値に
+      const fields: Record<string, string> = {};
+      if (result.fields) {
+        for (const [k, v] of Object.entries(result.fields)) {
+          if (v != null) fields[k] = String(v);
+        }
+      }
+      setFormValues(fields);
+      setOcrText(`[AI OCR] ${JSON.stringify(result, null, 2)}`);
+      setProgress(100);
+      setStatus("done");
+    } catch {
+      setStatus("error");
+    }
+  };
+
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) handleFile(file);
+    if (file) {
+      if (aiMode) handleFileAI(file);
+      else handleFile(file);
+    }
     e.target.value = "";
   };
 
@@ -472,7 +544,10 @@ export default function ScanPage() {
     setDragging(false);
     setInputSource("アップロード");
     const file = e.dataTransfer.files?.[0];
-    if (file) handleFile(file);
+    if (file) {
+      if (aiMode) handleFileAI(file);
+      else handleFile(file);
+    }
   };
 
   const changeCategory = (cat: StepCategory) => {
@@ -569,6 +644,19 @@ export default function ScanPage() {
       <AppHeader title="予定登録" />
 
       <Box pb={110} px="md" pt="md">
+        {/* テストモード切替 */}
+        {status === "idle" && (
+          <Box
+            className={`${classes.testModeBanner} ${aiMode ? classes.testModeActive : ""}`}
+            onClick={() => setAiMode((v) => !v)}
+          >
+            <IconFlask size={16} />
+            <Text size="xs" fw={600}>
+              {aiMode ? "AI OCR（テスト中）" : "テストモード：AI OCR"}
+            </Text>
+          </Box>
+        )}
+
         {/* 初期画面 */}
         {status === "idle" && (
           <>
@@ -682,7 +770,7 @@ export default function ScanPage() {
             <Box className={classes.processingOverlay}>
               <Loader size="md" color="white" />
               <Text size="sm" fw={600} c="white" mt="sm">
-                読み取り中... {progress}%
+                {aiMode ? "AI解析中" : "読み取り中"}... {progress}%
               </Text>
               <Box className={classes.progressBar}>
                 <Box

@@ -1,3 +1,23 @@
+.testModeBanner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px dashed var(--mantine-color-gray-4);
+  color: var(--mantine-color-gray-5);
+  cursor: pointer;
+  margin-bottom: 8px;
+}
+
+.testModeActive {
+  border-color: var(--mantine-color-violet-5);
+  background: var(--mantine-color-violet-0);
+  color: var(--mantine-color-violet-7);
+  border-style: solid;
+}
+
 .captureArea {
   display: flex;
   flex-direction: column;
