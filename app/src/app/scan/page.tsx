@@ -439,7 +439,7 @@ export default function ScanPage() {
 
   return (
     <>
-      <AppHeader title="スキャン" />
+      <AppHeader title="予定登録" />
 
       <Box pb={110} px="md" pt="md">
         {/* 初期画面: 撮影/アップロード */}
@@ -449,7 +449,7 @@ export default function ScanPage() {
               <IconScan size={48} stroke={1.5} />
             </Box>
             <Text fw={700} size="lg" mt="md">
-              書類をスキャン
+              予定の自動登録
             </Text>
             <Text size="sm" c="dimmed" ta="center" mt={4} lh={1.6}>
               撮影またはアップロードするだけで
