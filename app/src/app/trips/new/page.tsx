@@ -23,7 +23,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useDisclosure } from "@mantine/hooks";
 import { AppHeader } from "@/components/AppHeader";
-import { DeleteConfirmModal } from "@/components/DeleteConfirmModal";
 import { TabBar } from "@/components/TabBar";
 import { StepEditModal, emptyStepDraft } from "@/components/StepEditModal";
 import type { StepDraft } from "@/components/StepEditModal";
@@ -36,7 +35,6 @@ import {
   saveJourneyDraft,
 } from "@/lib/store";
 import { getCategoryIcon, getSourceIcon, getSourceLabel, getTodayDateString } from "@/lib/helpers";
-import { showSuccessToast } from "@/lib/toast";
 import type { JourneyDraftItem, Step, StepCategory, StepSource } from "@/lib/types";
 
 const actions: { icon: typeof IconCamera; label: string; key: StepSource }[] = [
@@ -205,17 +203,8 @@ export default function NewTripPage() {
     });
   };
 
-  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
-
   const removeStep = (itemId: string) => {
-    setDeleteTargetId(itemId);
-  };
-
-  const confirmDeleteStep = () => {
-    if (!deleteTargetId) return;
-    setItems((prev) => prev.filter((item) => item.id !== deleteTargetId));
-    setDeleteTargetId(null);
-    showSuccessToast("ステップを削除しました");
+    setItems((prev) => prev.filter((item) => item.id !== itemId));
   };
 
   const handleCreate = () => {
@@ -225,9 +214,8 @@ export default function NewTripPage() {
     const sortedDates =
       startDate <= endDate ? { startDate, endDate } : { startDate: endDate, endDate: startDate };
 
-    const newId = generateId();
     addJourney({
-      id: newId,
+      id: generateId(),
       title: title.trim(),
       startDate: sortedDates.startDate,
       endDate: sortedDates.endDate,
@@ -238,7 +226,7 @@ export default function NewTripPage() {
     });
 
     clearJourneyDraft();
-    sessionStorage.setItem("toritavi_toast", `journey_created:${newId}`);
+    sessionStorage.setItem("toritavi_toast", "journey_created");
     router.push("/");
   };
 
@@ -506,14 +494,6 @@ export default function NewTripPage() {
           </Box>
         </Box>
       </Modal>
-
-      <DeleteConfirmModal
-        opened={deleteTargetId !== null}
-        onClose={() => setDeleteTargetId(null)}
-        onConfirm={confirmDeleteStep}
-        title="ステップを削除しますか？"
-        description="このステップが削除されます。この操作は取り消せません。"
-      />
 
       <TabBar />
     </>

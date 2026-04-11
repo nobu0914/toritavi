@@ -1,13 +1,13 @@
 "use client";
 
-import { Box, Skeleton, Text, UnstyledButton } from "@mantine/core";
-import { IconPlus } from "@tabler/icons-react";
+import { Box, Skeleton, Text } from "@mantine/core";
+import { notifications } from "@mantine/notifications";
+import { IconCheck, IconPlus } from "@tabler/icons-react";
 import { startTransition, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
 import { TabBar } from "@/components/TabBar";
 import { seedSampleJourneys } from "@/lib/store";
-import { showSuccessToast } from "@/lib/toast";
 import {
   daysUntil,
   formatDateRange,
@@ -64,9 +64,17 @@ export default function TripsPage() {
 
   useEffect(() => {
     const toast = sessionStorage.getItem("toritavi_toast");
-    if (toast?.startsWith("journey_created")) {
+    if (toast === "journey_created") {
       sessionStorage.removeItem("toritavi_toast");
-      showSuccessToast("Journeyを作成しました");
+      notifications.show({
+        message: "Journeyを作成しました",
+        color: "teal",
+        icon: <IconCheck size={18} />,
+        autoClose: 3000,
+        withBorder: false,
+        style: { background: "var(--mantine-color-teal-6)", color: "white" },
+        styles: { icon: { color: "white", background: "transparent" } },
+      });
     }
   }, []);
 
@@ -181,19 +189,16 @@ export default function TripsPage() {
                 : "var(--mantine-color-gray-7)";
 
           return (
-            <UnstyledButton
+            <Box
               key={journey.id}
               onClick={() => router.push(`/trips/${journey.id}`)}
               style={{
-                display: "block",
-                width: "auto",
                 background: "white",
                 margin: "6px 16px",
                 borderRadius: 8,
                 overflow: "hidden",
                 border: "1px solid var(--mantine-color-gray-2)",
                 cursor: "pointer",
-                textAlign: "left",
               }}
             >
               {/* Cover */}
@@ -267,13 +272,14 @@ export default function TripsPage() {
                   {daysUntil(journey.startDate)}
                 </Box>
               </Box>
-            </UnstyledButton>
+            </Box>
           );
         })}
       </Box>
 
       {/* FAB */}
-      <button
+      <Box
+        component="button"
         onClick={() => router.push("/trips/new")}
         style={{
           position: "fixed",
@@ -295,7 +301,7 @@ export default function TripsPage() {
         }}
       >
         <IconPlus size={24} />
-      </button>
+      </Box>
 
       <TabBar />
     </>

@@ -10,7 +10,6 @@ import {
   Stack,
   Text,
   TextInput,
-  UnstyledButton,
 } from "@mantine/core";
 import {
   IconCheck,
@@ -20,17 +19,15 @@ import {
   IconTrash,
   IconX,
 } from "@tabler/icons-react";
-import { startTransition, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useDisclosure } from "@mantine/hooks";
 import { useParams, useRouter } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
-import { DeleteConfirmModal } from "@/components/DeleteConfirmModal";
 import { TabBar } from "@/components/TabBar";
 import { StepEditModal, emptyStepDraft } from "@/components/StepEditModal";
 import type { StepDraft } from "@/components/StepEditModal";
 import classes from "./page.module.css";
 import { deleteJourney, getJourney, updateJourney } from "@/lib/store";
-import { showSuccessToast } from "@/lib/toast";
 import {
   formatDateRange,
   formatDateJP,
@@ -48,39 +45,45 @@ type JourneyForm = {
   memo: string;
 };
 
+type PageData = {
+  journey: Journey | null;
+  journeyForm: JourneyForm;
+  loaded: boolean;
+};
+
+function loadPageData(id: string, today: string): PageData {
+  if (typeof window === "undefined") {
+    return {
+      journey: null,
+      journeyForm: { title: "", startDate: today, endDate: today, memo: "" },
+      loaded: false,
+    };
+  }
+  const found = getJourney(id) ?? null;
+  return {
+    journey: found,
+    journeyForm: found
+      ? { title: found.title, startDate: found.startDate, endDate: found.endDate, memo: found.memo ?? "" }
+      : { title: "", startDate: today, endDate: today, memo: "" },
+    loaded: true,
+  };
+}
+
 export default function TripDetailPage() {
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
   const today = getTodayDateString();
-  const [journey, setJourney] = useState<Journey | null>(null);
-  const [journeyForm, setJourneyForm] = useState<JourneyForm>({
-    title: "", startDate: today, endDate: today, memo: "",
-  });
-  const [loaded, setLoaded] = useState(false);
+  const [pageData, setPageData] = useState<PageData>(() => loadPageData(id, today));
+  const { journey, loaded } = pageData;
+  const setJourney = (j: Journey | null) => setPageData((d) => ({ ...d, journey: j }));
+  const [journeyForm, setJourneyForm] = useState<JourneyForm>(pageData.journeyForm);
   const [modalOpened, { open: openModal, close: closeModal }] = useDisclosure(false);
   const [journeyModalOpened, { open: openJourneyModal, close: closeJourneyModal }] =
     useDisclosure(false);
   const [draft, setDraft] = useState<StepDraft>(emptyStepDraft());
   const [editingStepId, setEditingStepId] = useState<string>("new");
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<{ type: "step"; index: number } | { type: "journey" } | null>(null);
-
-  useEffect(() => {
-    startTransition(() => {
-      const found = getJourney(id) ?? null;
-      setJourney(found);
-      if (found) {
-        setJourneyForm({
-          title: found.title,
-          startDate: found.startDate,
-          endDate: found.endDate,
-          memo: found.memo ?? "",
-        });
-      }
-      setLoaded(true);
-    });
-  }, [id]);
 
   useEffect(() => {
     if (loaded && !journey) router.replace("/");
@@ -182,7 +185,7 @@ export default function TripDetailPage() {
   };
 
   const removeStep = (index: number) => {
-    setDeleteTarget({ type: "step", index });
+    persist({ ...journey, steps: journey.steps.filter((_, stepIndex) => stepIndex !== index) });
   };
 
   const setStepStatus = (index: number, status: StepStatus) => {
@@ -195,20 +198,10 @@ export default function TripDetailPage() {
   };
 
   const handleDelete = () => {
-    setDeleteTarget({ type: "journey" });
-  };
-
-  const confirmDelete = () => {
-    if (!deleteTarget) return;
-    if (deleteTarget.type === "step") {
-      persist({ ...journey, steps: journey.steps.filter((_, i) => i !== deleteTarget.index) });
-      showSuccessToast("ステップを削除しました");
-    } else {
+    if (confirm("このJourneyを削除しますか？")) {
       deleteJourney(journey.id);
-      showSuccessToast("Journeyを削除しました");
       router.push("/");
     }
-    setDeleteTarget(null);
   };
 
   return (
@@ -299,7 +292,7 @@ export default function TripDetailPage() {
                   <Box className={`${classes.timelineDot} ${dotClass}`} />
                   <Box className={`${classes.timelineLine} ${lineClass}`} />
                 </Box>
-                <UnstyledButton
+                <Box
                   className={`${classes.timelineCard} ${isNext ? classes.timelineCardActive : ""}`}
                   onClick={() => openEdit(iconIndex)}
                 >
@@ -328,27 +321,27 @@ export default function TripDetailPage() {
                         <Menu.Label>ステータス変更</Menu.Label>
                         <Menu.Item
                           leftSection={<IconPlayerPlay size={14} />}
-                          onClick={(e: React.MouseEvent) => { e.stopPropagation(); setStepStatus(iconIndex, "進行中"); }}
+                          onClick={() => setStepStatus(iconIndex, "進行中")}
                         >
                           進行中
                         </Menu.Item>
                         <Menu.Item
                           leftSection={<IconCheck size={14} />}
-                          onClick={(e: React.MouseEvent) => { e.stopPropagation(); setStepStatus(iconIndex, "完了"); }}
+                          onClick={() => setStepStatus(iconIndex, "完了")}
                         >
                           完了
                         </Menu.Item>
-                        <Menu.Item onClick={(e: React.MouseEvent) => { e.stopPropagation(); setStepStatus(iconIndex, "未開始"); }}>未開始</Menu.Item>
-                        <Menu.Item onClick={(e: React.MouseEvent) => { e.stopPropagation(); setStepStatus(iconIndex, "遅延"); }}>遅延</Menu.Item>
-                        <Menu.Item onClick={(e: React.MouseEvent) => { e.stopPropagation(); setStepStatus(iconIndex, "キャンセル"); }}>キャンセル</Menu.Item>
+                        <Menu.Item onClick={() => setStepStatus(iconIndex, "未開始")}>未開始</Menu.Item>
+                        <Menu.Item onClick={() => setStepStatus(iconIndex, "遅延")}>遅延</Menu.Item>
+                        <Menu.Item onClick={() => setStepStatus(iconIndex, "キャンセル")}>キャンセル</Menu.Item>
                         <Menu.Divider />
-                        <Menu.Item leftSection={<IconEdit size={14} />} onClick={(e: React.MouseEvent) => { e.stopPropagation(); openEdit(iconIndex); }}>
+                        <Menu.Item leftSection={<IconEdit size={14} />} onClick={() => openEdit(iconIndex)}>
                           編集
                         </Menu.Item>
                         <Menu.Item
                           color="red"
                           leftSection={<IconTrash size={14} />}
-                          onClick={(e: React.MouseEvent) => { e.stopPropagation(); removeStep(iconIndex); }}
+                          onClick={() => removeStep(iconIndex)}
                         >
                           削除
                         </Menu.Item>
@@ -372,7 +365,7 @@ export default function TripDetailPage() {
                       {isNext && !isDone ? "次" : step.status}
                     </Box>
                   </Stack>
-                </UnstyledButton>
+                </Box>
               </Box>
             );
           })}
@@ -480,21 +473,7 @@ export default function TripDetailPage() {
         </Box>
       </Modal>
 
-      <DeleteConfirmModal
-        opened={deleteTarget !== null}
-        onClose={() => setDeleteTarget(null)}
-        onConfirm={confirmDelete}
-        title={
-          deleteTarget?.type === "journey"
-            ? "Journeyを削除しますか？"
-            : "ステップを削除しますか？"
-        }
-        description={
-          deleteTarget?.type === "journey"
-            ? `「${journey.title}」とすべてのステップが削除されます。この操作は取り消せません。`
-            : "このステップが削除されます。この操作は取り消せません。"
-        }
-      />
+
 
       <TabBar />
     </>
