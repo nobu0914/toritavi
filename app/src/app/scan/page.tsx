@@ -16,6 +16,8 @@ import {
   IconScan,
   IconCheck,
   IconAlertCircle,
+  IconChevronDown,
+  IconChevronUp,
 } from "@tabler/icons-react";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -345,6 +347,7 @@ export default function ScanPage() {
   const [formValues, setFormValues] = useState<Record<string, string>>({});
   const [ocrText, setOcrText] = useState("");
   const [progress, setProgress] = useState(0);
+  const [previewExpanded, setPreviewExpanded] = useState(false);
 
   const handleFile = async (file: File) => {
     const url = URL.createObjectURL(file);
@@ -421,6 +424,7 @@ export default function ScanPage() {
     setOcrText("");
     setFormValues({});
     setProgress(0);
+    setPreviewExpanded(false);
   };
 
   const catDef = getCategoryDef(detectedCategory);
@@ -510,6 +514,28 @@ export default function ScanPage() {
         {/* 結果: カテゴリ別専用フォーム */}
         {status === "done" && (
           <>
+            {/* スキャン元プレビュー（アコーディオン） */}
+            {imageUrl && (
+              <Box
+                className={classes.previewAccordion}
+                onClick={() => setPreviewExpanded((v) => !v)}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={imageUrl}
+                  alt="スキャン元"
+                  className={`${classes.previewCropped} ${previewExpanded ? classes.expanded : ""}`}
+                />
+                <Box className={classes.previewToggle}>
+                  {previewExpanded ? (
+                    <><IconChevronUp size={14} />閉じる</>
+                  ) : (
+                    <><IconChevronDown size={14} />スキャン元データを表示</>
+                  )}
+                </Box>
+              </Box>
+            )}
+
             {/* カテゴリ表示 */}
             <Box className={classes.categoryHeader}>
               <Box
@@ -539,17 +565,6 @@ export default function ScanPage() {
                 </Box>
               ))}
             </Box>
-
-            {/* スキャン元プレビュー */}
-            {imageUrl && (
-              <>
-                <Text className={classes.sectionLabel}>スキャン元データ</Text>
-                <Box className={classes.previewCard}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={imageUrl} alt="スキャン元" className={classes.previewThumb} />
-                </Box>
-              </>
-            )}
 
             {/* OCR全文 */}
             <details className={classes.ocrDetails}>
