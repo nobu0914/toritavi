@@ -3,9 +3,6 @@
   bottom: 0;
   left: 0;
   right: 0;
-  width: 100%;
-  max-width: 430px;
-  margin: 0 auto;
   background: white;
   border-top: 1px solid #e9ecef;
   display: flex;
