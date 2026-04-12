@@ -27,20 +27,66 @@ export const DATE_RULES = {
 } as const;
 
 export const TIME_RULES = {
-  // 時刻フォーマット
   format: "HH:MM（24時間制）",
-
-  // AM/PM変換
   ampm: "AM/PMは24時間制に変換する（例: 2:30PM → 14:30）",
 
-  // タイムゾーン
   timezone: {
     rule: "国際線・海外予約の場合、出発地と到着地それぞれの現地時間で返す",
     field: "timezoneフィールドに出発地のタイムゾーン略称を入れる（例: JST, CET, EST）",
     arrival: "到着時刻のタイムゾーンが異なる場合、endTimezoneとして変動項目に入れる",
     domestic: "国内の場合はtimezoneは省略する（JSTが前提）",
   },
+
+  // UI表示ルール
+  display: {
+    primary: "「現地時間」「日本時間」をラベルとして使う",
+    noAbbreviation: "JST/CET等の略称だけでは表示しない。補助情報として小さく添える",
+    domestic: "国内予定はタイムゾーン表示不要。時刻のみ表示",
+    international: "国際線は現地時間を主表示。必要に応じ日本時間を併記",
+    nextDay: "+1 や翌日がある場合は必ず明示する",
+  },
 } as const;
+
+/* ====== 時刻表示ヘルパー（UI用） ====== */
+
+/**
+ * 国際線かどうかを判定する
+ */
+export function isInternational(timezone?: string): boolean {
+  if (!timezone) return false;
+  const tz = timezone.toUpperCase().trim();
+  return tz !== "" && tz !== "JST" && tz !== "Asia/Tokyo";
+}
+
+/**
+ * 時刻を表示用にフォーマットする
+ * @param time HH:MM
+ * @param timezone タイムゾーン略称（国際線のみ）
+ * @param isArrival 到着時刻か
+ * @param crossDay 翌日到着か
+ */
+export function formatTimeDisplay(
+  time: string,
+  options?: {
+    timezone?: string;
+    crossDay?: boolean;
+    compact?: boolean; // カード等のスペースが狭い場合
+  },
+): string {
+  if (!time) return "";
+  const { timezone, crossDay, compact } = options || {};
+
+  if (!isInternational(timezone)) {
+    // 国内: 時刻のみ
+    return time;
+  }
+
+  // 国際線
+  if (compact) {
+    return crossDay ? `${time} 現地 +1` : `${time} 現地`;
+  }
+  return crossDay ? `${time}（現地時間・翌日）` : `${time}（現地時間）`;
+}
 
 /* ====== 文書分割ルール ====== */
 

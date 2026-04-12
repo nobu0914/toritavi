@@ -42,6 +42,7 @@ import {
   sortStepsByTime,
 } from "@/lib/helpers";
 import type { Journey, Step, StepStatus } from "@/lib/types";
+import { formatTimeDisplay, isInternational } from "@/lib/ocr-rules";
 
 type JourneyForm = {
   title: string;
@@ -371,8 +372,10 @@ export default function TripDetailPage() {
                 <Box className={classes.timelineTimeRow}>
                   <Box className={`${classes.timelineDot} ${dotClass} ${step.needsReview ? classes.timelineDotReview : ""}`} />
                   <Text className={classes.timelineTimeText}>
-                    {step.time?.match(/\d{1,2}:\d{2}/)?.[0] || "--:--"}
-                    {step.timezone ? ` (${step.timezone})` : ""}
+                    {formatTimeDisplay(
+                      step.time?.match(/\d{1,2}:\d{2}/)?.[0] || "--:--",
+                      { timezone: step.timezone, compact: true }
+                    )}
                   </Text>
                   <Box style={{ flex: 1 }} />
                   <Box
@@ -430,10 +433,14 @@ export default function TripDetailPage() {
                           {step.date} → {step.endDate}
                         </Text>
                       )}
-                      {/* 到着時刻（翌日到着） */}
+                      {/* 到着時刻 */}
                       {step.endTime && (
                         <Text className={classes.timelineDetail}>
-                          → {step.endTime}{step.endDate && step.date && step.endDate !== step.date ? " (翌日到着)" : ""}
+                          → {formatTimeDisplay(step.endTime, {
+                            timezone: step.timezone,
+                            crossDay: !!(step.endDate && step.date && step.endDate !== step.date),
+                            compact: true,
+                          })}
                         </Text>
                       )}
                       {step.confNumber && (
