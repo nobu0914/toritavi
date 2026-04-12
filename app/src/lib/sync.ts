@@ -4,20 +4,22 @@
  * オフライン時はIndexedDBのみで動作。
  */
 import { db, getDeviceId } from "./db";
-import { supabase } from "./supabase";
 import type { DBJourney, DBStep } from "./db";
+import { supabase } from "./supabase";
 
 /** dirty なデータをSupabaseに同期 */
 export async function syncToCloud(): Promise<{ synced: number; errors: number }> {
   if (typeof window === "undefined") return { synced: 0, errors: 0 };
   if (!navigator.onLine) return { synced: 0, errors: 0 };
+  if (!supabase) return { synced: 0, errors: 0 };
 
   let synced = 0;
   let errors = 0;
   const deviceId = getDeviceId();
 
   // dirty Journeys を同期
-  const dirtyJourneys = await db.journeys.where("dirty").equals(1).toArray();
+  const allJourneys = await db.journeys.toArray();
+  const dirtyJourneys = allJourneys.filter((j) => j.dirty);
   for (const j of dirtyJourneys) {
     try {
       const { dirty, syncedAt, ...data } = j;
@@ -40,7 +42,8 @@ export async function syncToCloud(): Promise<{ synced: number; errors: number }>
   }
 
   // dirty Steps を同期
-  const dirtySteps = await db.steps.where("dirty").equals(1).toArray();
+  const allSteps = await db.steps.toArray();
+  const dirtySteps = allSteps.filter((s) => s.dirty);
   for (const s of dirtySteps) {
     try {
       const { error } = await supabase.from("toritavi_steps").upsert({
@@ -81,6 +84,7 @@ export async function syncToCloud(): Promise<{ synced: number; errors: number }>
 export async function restoreFromCloud(): Promise<number> {
   if (typeof window === "undefined") return 0;
   if (!navigator.onLine) return 0;
+  if (!supabase) return 0;
 
   const deviceId = getDeviceId();
   let restored = 0;
