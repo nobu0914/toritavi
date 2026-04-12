@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
+import { buildOcrRulesPrompt } from "@/lib/ocr-rules";
 
 const SYSTEM_PROMPT = `あなたは旅行・予約文書の情報抽出専門家です。
 画像から予約情報を読み取り、以下のJSON形式で返してください。
@@ -17,57 +18,37 @@ const SYSTEM_PROMPT = `あなたは旅行・予約文書の情報抽出専門家
 - その他: 上記に該当しない
 
 ## 出力形式（JSONのみ返すこと）
+
+往復予約など1文書に複数予定が含まれる場合はsteps配列に複数要素を返す。
+通常は1要素。
+
 {
-  "category": "飛行機|列車|宿泊|病院|商談|食事|バス|観光|その他",
-  "fixed": {
-    // カテゴリに応じた基本固定項目（以下参照）
-  },
-  "variable": [
-    // 文書から読み取れた追加の重要情報（固定項目以外）
-    { "label": "項目名（日本語）", "value": "値" }
+  "steps": [
+    {
+      "category": "飛行機|列車|宿泊|病院|商談|食事|バス|観光|その他",
+      "fixed": {
+        "title": "タイトル（便名/列車名/施設名等）",
+        "date": "開始日（YYYY-MM-DD）",
+        "endDate": "終了日（YYYY-MM-DD、宿泊checkout・複数日イベント等。同日ならnull）",
+        "startTime": "開始時刻（HH:MM）",
+        "endTime": "終了時刻（HH:MM）",
+        "from": "出発地・場所",
+        "to": "到着地",
+        "confNumber": "確認番号",
+        "timezone": "タイムゾーン略称（国際線のみ。国内はnull）"
+      },
+      "variable": [
+        { "label": "項目名（日本語）", "value": "値" }
+      ]
+    }
   ]
 }
 
-## 固定項目（カテゴリごと）
+${buildOcrRulesPrompt()}
 
-### 飛行機
-{ "title": "便名（例: NH225）", "date": "出発日（YYYY-MM-DD）", "startTime": "出発時刻（HH:MM）", "endTime": "到着時刻（HH:MM）", "from": "出発地（空港コードまたは空港名）", "to": "到着地（空港コードまたは空港名）", "confNumber": "確認番号" }
-
-### 列車
-{ "title": "列車名（例: のぞみ225号）", "date": "乗車日（YYYY-MM-DD）", "startTime": "発車時刻（HH:MM）", "endTime": "到着時刻（HH:MM）", "from": "乗車駅", "to": "降車駅", "confNumber": "確認番号" }
-
-### 宿泊
-{ "title": "施設名", "date": "チェックイン日（YYYY-MM-DD）", "startTime": "チェックイン時刻（HH:MM）", "endTime": "チェックアウト時刻（HH:MM）", "confNumber": "確認番号" }
-
-### 病院
-{ "title": "病院名", "date": "予約日（YYYY-MM-DD）", "startTime": "予約時刻（HH:MM）", "confNumber": "診察券番号" }
-
-### 商談
-{ "title": "相手先・件名", "date": "日付（YYYY-MM-DD）", "startTime": "開始時刻（HH:MM）", "endTime": "終了時刻（HH:MM）", "from": "場所", "confNumber": "確認番号" }
-
-### 食事
-{ "title": "店名", "date": "予約日（YYYY-MM-DD）", "startTime": "予約時刻（HH:MM）", "confNumber": "確認番号" }
-
-### バス
-{ "title": "路線名", "date": "乗車日（YYYY-MM-DD）", "startTime": "発車時刻（HH:MM）", "endTime": "到着時刻（HH:MM）", "from": "出発地", "to": "到着地", "confNumber": "確認番号" }
-
-### 観光
-{ "title": "イベント名", "date": "日付（YYYY-MM-DD）", "startTime": "開演時刻（HH:MM）", "from": "会場", "confNumber": "確認番号" }
-
-### その他
-{ "title": "タイトル", "date": "日付（YYYY-MM-DD）", "startTime": "時刻（HH:MM）", "confNumber": "確認番号" }
-
-## 変動項目（variable）のルール
-- 固定項目以外で、文書に記載されている重要な情報を抽出する
-- 例: 座席、ゲート、号車、部屋タイプ、人数、診療科、料金、備考など
-- labelは日本語で、ユーザーにわかりやすい表記にする
-- 最大10件まで。重要度の高い順に並べる
-- 値が空やnullの項目は含めない
-
-## 規則
+## 最終規則
 - 読み取れない固定項目はnullを返す（推測しない）
 - JSONのみ返す（説明文不要）
-- 時刻はHH:MM形式、日付はYYYY-MM-DD形式で統一
 `;
 
 export async function POST(request: NextRequest) {
@@ -104,7 +85,7 @@ export async function POST(request: NextRequest) {
 
     const response = await client.messages.create({
       model: "claude-sonnet-4-6",
-      max_tokens: 2048,
+      max_tokens: 4096,
       system: SYSTEM_PROMPT,
       messages: [{ role: "user", content }],
     });
@@ -118,6 +99,18 @@ export async function POST(request: NextRequest) {
     }
 
     const result = JSON.parse(jsonMatch[0]);
+
+    // 旧形式（single step）との互換: stepsがなければ旧形式をラップ
+    if (!result.steps && result.category) {
+      return NextResponse.json({
+        steps: [{
+          category: result.category,
+          fixed: result.fixed || result.fields || {},
+          variable: result.variable || [],
+        }],
+      });
+    }
+
     return NextResponse.json(result);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-テストデータ生成: 各区分 PDF×4 + 画像×4 + テキスト×2 = 10セット × 9区分 = 90件
+テストデータ生成: 各区分 PDF×6 + 画像×6 = 12ファイル × 9区分 = 108件
 """
 import os
 from reportlab.lib.pagesizes import A4
@@ -8,7 +8,7 @@ from reportlab.lib.units import mm
 from reportlab.pdfgen import canvas
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
 # --- フォント設定 ---
 FONT_PATH = "/Library/Fonts/Arial Unicode.ttf"
@@ -536,6 +536,367 @@ CATEGORIES = {
     },
 }
 
+EXTRA_CATEGORIES = {
+    "flight": {
+        "pdf": [
+            {"title": "Cathay Pacific E-Ticket", "lines": [
+                "CATHAY PACIFIC", "E-TICKET ITINERARY / RECEIPT", "",
+                "BOOKING REF: P7K2LM", "PASSENGER: KOBAYASHI/NAOKO MS", "",
+                "CX 509  21SEP2026", "TOKYO NARITA (NRT) 09:35",
+                "HONG KONG (HKG) 13:30", "SEAT: 41A  ECONOMY",
+                "TICKET NO: 160-4219087731", "TOTAL FARE: JPY 64,820"
+            ]},
+            {"title": "Jetstar 予約確認書", "lines": [
+                "Jetstar Japan", "旅程表 / 予約確認書", "",
+                "予約番号: JQ8L2N", "搭乗者: MORI KENTA", "",
+                "GK 203", "2026年10月18日（日）",
+                "成田 NRT 07:10 出発", "新千歳 CTS 08:55 到着",
+                "座席: 18F", "受託手荷物: 20kg", "支払総額: ¥11,980"
+            ]},
+        ],
+        "image": [
+            {"title": "eチケット控え", "lines": [
+                "ZIPAIR Tokyo", "ZG 24",
+                "成田 NRT → ソウル ICN",
+                "2026/11/07  09:15発", "到着 11:55",
+                "座席 21K", "予約番号 ZA-1107-2408", "受託手荷物 30kg"
+            ]},
+            {"title": "国際線チェックイン", "lines": [
+                "EMIRATES", "Online Check-in Confirmed",
+                "EK 319", "2026/12/03",
+                "TOKYO NRT 22:30", "DUBAI DXB 05:40+1",
+                "Seat 27A", "Booking Ref: EM4Q8R"
+            ]},
+        ],
+    },
+    "train": {
+        "pdf": [
+            {"title": "近鉄特急 予約確認", "lines": [
+                "近畿日本鉄道", "特急券予約確認", "",
+                "アーバンライナー 17号", "2026年9月11日（金）",
+                "大阪難波 → 近鉄名古屋", "発車 09:00 / 到着 11:08",
+                "4号車 9番C席", "予約番号: KNT-0911-417C", "支払額: ¥4,560"
+            ]},
+            {"title": "小田急ロマンスカー eチケット", "lines": [
+                "小田急電鉄", "e-Romancecar 予約票", "",
+                "GSE はこね 9号", "2026年10月2日（金）",
+                "新宿 → 箱根湯本", "11:00発 / 12:25着",
+                "3号車 7番A席", "チケットID: ODX-1002-3907A"
+            ]},
+        ],
+        "image": [
+            {"title": "えきねっと チケットレス", "lines": [
+                "特急あずさ 17号", "2026/11/14",
+                "新宿 → 松本", "10:00発 12:38着",
+                "6号車 11D", "JRE-1114-6D11", "チケットレス特急券"
+            ]},
+            {"title": "南海ラピート", "lines": [
+                "rapi:t β47号", "なんば → 関西空港",
+                "12月8日 16:35発", "17:10着",
+                "4号車 6A", "NKT-1208-RP47", "空港特急"
+            ]},
+        ],
+    },
+    "hotel": {
+        "pdf": [
+            {"title": "ザ・リッツ・カールトン福岡", "lines": [
+                "The Ritz-Carlton, Fukuoka", "Reservation Confirmation", "",
+                "Confirmation No: RCF-260918-5521",
+                "Guest: TANAKA TARO", "Check-in: 18 Sep 2026 15:00",
+                "Check-out: 20 Sep 2026 12:00", "Room: Deluxe King",
+                "Rate: JPY 48,000 per night", "Special Request: High Floor"
+            ]},
+            {"title": "東横INN 予約確認", "lines": [
+                "東横INN 新大阪中央口新館", "宿泊予約確認書", "",
+                "予約番号: TYI-1014-8832", "宿泊者: 佐々木 美咲 様",
+                "チェックイン: 2026年10月14日 16:00",
+                "チェックアウト: 2026年10月15日 10:00",
+                "エコノミーダブル 喫煙", "料金合計: ¥8,300"
+            ]},
+        ],
+        "image": [
+            {"title": "Booking.com 予約詳細", "lines": [
+                "Hotel Monterey Kyoto", "予約確定",
+                "2026/11/21 - 2026/11/23", "Superior Twin",
+                "2名 朝食付き", "予約番号 BKG-1121-8820", "総額 ¥31,640"
+            ]},
+            {"title": "チェックイン案内", "lines": [
+                "sequence KYOTO GOJO",
+                "Self Check-in Available", "Room Type: Queen",
+                "Check-in 15:00", "Reservation SQK-1202-1045",
+                "Access Code: 624913"
+            ]},
+        ],
+    },
+    "hospital": {
+        "pdf": [
+            {"title": "人間ドック受診票", "lines": [
+                "聖路加国際病院附属クリニック", "人間ドック受診票", "",
+                "受診者: 中村 恒一", "受付番号: DOC-20260903-41", "",
+                "受診日: 2026年9月3日（木）", "受付時間: 08:10",
+                "コース: 一日人間ドック", "持参物: 保険証・問診票"
+            ]},
+            {"title": "婦人科予約確認", "lines": [
+                "みなとみらいレディースクリニック", "予約確認票", "",
+                "患者名: 井上 真理", "診察券番号: 4408213", "",
+                "予約日時: 2026年10月27日 15:20",
+                "診療科: 婦人科", "診療内容: 定期検診", "担当医: 田村 医師"
+            ]},
+        ],
+        "image": [
+            {"title": "検査受付票", "lines": [
+                "虎の門病院", "採血受付",
+                "2026年11月11日", "受付番号 B-032",
+                "受付時間 08:45", "診察券 7712054"
+            ]},
+            {"title": "薬局受取案内", "lines": [
+                "さくら薬局", "処方せん受付完了",
+                "患者: 松本 直子", "受付番号 RX-1207-018",
+                "2026/12/07 17:40", "出来上がり予定 18:05"
+            ]},
+        ],
+    },
+    "ticket": {
+        "pdf": [
+            {"title": "USJ スタジオ・パス", "lines": [
+                "ユニバーサル・スタジオ・ジャパン", "1デイ・スタジオ・パス", "",
+                "入場日: 2026年9月26日（土）", "大人 2名",
+                "チケット番号: USJ-0926-440812", "エリア入場整理券対象日",
+                "購入金額: ¥19,600"
+            ]},
+            {"title": "サッカー代表戦チケット", "lines": [
+                "SAMURAI BLUE", "電子チケット", "",
+                "日本 vs 韓国", "2026年10月13日（火） 19:20 KICK OFF",
+                "埼玉スタジアム2002", "カテゴリー1 メイン下層",
+                "209入口 14列 118番", "TKT-JFA-1013-20914118"
+            ]},
+        ],
+        "image": [
+            {"title": "展示会入場QR", "lines": [
+                "CEATEC 2026", "幕張メッセ",
+                "来場日 2026/10/21", "入場区分: ビジネス",
+                "登録ID CEA-1021-9912", "ホール 4-6"
+            ]},
+            {"title": "舞台チケット", "lines": [
+                "明治座", "12月公演",
+                "2026/12/18 11:30開演", "S席 1階 10列 22番",
+                "チケット番号 MJZ-1218-S1022", "¥14,000"
+            ]},
+        ],
+    },
+    "restaurant": {
+        "pdf": [
+            {"title": "焼肉うしごろ 銀座店 予約確認", "lines": [
+                "焼肉うしごろ 銀座店", "ご予約確認", "",
+                "予約番号: USG-20260918-1930",
+                "2026年9月18日（金）19:30", "3名",
+                "席種: テーブル席", "コース: 極みコース ¥12,000/名",
+                "要望: 1名が甲殻類アレルギー"
+            ]},
+            {"title": "オーベルジュ ディナー予約", "lines": [
+                "Auberge TOKITO", "Reservation Details", "",
+                "Booking ID: ATK-1022-1800", "Date: 22 Oct 2026 18:00",
+                "Guests: 2", "Menu: Seasonal Chef Tasting",
+                "Estimated Total: JPY 46,000", "Dress Code: Smart Elegant"
+            ]},
+        ],
+        "image": [
+            {"title": "TableCheck 確認", "lines": [
+                "NARISAWA", "Reservation Confirmed",
+                "2026/11/28 12:00", "2 guests",
+                "Booking TC-1128-2204", "Counter Seating",
+                "Anniversary Plate requested"
+            ]},
+            {"title": "予約完了画面", "lines": [
+                "もつ鍋 おおやま", "博多店",
+                "12月11日 20:00", "4名",
+                "座席: 半個室", "予約番号 OYM-1211-8004"
+            ]},
+        ],
+    },
+    "bus": {
+        "pdf": [
+            {"title": "京成バス 深夜急行", "lines": [
+                "京成バス", "深夜急行バス 予約確認", "",
+                "予約番号: KSB-20260930-114",
+                "2026年9月30日", "新橋 24:10発 → 千葉中央 01:35着",
+                "座席: 2列目A", "運賃: ¥2,100", "乗車時刻の10分前集合"
+            ]},
+            {"title": "那覇空港シャトル", "lines": [
+                "沖縄エアポートシャトル", "予約確認メール", "",
+                "予約番号: OAS-1018-5520", "2026年10月18日",
+                "那覇空港 14:20発 → 恩納村 15:55着",
+                "乗客: 2名", "支払額: ¥3,200"
+            ]},
+        ],
+        "image": [
+            {"title": "空港バス モバイル券", "lines": [
+                "Airport Bus", "羽田空港 → 横浜駅",
+                "2026/11/02 18:40", "Seat 9B",
+                "Ticket AB-1102-009B", "大人1名 ¥650"
+            ]},
+            {"title": "バスツアー集合案内", "lines": [
+                "クラブツーリズム", "日帰り紅葉ツアー",
+                "12月6日 07:45 集合", "新宿都庁大型バス駐車場",
+                "受付番号 CT-1206-331", "バス号車 2号車"
+            ]},
+        ],
+    },
+    "business": {
+        "pdf": [
+            {"title": "展示会出展者パス", "lines": [
+                "Japan IT Week 秋 2026", "出展者バッジ引換票", "",
+                "会社名: ABCソリューションズ株式会社", "来場者: 田中 太郎",
+                "登録番号: ITW-20261028-8821", "会期: 2026年10月28日-30日",
+                "会場: 幕張メッセ 1-8ホール"
+            ]},
+            {"title": "取引先訪問予定表", "lines": [
+                "訪問予定確認", "",
+                "訪問日: 2026年11月12日（木） 13:30～14:30",
+                "訪問先: 株式会社オリオンテック", "住所: 名古屋市中村区名駅3-28-12",
+                "担当: 営業企画部 佐久間様", "案件番号: BIZ-1112-ORN"
+            ]},
+        ],
+        "image": [
+            {"title": "Zoom 招待", "lines": [
+                "Weekly Product Sync", "2026/11/05 10:00-11:00",
+                "Meeting ID 839 2201 4421", "Passcode 551208",
+                "Host: product-team@toritavi.jp"
+            ]},
+            {"title": "受付用QR", "lines": [
+                "Salesforce World Tour Tokyo", "Admission Pass",
+                "Name: TANAKA TARO", "Company: ABC Corp.",
+                "Pass ID SFT-1201-9921", "2026/12/01 Tokyo Big Sight"
+            ]},
+        ],
+    },
+    "other": {
+        "pdf": [
+            {"title": "レンタカー予約確認", "lines": [
+                "トヨタレンタカー", "予約確認書", "",
+                "予約番号: TRC-20260912-3102",
+                "利用日時: 2026年9月12日 09:00",
+                "返却日時: 2026年9月13日 18:00",
+                "車種: ヤリス", "受取店舗: 新千歳空港店", "概算料金: ¥13,200"
+            ]},
+            {"title": "コワーキング会議室予約", "lines": [
+                "WeWork 神谷町トラストタワー", "会議室予約確認", "",
+                "予約番号: WWK-1031-ROOM8",
+                "2026年10月31日 14:00～16:00",
+                "Room: Sakura 8A", "利用者: 田中 太郎", "料金: ¥6,600"
+            ]},
+        ],
+        "image": [
+            {"title": "駐車場予約", "lines": [
+                "akippa", "予約完了",
+                "2026/11/15 09:00-18:00", "渋谷区神南1丁目駐車場",
+                "予約番号 AKP-1115-4012", "¥1,800"
+            ]},
+            {"title": "宅配ロッカー通知", "lines": [
+                "PUDO ステーション", "荷物受取案内",
+                "お問い合わせ番号 9901-2284-5510",
+                "保管期限 2026/12/14 23:59", "受取場所: 品川駅港南口"
+            ]},
+        ],
+    },
+}
+
+for cat_key, extra_data in EXTRA_CATEGORIES.items():
+    CATEGORIES[cat_key]["pdf"].extend(extra_data["pdf"])
+    CATEGORIES[cat_key]["image"].extend(extra_data["image"])
+
+BROKEN_SAMPLES = {
+    "pdf": [
+        {
+            "filename": "broken_pdf_01_flight_mixed_layout.pdf",
+            "title": "E-TKT / 搭乗案内 / Itinerary",
+            "lines": [
+                "ANA / Codeshare with UA", "Passenger: TANAKA TARO", "REF: NH-UC3A91",
+                "NRT 07:25  ->  SFO 00:45", "Seat 39K / Group 5 / Gate 47A",
+                "Baggage 1PC 23KG", "2026-10-14(WED)", "Check-in closed 06:45",
+                "Invoice total JPY 142,380", "Note: Terminal 1 South Wing"
+            ],
+        },
+        {
+            "filename": "broken_pdf_02_receipt_faded.pdf",
+            "title": "宿泊領収 / Payment Slip",
+            "lines": [
+                "Hotel Monterey Sendai", "CONF# MTS-1108-5501", "Guest: SASAKI MISAKI",
+                "Check-in 2026/11/08 15:00", "Check-out 2026/11/09 11:00", "Rm Type Semi Double",
+                "Room charge 8,900", "City tax 200", "Breakfast x1 1,870", "TOTAL 10,970"
+            ],
+        },
+        {
+            "filename": "broken_pdf_03_business_dense.pdf",
+            "title": "Meeting / Seminar / Access Info",
+            "lines": [
+                "DX Leaders Forum 2026", "Tokyo Midtown Yaesu 5F Hall C", "2026/12/02 13:00-18:10",
+                "受付開始 12:20", "入場コード DLF-1202-8821", "Speaker track B / breakout room 2",
+                "Lunch coupon attached", "Wi-Fi SSID DLF-GUEST", "Emergency contact 03-5500-1881"
+            ],
+        },
+        {
+            "filename": "broken_pdf_04_hospital_overprint.pdf",
+            "title": "予約票 / Prescription / Next Visit",
+            "lines": [
+                "Shibuya Medical Clinic", "Pt.ID 4402188", "Dermatology / 皮膚科",
+                "2026/12/18 17:20", "Doctor: HASEGAWA", "Rx: Ointment 0.1%",
+                "Next appt tentative 2027/01/22 10:40", "Pharmacy code RX-8841"
+            ],
+        },
+    ],
+    "image": [
+        {
+            "filename": "broken_img_01_train_skewed.jpg",
+            "title": "斜め撮影の切符",
+            "lines": ["のぞみ 243号", "東京→京都", "2026/10/21", "13:57発 16:09着", "8号車 5E", "EX-1021-8E05"],
+            "style": "skewed",
+        },
+        {
+            "filename": "broken_img_02_flight_low_contrast.jpg",
+            "title": "低コントラスト搭乗券",
+            "lines": ["JAL JL318", "FUK→HND", "2026/11/02 19:35", "Seat 21A", "Gate 11", "JL-1102-K821"],
+            "style": "low_contrast",
+        },
+        {
+            "filename": "broken_img_03_hotel_glare.jpg",
+            "title": "反射入りホテル確認",
+            "lines": ["Hotel Gracery", "2026/11/14-11/15", "Twin Non-smoking", "Conf HGR-1114-2201", "TOTAL 18,400"],
+            "style": "glare",
+        },
+        {
+            "filename": "broken_img_04_restaurant_crop.jpg",
+            "title": "下部欠けた予約画面",
+            "lines": ["TableCheck", "NARISAWA", "2026/11/28 12:00", "2 guests", "Counter", "Booking TC-1128-2204"],
+            "style": "cropped",
+        },
+        {
+            "filename": "broken_img_05_bus_noise.jpg",
+            "title": "ノイズ入り高速バス",
+            "lines": ["WILLER EXPRESS", "新宿23:20→京都06:10", "2026/12/05", "Seat 4C", "WEX-1205-04C"],
+            "style": "noise",
+        },
+        {
+            "filename": "broken_img_06_ticket_dense.jpg",
+            "title": "情報密度高めチケット",
+            "lines": ["SAMURAI BLUE", "2026/10/13 19:20", "埼玉スタジアム2002", "Cat1 209入口14列118番", "TKT-JFA-1013-20914118", "開場17:30", "QR ENTRY"],
+            "style": "dense",
+        },
+        {
+            "filename": "broken_img_07_hospital_mixed_lang.jpg",
+            "title": "英日混在の予約票",
+            "lines": ["Toranomon Hosp.", "採血 / Blood Test", "2026-11-11 08:45", "No.B-032", "Pt ID 7712054", "fasting required"],
+            "style": "mixed_lang",
+        },
+        {
+            "filename": "broken_img_08_other_wrinkled.jpg",
+            "title": "しわ寄せ風の控え",
+            "lines": ["Toyota Rent a Car", "Pickup CTS 09:00", "Return 18:00 next day", "Yaris", "TRC-20260912-3102", "13,200 JPY"],
+            "style": "wrinkled",
+        },
+    ],
+}
+
 
 def create_pdf(filepath, title, lines):
     """PDF生成（A4サイズ、日本語対応）"""
@@ -598,18 +959,96 @@ def create_image(filepath, title, lines, bg_color=(248, 249, 250)):
     img.save(filepath, quality=92)
 
 
+def create_broken_pdf(filepath, title, lines, variant):
+    """OCRで崩れやすい帳票風PDF"""
+    c = canvas.Canvas(filepath, pagesize=A4)
+    w, h = A4
+    c.setFillColorRGB(0.92, 0.92, 0.92)
+    c.rect(0, 0, w, h, fill=1, stroke=0)
+    c.setFillColorRGB(0.35, 0.35, 0.35)
+    c.setFont(PDF_FONT_BOLD, 15)
+    c.drawString(18 * mm, h - 26 * mm, title)
+
+    if variant == "broken_pdf_02_receipt_faded.pdf":
+        c.setFillColorRGB(0.58, 0.58, 0.58)
+    elif variant == "broken_pdf_04_hospital_overprint.pdf":
+        c.setFillColorRGB(0.22, 0.22, 0.22)
+        c.rotate(0.6)
+
+    y = h - 42 * mm
+    for i, line in enumerate(lines):
+        font_size = 9 if i % 2 == 0 else 10.5
+        x = 18 * mm + (i % 3) * 2.2 * mm
+        if i in {2, 5}:
+            x += 12 * mm
+        c.setFont(PDF_FONT, font_size)
+        c.drawString(x, y, line)
+        y -= 13 * mm if i % 2 == 0 else 9 * mm
+
+    c.setFillColorRGB(0.75, 0.75, 0.75)
+    c.setFont(PDF_FONT, 8)
+    c.drawString(22 * mm, 22 * mm, "Scanned copy / some text may be partially unreadable")
+    c.save()
+
+
+def create_broken_image(filepath, title, lines, style):
+    """OCRで失敗しやすい画像サンプル"""
+    w, h = 390, 600
+    base = Image.new("RGB", (w, h), (242, 242, 240))
+    draw = ImageDraw.Draw(base)
+    draw.rectangle([0, 0, w, 54], fill=(78, 96, 110))
+    draw.text((16, 12), title, fill=(245, 245, 245), font=pil_font_lg)
+    draw.rounded_rectangle([18, 76, w - 18, h - 28], radius=10, fill=(252, 252, 248), outline=(214, 214, 214))
+
+    y = 104
+    for index, line in enumerate(lines):
+        font = pil_font_sm if len(line) > 22 or style in {"dense", "mixed_lang"} else pil_font
+        text_x = 34 + (index % 2) * (4 if style in {"skewed", "wrinkled"} else 0)
+        if style == "dense":
+            y += 1
+        draw.text((text_x, y), line, fill=(40, 40, 40), font=font)
+        y += 22 if style == "dense" else 30
+
+    if style == "glare":
+        draw.ellipse([210, 120, 410, 320], fill=(255, 255, 255))
+    elif style == "cropped":
+        base = base.crop((0, 0, w, h - 85))
+    elif style == "noise":
+        for x in range(24, w - 20, 18):
+            for y2 in range(86, h - 38, 28):
+                shade = 215 if (x + y2) % 36 else 185
+                draw.point((x, y2), fill=(shade, shade, shade))
+                draw.point((x + 2, y2 + 1), fill=(shade - 10, shade - 10, shade - 10))
+    elif style == "low_contrast":
+        overlay = Image.new("RGB", base.size, (232, 232, 228))
+        base = Image.blend(base, overlay, 0.46)
+    elif style == "wrinkled":
+        for y2 in range(90, h - 40, 48):
+            draw.arc([20, y2, w - 20, y2 + 28], start=0, end=180, fill=(220, 220, 220), width=2)
+
+    if style == "skewed":
+        base = base.rotate(-7, resample=Image.Resampling.BICUBIC, expand=True, fillcolor=(236, 236, 232))
+    elif style in {"glare", "noise", "mixed_lang", "wrinkled"}:
+        base = base.rotate(2, resample=Image.Resampling.BICUBIC, expand=True, fillcolor=(238, 238, 236))
+
+    if style in {"noise", "low_contrast", "wrinkled"}:
+        base = base.filter(ImageFilter.GaussianBlur(radius=0.6))
+
+    base.save(filepath, quality=88)
+
+
 def main():
     for cat_key, cat_data in CATEGORIES.items():
         cat_dir = os.path.join(BASE_DIR, cat_key)
         os.makedirs(cat_dir, exist_ok=True)
 
-        # PDF (4件)
+        # PDF
         for i, item in enumerate(cat_data["pdf"], 1):
             path = os.path.join(cat_dir, f"pdf_{i:02d}_{cat_key}.pdf")
             create_pdf(path, item["title"], item["lines"])
             print(f"  PDF: {path}")
 
-        # 画像 (4件)
+        # 画像
         for i, item in enumerate(cat_data["image"], 1):
             path = os.path.join(cat_dir, f"img_{i:02d}_{cat_key}.jpg")
             create_image(path, item["title"], item["lines"])
@@ -618,7 +1057,25 @@ def main():
         # テキスト (2件) - 既存テキストファイルから流用
         print(f"  TXT: 既存の {cat_key} テキストファイルを参照")
 
-    print(f"\n合計: {len(CATEGORIES)} カテゴリ × (PDF4 + IMG4) = {len(CATEGORIES) * 8} ファイル生成完了")
+    broken_dir = os.path.join(BASE_DIR, "broken-samples")
+    os.makedirs(broken_dir, exist_ok=True)
+
+    for item in BROKEN_SAMPLES["pdf"]:
+        path = os.path.join(broken_dir, item["filename"])
+        create_broken_pdf(path, item["title"], item["lines"], item["filename"])
+        print(f"  BROKEN PDF: {path}")
+
+    for item in BROKEN_SAMPLES["image"]:
+        path = os.path.join(broken_dir, item["filename"])
+        create_broken_image(path, item["title"], item["lines"], item["style"])
+        print(f"  BROKEN IMG: {path}")
+
+    per_category = len(next(iter(CATEGORIES.values()))["pdf"]) + len(next(iter(CATEGORIES.values()))["image"])
+    broken_total = len(BROKEN_SAMPLES["pdf"]) + len(BROKEN_SAMPLES["image"])
+    print(
+        f"\n合計: {len(CATEGORIES)} カテゴリ × {per_category} ファイル = {len(CATEGORIES) * per_category} ファイル"
+        f" + 崩れサンプル {broken_total} ファイル"
+    )
 
 
 if __name__ == "__main__":

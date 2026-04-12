@@ -25,9 +25,11 @@ export type Step = {
   id: string;
   category: StepCategory;
   title: string;
-  date?: string;         // YYYY-MM-DD
+  date?: string;         // YYYY-MM-DD（開始日）
+  endDate?: string;      // YYYY-MM-DD（終了日、宿泊checkout等）
   time: string;          // 開始時刻 HH:MM
   endTime?: string;      // 終了時刻 HH:MM
+  timezone?: string;     // タイムゾーン（例: JST, CET）
   from?: string;         // 出発地・場所
   to?: string;           // 到着地
   detail?: string;       // 旧互換用

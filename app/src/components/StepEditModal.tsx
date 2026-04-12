@@ -25,6 +25,7 @@ export type StepDraft = {
   source: StepSource;
   title: string;
   date: string;
+  endDate: string;
   time: string;
   endTime: string;
   from: string;
@@ -36,7 +37,7 @@ export type StepDraft = {
 export function emptyStepDraft(): StepDraft {
   return {
     category: "列車", source: "手入力",
-    title: "", date: "", time: "", endTime: "",
+    title: "", date: "", endDate: "", time: "", endTime: "",
     from: "", to: "", confNumber: "", information: [],
   };
 }
@@ -71,7 +72,8 @@ export function StepEditModal({
 
   const fixedFields: { key: keyof StepDraft; label: string; placeholder: string }[] = [
     { key: "title", label: "タイトル", placeholder: "NH225 / のぞみ225号" },
-    { key: "date", label: "日付", placeholder: "2026-04-15" },
+    { key: "date", label: "開始日", placeholder: "2026-04-15" },
+    { key: "endDate", label: "終了日", placeholder: "2026-04-17" },
     { key: "time", label: "開始時刻", placeholder: "10:00" },
     { key: "endTime", label: "終了時刻", placeholder: "12:00" },
     { key: "from", label: "出発地・場所", placeholder: "NRT / 東京" },

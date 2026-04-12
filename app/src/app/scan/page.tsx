@@ -341,7 +341,8 @@ function formToStep(category: StepCategory, values: Record<string, string>): { t
 
 const fixedFieldDefs: { key: string; label: string; placeholder: string }[] = [
   { key: "title", label: "タイトル", placeholder: "NH225 / のぞみ225号 / ホテル名" },
-  { key: "date", label: "日付", placeholder: "2026-04-15" },
+  { key: "date", label: "開始日", placeholder: "2026-04-15" },
+  { key: "endDate", label: "終了日", placeholder: "2026-04-17（宿泊checkout等）" },
   { key: "startTime", label: "開始時刻", placeholder: "10:00" },
   { key: "endTime", label: "終了時刻", placeholder: "12:00" },
   { key: "from", label: "出発地・場所", placeholder: "NRT / 東京" },
@@ -374,6 +375,8 @@ export default function ScanPage() {
   const [aiMode, setAiMode] = useState(true);
   const [fixedValues, setFixedValues] = useState<Record<string, string>>({});
   const [variableFields, setVariableFields] = useState<{ label: string; value: string }[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [aiSteps, setAiSteps] = useState<any[]>([]);
 
   const pdfToImages = async (file: File): Promise<Blob[]> => {
     const pdfjsLib = await import("pdfjs-dist");
@@ -492,32 +495,12 @@ export default function ScanPage() {
       const result = await res.json();
       setProgress(90);
 
-      // カテゴリとフィールドをセット
-      const cat = (result.category || "その他") as StepCategory;
-      setDetectedCategory(cat);
+      // steps配列から処理（TODO: 往復時は複数Step登録UI）
+      const allSteps = result.steps || [result];
+      setAiSteps(allSteps);
 
-      // 固定項目
-      const fixed: Record<string, string> = {};
-      if (result.fixed) {
-        for (const [k, v] of Object.entries(result.fixed)) {
-          if (v != null) fixed[k] = String(v);
-        }
-      }
-      setFixedValues(fixed);
-
-      // 変動項目
-      const vars: { label: string; value: string }[] = [];
-      if (Array.isArray(result.variable)) {
-        for (const item of result.variable) {
-          if (item?.label && item?.value) {
-            vars.push({ label: String(item.label), value: String(item.value) });
-          }
-        }
-      }
-      setVariableFields(vars);
-
-      // 旧formValuesにもマッピング（Step作成用）
-      setFormValues({ ...fixed });
+      // 最初のStepを表示
+      applyAiStep(allSteps[0]);
       setOcrText(`[AI OCR] ${JSON.stringify(result, null, 2)}`);
       setProgress(100);
       setStatus("done");
@@ -537,6 +520,31 @@ export default function ScanPage() {
 
   const updateField = (key: string, value: string) => {
     setFormValues((prev) => ({ ...prev, [key]: value }));
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const applyAiStep = (stepData: any) => {
+    const cat = (stepData.category || "その他") as StepCategory;
+    setDetectedCategory(cat);
+
+    const fixed: Record<string, string> = {};
+    if (stepData.fixed) {
+      for (const [k, v] of Object.entries(stepData.fixed)) {
+        if (v != null) fixed[k] = String(v);
+      }
+    }
+    setFixedValues(fixed);
+
+    const vars: { label: string; value: string }[] = [];
+    if (Array.isArray(stepData.variable)) {
+      for (const item of stepData.variable) {
+        if (item?.label && item?.value) {
+          vars.push({ label: String(item.label), value: String(item.value) });
+        }
+      }
+    }
+    setVariableFields(vars);
+    setFormValues({ ...fixed });
   };
 
   const handleTextSubmit = () => {
@@ -608,7 +616,35 @@ export default function ScanPage() {
     let endTime: string | undefined, from: string | undefined, to: string | undefined;
     let confNumber: string | undefined, detail: string | undefined;
 
-    if (aiMode && Object.keys(fixedValues).length > 0) {
+    // 登録するStep群を構築
+    const stepsToRegister: Step[] = [];
+
+    // AI往復対応: aiStepsが複数ある場合は全て登録
+    if (aiMode && aiSteps.length > 1) {
+      for (let si = 0; si < aiSteps.length; si++) {
+        const s = aiSteps[si];
+        const f = s.fixed || {};
+        stepsToRegister.push({
+          id: generateId(),
+          category: (s.category || "その他") as StepCategory,
+          title: f.title || getCategoryDef(s.category || "その他").label,
+          date: f.date || undefined,
+          endDate: f.endDate || undefined,
+          time: f.startTime || "",
+          endTime: f.endTime || undefined,
+          from: f.from || undefined,
+          to: f.to || undefined,
+          confNumber: f.confNumber || undefined,
+          timezone: f.timezone || undefined,
+          source: inputSource,
+          sourceImageUrl: savedImageUrl,
+          status: "未開始",
+          information: (s.variable || [])
+            .filter((v: { label?: string; value?: string }) => v?.label && v?.value)
+            .map((v: { label: string; value: string }, i: number) => ({ id: `var-${si}-${i}`, label: v.label, value: v.value })),
+        });
+      }
+    } else if (aiMode && Object.keys(fixedValues).length > 0) {
       title = fixedValues.title || getCategoryDef(detectedCategory).label;
       stepDate = fixedValues.date || undefined;
       time = fixedValues.startTime || "";
@@ -616,54 +652,52 @@ export default function ScanPage() {
       from = fixedValues.from || undefined;
       to = fixedValues.to || undefined;
       confNumber = fixedValues.confNumber || undefined;
+      stepsToRegister.push({
+        id: generateId(),
+        category: detectedCategory,
+        title, date: stepDate, endDate: fixedValues.endDate || undefined,
+        time, endTime, from, to, confNumber,
+        timezone: fixedValues.timezone || undefined,
+        source: inputSource, sourceImageUrl: savedImageUrl,
+        status: "未開始",
+        information: variableFields.map((v, i) => ({ id: `var-${i}`, label: v.label, value: v.value })),
+      });
     } else {
       const stepData = formToStep(detectedCategory, formValues);
       title = stepData.title;
       time = stepData.time;
       detail = stepData.detail || undefined;
       confNumber = stepData.confNumber || undefined;
+      stepsToRegister.push({
+        id: generateId(),
+        category: detectedCategory,
+        title, time, detail, confNumber,
+        source: inputSource, sourceImageUrl: savedImageUrl,
+        status: "未開始", information: [],
+      });
     }
 
-    const step: Step = {
-      id: generateId(),
-      category: detectedCategory,
-      title,
-      date: stepDate,
-      time,
-      endTime,
-      from,
-      to,
-      detail,
-      confNumber,
-      source: inputSource,
-      sourceImageUrl: savedImageUrl,
-      status: "未開始",
-      information: variableFields.map((v, i) => ({
-        id: `var-${i}`,
-        label: v.label,
-        value: v.value,
-      })),
-    };
-
     let journeyId: string;
+    const firstDate = stepsToRegister[0]?.date;
+    const lastDate = stepsToRegister[stepsToRegister.length - 1]?.endDate
+      || stepsToRegister[stepsToRegister.length - 1]?.date;
 
     if (addToExisting && sameDayTarget) {
-      // 既存Journeyに追加
       updateJourney(sameDayTarget.id, {
-        steps: [...sameDayTarget.steps, step],
+        steps: [...sameDayTarget.steps, ...stepsToRegister],
       });
       journeyId = sameDayTarget.id;
     } else {
-      // 新規Journey作成
       journeyId = generateId();
-      const cd = getCategoryDef(detectedCategory);
-      const journeyDate = stepDate || todayStr;
+      const cd = getCategoryDef(stepsToRegister[0]?.category || detectedCategory);
+      const journeyStartDate = firstDate || todayStr;
+      const journeyEndDate = lastDate || journeyStartDate;
       addJourney({
         id: journeyId,
-        title: `${cd.label} ${new Date(journeyDate).toLocaleDateString("ja-JP")}`,
-        startDate: journeyDate,
-        endDate: journeyDate,
-        steps: [step],
+        title: `${cd.label} ${new Date(journeyStartDate).toLocaleDateString("ja-JP")}`,
+        startDate: journeyStartDate,
+        endDate: journeyEndDate,
+        steps: stepsToRegister,
         createdAt: now,
         updatedAt: now,
       });
@@ -686,6 +720,7 @@ export default function ScanPage() {
     setPasteText("");
     setFixedValues({});
     setVariableFields([]);
+    setAiSteps([]);
   };
 
   const catDef = getCategoryDef(detectedCategory);
