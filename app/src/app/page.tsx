@@ -15,7 +15,7 @@ import { startTransition, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
 import { TabBar } from "@/components/TabBar";
-import { seedSampleJourneys } from "@/lib/store";
+import { getJourneys } from "@/lib/store-supabase";
 import {
   formatDateRange,
   getJourneyState,
@@ -66,9 +66,11 @@ export default function TripsPage() {
   const router = useRouter();
 
   useEffect(() => {
-    startTransition(() => {
-      setJourneys(seedSampleJourneys());
-      setLoaded(true);
+    getJourneys().then((data) => {
+      startTransition(() => {
+        setJourneys(data);
+        setLoaded(true);
+      });
     });
   }, []);
 

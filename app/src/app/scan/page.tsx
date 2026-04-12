@@ -28,7 +28,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
 import { TabBar } from "@/components/TabBar";
-import { addJourney, getJourneys, updateJourney, generateId } from "@/lib/store";
+import { addJourney, getJourneys, updateJourney, generateId } from "@/lib/store-supabase";
 import type { Step, StepCategory } from "@/lib/types";
 import { getFixedFields } from "@/lib/ocr-rules";
 import classes from "./page.module.css";
@@ -691,8 +691,12 @@ export default function ScanPage() {
     const lastDate = stepsToRegister[stepsToRegister.length - 1]?.endDate
       || stepsToRegister[stepsToRegister.length - 1]?.date;
 
+    // 同日Journeyを検索
+    const allJourneys = await getJourneys();
+    const sameDayTarget = allJourneys.find((j) => j.startDate <= todayStr && j.endDate >= todayStr);
+
     if (addToExisting && sameDayTarget) {
-      updateJourney(sameDayTarget.id, {
+      await updateJourney(sameDayTarget.id, {
         steps: [...sameDayTarget.steps, ...stepsToRegister],
       });
       journeyId = sameDayTarget.id;
@@ -701,7 +705,7 @@ export default function ScanPage() {
       const cd = getCategoryDef(stepsToRegister[0]?.category || detectedCategory);
       const journeyStartDate = firstDate || todayStr;
       const journeyEndDate = lastDate || journeyStartDate;
-      addJourney({
+      await addJourney({
         id: journeyId,
         title: `${cd.label} ${new Date(journeyStartDate).toLocaleDateString("ja-JP")}`,
         startDate: journeyStartDate,
@@ -737,12 +741,7 @@ export default function ScanPage() {
   const catDef = getCategoryDef(detectedCategory);
   const fields = categoryFields[detectedCategory] || categoryFields["その他"];
 
-  // 同じ日のJourneyを検索
   const today = new Date().toISOString().split("T")[0];
-  const sameDayJourneys = status === "done"
-    ? getJourneys().filter((j) => j.startDate <= today && j.endDate >= today)
-    : [];
-  const sameDayTarget = sameDayJourneys[0]; // 最初の一致を使用
 
   return (
     <>
@@ -1055,9 +1054,9 @@ export default function ScanPage() {
             </details>
 
             {/* 同じ日の予定に追加チェック */}
-            {sameDayTarget && (
+            {(
               <Checkbox
-                label={`同じ日の予定に追加する（${sameDayTarget.title}）`}
+                label="同じ日の予定があれば追加する"
                 checked={addToExisting}
                 onChange={(e) => setAddToExisting(e.currentTarget.checked)}
                 mt="md"

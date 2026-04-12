@@ -35,7 +35,7 @@ import {
   generateId,
   getJourneyDraft,
   saveJourneyDraft,
-} from "@/lib/store";
+} from "@/lib/store-supabase";
 import { getCategoryIcon, getSourceIcon, getSourceLabel, getTodayDateString } from "@/lib/helpers";
 import type { JourneyDraftItem, Step, StepCategory, StepSource } from "@/lib/types";
 
@@ -257,14 +257,14 @@ export default function NewTripPage() {
     }, REMOVE_ANIMATION_MS);
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!title.trim() || !startDate || !endDate) return;
     const now = new Date().toISOString();
     const steps = items.filter((item) => item.registered && item.step).map((item) => item.step!);
     const sortedDates =
       startDate <= endDate ? { startDate, endDate } : { startDate: endDate, endDate: startDate };
 
-    addJourney({
+    await addJourney({
       id: generateId(),
       title: title.trim(),
       startDate: sortedDates.startDate,

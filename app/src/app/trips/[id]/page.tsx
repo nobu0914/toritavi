@@ -32,7 +32,7 @@ import { TabBar } from "@/components/TabBar";
 import { StepEditModal, emptyStepDraft } from "@/components/StepEditModal";
 import type { StepDraft } from "@/components/StepEditModal";
 import classes from "./page.module.css";
-import { deleteJourney, getJourney, updateJourney } from "@/lib/store";
+import { deleteJourney, getJourney, updateJourney } from "@/lib/store-supabase";
 import {
   formatDateRange,
   formatDateJP,
@@ -65,8 +65,8 @@ function createInitialPageData(today: string): PageData {
   };
 }
 
-function loadPageData(id: string, today: string): PageData {
-  const found = getJourney(id) ?? null;
+async function loadPageData(id: string, today: string): Promise<PageData> {
+  const found = (await getJourney(id)) ?? null;
   return {
     journey: found,
     journeyForm: found
@@ -99,10 +99,11 @@ export default function TripDetailPage() {
   const [pendingStepDeleteIndex, setPendingStepDeleteIndex] = useState<number | null>(null);
 
   useEffect(() => {
-    startTransition(() => {
-      const nextPageData = loadPageData(id, today);
-      setPageData(nextPageData);
-      setJourneyForm(nextPageData.journeyForm);
+    loadPageData(id, today).then((nextPageData) => {
+      startTransition(() => {
+        setPageData(nextPageData);
+        setJourneyForm(nextPageData.journeyForm);
+      });
     });
   }, [id, today]);
 
@@ -155,7 +156,7 @@ export default function TripDetailPage() {
 
   const persist = (updated: Journey) => {
     setJourney(updated);
-    updateJourney(updated.id, updated);
+    updateJourney(updated.id, updated); // async but fire-and-forget
   };
 
   const openEdit = (index: number) => {
@@ -284,9 +285,9 @@ export default function TripDetailPage() {
     });
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     sessionStorage.setItem("toritavi_toast", "journey_deleted");
-    deleteJourney(journey.id);
+    await deleteJourney(journey.id);
     router.push("/");
   };
 
