@@ -26,8 +26,8 @@ import { useRouter } from "next/navigation";
 import { useDisclosure } from "@mantine/hooks";
 import { AppHeader } from "@/components/AppHeader";
 import { TabBar } from "@/components/TabBar";
-import { StepEditModal, emptyStepDraft } from "@/components/StepEditModal";
-import type { StepDraft } from "@/components/StepEditModal";
+import { StepDetailDrawer, emptyStepDraft } from "@/components/StepDetailDrawer";
+import type { StepDraft } from "@/components/StepDetailDrawer";
 import classes from "./page.module.css";
 import {
   addJourney,
@@ -512,7 +512,7 @@ export default function NewTripPage() {
         </Box>
       </Box>
 
-      <StepEditModal
+      <StepDetailDrawer
         opened={modalOpened}
         onClose={closeModal}
         draft={draft}

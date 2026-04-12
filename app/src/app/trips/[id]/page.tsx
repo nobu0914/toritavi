@@ -29,8 +29,8 @@ import { useDisclosure } from "@mantine/hooks";
 import { useParams, useRouter } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
 import { TabBar } from "@/components/TabBar";
-import { StepEditModal, emptyStepDraft } from "@/components/StepEditModal";
-import type { StepDraft } from "@/components/StepEditModal";
+import { StepDetailDrawer, emptyStepDraft } from "@/components/StepDetailDrawer";
+import type { StepDraft } from "@/components/StepDetailDrawer";
 import classes from "./page.module.css";
 import { deleteJourney, getJourney, updateJourney } from "@/lib/store-supabase";
 import {
@@ -502,7 +502,7 @@ export default function TripDetailPage() {
         </Box>
       </Box>
 
-      <StepEditModal
+      <StepDetailDrawer
         opened={modalOpened}
         onClose={closeModal}
         draft={draft}
