@@ -343,7 +343,6 @@ export default function TripDetailPage() {
 
           {sortedSteps.map((step, index) => {
             const iconIndex = journey.steps.findIndex((item) => item.id === step.id);
-            const Icon = getCategoryIcon(step.category);
             const isActive = step.status === "進行中";
             const isDone = step.status === "完了";
             const isNext = nextAction?.id === step.id;
@@ -362,13 +361,7 @@ export default function TripDetailPage() {
                   : "";
             return (
               <Box key={step.id} className={`${classes.timelineItem} ${itemClass}`}>
-                {/* 要確認マーク */}
-                {step.needsReview && (
-                  <Box className={classes.reviewMark}>
-                    <Text size="xs" fw={600}>要確認</Text>
-                  </Box>
-                )}
-                {/* 時間行: ● 時間 ... ステータス */}
+                {/* 時間行: ● 時間(基準) ... ステータス */}
                 <Box className={classes.timelineTimeRow}>
                   <Box className={`${classes.timelineDot} ${dotClass} ${step.needsReview ? classes.timelineDotReview : ""}`} />
                   <Text className={classes.timelineTimeText}>
@@ -397,87 +390,54 @@ export default function TripDetailPage() {
                   </Box>
                 </Box>
 
-                {/* カード */}
-                  <Box
-                    className={`${classes.timelineCard} ${isNext ? classes.timelineCardActive : ""}`}
-                    onClick={() => openEdit(iconIndex)}
-                  >
-                    <Box className={`${classes.timelineCardIcon} ${isDone ? classes.timelineCardIconDone : ""}`}>
-                      <Icon size={20} />
-                    </Box>
-                    <Box className={classes.timelineCardBody}>
-                      <Text className={classes.timelineType}>{step.category}</Text>
-                      <Text className={classes.timelineTitle}>{step.title}</Text>
-                      {(step.from || step.to) && (
-                        <Text
-                          className={classes.timelineLocation}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const q = [step.from, step.to].filter(Boolean).pop() || "";
-                            window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`, "_blank", "noopener");
-                          }}
-                        >
-                          <IconMapPin size={12} />
-                          {[step.from, step.to].filter(Boolean).join(" → ")}
-                        </Text>
-                      )}
-                      {step.detail && !step.from && !step.to && (
-                        <Text className={classes.timelineDetail}>{step.detail}</Text>
-                      )}
-                      {step.time && step.time !== (step.time.match(/\d{1,2}:\d{2}/)?.[0] || "") && (
-                        <Text className={classes.timelineDetail}>{step.time}</Text>
-                      )}
-                      {/* 期間表示（宿泊等） */}
-                      {step.endDate && step.date && step.endDate !== step.date && (
-                        <Text className={classes.timelineDetail}>
-                          {step.date} → {step.endDate}
-                        </Text>
-                      )}
-                      {/* 到着時刻 */}
-                      {step.endTime && (
-                        <Text className={classes.timelineDetail}>
-                          → {formatTimeDisplay(step.endTime, {
-                            timezone: step.timezone,
-                            crossDay: !!(step.endDate && step.date && step.endDate !== step.date),
-                            compact: true,
-                          })}
-                        </Text>
-                      )}
-                      {step.confNumber && (
-                        <Text className={classes.timelineConf}>Conf# {step.confNumber}</Text>
-                      )}
-                    </Box>
-                    <Menu position="bottom-end" withArrow>
-                      <Menu.Target>
-                        <ActionIcon variant="subtle" color="gray" onClick={(e) => e.stopPropagation()}>
-                          <IconDotsVertical size={16} />
-                        </ActionIcon>
-                      </Menu.Target>
-                      <Menu.Dropdown>
-                        <Menu.Label>ステータス変更</Menu.Label>
-                        <Menu.Item
-                          leftSection={<IconPlayerPlay size={14} />}
-                          onClick={(e) => { e.stopPropagation(); setStepStatus(iconIndex, "進行中"); }}
-                        >進行中</Menu.Item>
-                        <Menu.Item
-                          leftSection={<IconCheck size={14} />}
-                          onClick={(e) => { e.stopPropagation(); setStepStatus(iconIndex, "完了"); }}
-                        >完了</Menu.Item>
-                        <Menu.Item onClick={(e) => { e.stopPropagation(); setStepStatus(iconIndex, "未開始"); }}>未開始</Menu.Item>
-                        <Menu.Item onClick={(e) => { e.stopPropagation(); setStepStatus(iconIndex, "遅延"); }}>遅延</Menu.Item>
-                        <Menu.Item onClick={(e) => { e.stopPropagation(); setStepStatus(iconIndex, "キャンセル"); }}>キャンセル</Menu.Item>
-                        <Menu.Divider />
-                        <Menu.Item leftSection={<IconEdit size={14} />} onClick={(e) => { e.stopPropagation(); openEdit(iconIndex); }}>
-                          編集
-                        </Menu.Item>
-                        <Menu.Item
-                          color="red"
-                          leftSection={<IconTrash size={14} />}
-                          onClick={(e) => { e.stopPropagation(); requestStepDelete(iconIndex); }}
-                        >削除</Menu.Item>
-                      </Menu.Dropdown>
-                    </Menu>
+                {/* カード（情報量を絞った一覧向け） */}
+                <Box
+                  className={`${classes.timelineCard} ${isNext ? classes.timelineCardActive : ""} ${step.needsReview ? classes.timelineCardReview : ""}`}
+                  onClick={() => openEdit(iconIndex)}
+                >
+                  <Box className={classes.timelineCardBody}>
+                    {/* 1行目: 区間 */}
+                    {(step.from || step.to) ? (
+                      <Text className={classes.timelineRoute}>
+                        {[step.from, step.to].filter(Boolean).join(" → ")}
+                      </Text>
+                    ) : step.detail ? (
+                      <Text className={classes.timelineRoute}>{step.detail}</Text>
+                    ) : (
+                      <Text className={classes.timelineRoute}>{step.title}</Text>
+                    )}
+
+                    {/* 2行目: 到着時刻 */}
+                    {step.endTime && (
+                      <Text className={classes.timelineArrival}>
+                        {formatTimeDisplay(step.endTime, {
+                          timezone: step.timezone,
+                          crossDay: !!(step.endDate && step.date && step.endDate !== step.date),
+                          compact: true,
+                        })} 到着
+                      </Text>
+                    )}
+
+                    {/* 宿泊: 期間表示 */}
+                    {step.category === "宿泊" && step.endDate && step.date && step.endDate !== step.date && (
+                      <Text className={classes.timelineArrival}>
+                        {step.endDate} {step.endTime || ""} チェックアウト
+                      </Text>
+                    )}
+
+                    {/* 3行目: 便名・タイトル（区間と異なる場合のみ） */}
+                    {(step.from || step.to) && (
+                      <Text className={classes.timelineFlightNo}>{step.title}</Text>
+                    )}
+
+                    {/* 4行目: 要確認（ある場合のみ） */}
+                    {step.needsReview && (
+                      <Text className={classes.timelineReviewInline}>
+                        要確認{step.inferred && step.inferred.length > 0 ? `: ${step.inferred.join(", ")}` : ""}
+                      </Text>
+                    )}
                   </Box>
+                </Box>
 
                 {/* カード間アクションバー */}
                 {!isLast && (() => {
@@ -550,6 +510,8 @@ export default function TripDetailPage() {
         isEdit={editingIndex !== null}
         editingTitle={editingIndex !== null ? journey.steps[editingIndex]?.title : undefined}
         sourceImageUrl={editingIndex !== null ? journey.steps[editingIndex]?.sourceImageUrl : undefined}
+        needsReview={editingIndex !== null ? journey.steps[editingIndex]?.needsReview : undefined}
+        inferred={editingIndex !== null ? journey.steps[editingIndex]?.inferred : undefined}
       />
 
       <Modal

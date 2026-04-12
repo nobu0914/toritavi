@@ -132,6 +132,10 @@
   border-width: 2px;
 }
 
+.timelineCardReview {
+  border-left: 3px solid var(--mantine-color-yellow-5);
+}
+
 .actionBar {
   display: flex;
   gap: 6px;
@@ -159,68 +163,34 @@
   background: var(--mantine-color-gray-0);
 }
 
-.timelineCardIcon {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  background: var(--mantine-color-blue-0);
-  color: var(--mantine-color-blue-7);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.timelineCardIconDone {
-  background: var(--mantine-color-teal-0);
-  color: var(--mantine-color-teal-8);
-}
-
 .timelineCardBody {
   flex: 1;
   min-width: 0;
 }
 
-.timelineType {
-  font-size: 10px;
-  color: var(--mantine-color-gray-5);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.timelineTitle {
-  font-size: 13px;
+.timelineRoute {
+  font-size: 14px;
   font-weight: 600;
-  margin-top: 1px;
+  color: var(--mantine-color-gray-9);
 }
 
-.timelineDetail {
+.timelineArrival {
   font-size: 12px;
   color: var(--mantine-color-gray-6);
   margin-top: 2px;
 }
 
-.timelineLocation {
-  font-size: 12px;
-  color: var(--mantine-color-blue-6);
-  margin-top: 2px;
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  cursor: pointer;
-  min-height: 28px;
-}
-
-.timelineLocation:active {
-  opacity: 0.6;
-}
-
-.timelineConf {
+.timelineFlightNo {
   font-size: 11px;
-  color: var(--mantine-color-blue-7);
+  color: var(--mantine-color-gray-5);
+  margin-top: 2px;
+}
+
+.timelineReviewInline {
+  font-size: 11px;
   font-weight: 600;
-  margin-top: 3px;
-  font-family: monospace;
+  color: var(--mantine-color-yellow-8);
+  margin-top: 4px;
 }
 
 .reviewMark {

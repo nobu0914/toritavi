@@ -45,6 +45,47 @@
   min-height: 0;
 }
 
+.summaryCard {
+  background: var(--mantine-color-blue-0);
+  border: 1px solid var(--mantine-color-blue-2);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+
+.summaryRow {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 3px 0;
+}
+
+.summaryLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--mantine-color-blue-7);
+  width: 50px;
+  flex-shrink: 0;
+}
+
+.summaryValue {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--mantine-color-gray-9);
+}
+
+.reviewBanner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--mantine-color-yellow-0);
+  border: 1px solid var(--mantine-color-yellow-5);
+  color: var(--mantine-color-yellow-8);
+  margin-bottom: 12px;
+}
+
 .sectionLabel {
   font-size: 11px;
   font-weight: 700;

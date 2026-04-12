@@ -12,7 +12,8 @@ import {
 import { IconChevronDown, IconChevronUp, IconX } from "@tabler/icons-react";
 import classes from "./StepEditModal.module.css";
 import type { StepCategory, StepSource, Information } from "@/lib/types";
-import { getFixedFields } from "@/lib/ocr-rules";
+import { getFixedFields, formatTimeDisplay, isInternational } from "@/lib/ocr-rules";
+import { IconAlertTriangle } from "@tabler/icons-react";
 
 const categories: StepCategory[] = [
   "列車", "飛行機", "バス", "車", "徒歩",
@@ -52,10 +53,13 @@ type Props = {
   isEdit: boolean;
   editingTitle?: string;
   sourceImageUrl?: string;
+  needsReview?: boolean;
+  inferred?: string[];
 };
 
 export function StepEditModal({
   opened, onClose, draft, onChange, onSave, isEdit, editingTitle, sourceImageUrl,
+  needsReview, inferred,
 }: Props) {
   const [editing, setEditing] = useState(!isEdit);
   const [previewExpanded, setPreviewExpanded] = useState(false);
@@ -136,6 +140,54 @@ export function StepEditModal({
                   <><IconChevronDown size={14} />スキャン元データを表示</>
                 )}
               </Box>
+            </Box>
+          )}
+
+          {/* サマリーカード（閲覧モード） */}
+          {isEdit && !editing && (
+            <Box className={classes.summaryCard}>
+              <Box className={classes.summaryRow}>
+                <Text className={classes.summaryLabel}>出発</Text>
+                <Text className={classes.summaryValue}>
+                  {draft.date || "未設定"} {formatTimeDisplay(draft.time, { timezone: undefined, compact: true })}
+                  {isInternational(undefined) ? "" : ""}
+                </Text>
+              </Box>
+              {draft.endTime && (
+                <Box className={classes.summaryRow}>
+                  <Text className={classes.summaryLabel}>到着</Text>
+                  <Text className={classes.summaryValue}>
+                    {draft.endDate || draft.date || ""} {formatTimeDisplay(draft.endTime, { compact: true })}
+                    {draft.endDate && draft.date && draft.endDate !== draft.date ? "（翌日）" : ""}
+                  </Text>
+                </Box>
+              )}
+              {(draft.from || draft.to) && (
+                <Box className={classes.summaryRow}>
+                  <Text className={classes.summaryLabel}>区間</Text>
+                  <Text className={classes.summaryValue}>
+                    {[draft.from, draft.to].filter(Boolean).join(" → ")}
+                  </Text>
+                </Box>
+              )}
+              {draft.confNumber && (
+                <Box className={classes.summaryRow}>
+                  <Text className={classes.summaryLabel}>確認番号</Text>
+                  <Text className={classes.summaryValue} style={{ fontFamily: "monospace" }}>
+                    {draft.confNumber}
+                  </Text>
+                </Box>
+              )}
+            </Box>
+          )}
+
+          {/* 要確認バナー */}
+          {needsReview && (
+            <Box className={classes.reviewBanner}>
+              <IconAlertTriangle size={16} />
+              <Text size="xs" fw={600}>
+                要確認{inferred && inferred.length > 0 ? `: ${inferred.join(", ")}` : ""}
+              </Text>
             </Box>
           )}
 
