@@ -510,6 +510,7 @@ export default function TripDetailPage() {
         isEdit={editingIndex !== null}
         editingTitle={editingIndex !== null ? journey.steps[editingIndex]?.title : undefined}
         sourceImageUrl={editingIndex !== null ? journey.steps[editingIndex]?.sourceImageUrl : undefined}
+        sourceImageUrls={editingIndex !== null ? journey.steps[editingIndex]?.sourceImageUrls : undefined}
         needsReview={editingIndex !== null ? journey.steps[editingIndex]?.needsReview : undefined}
         inferred={editingIndex !== null ? journey.steps[editingIndex]?.inferred : undefined}
       />

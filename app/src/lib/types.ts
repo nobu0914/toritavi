@@ -37,6 +37,7 @@ export type Step = {
   memo?: string;
   source?: StepSource;
   sourceImageUrl?: string;
+  sourceImageUrls?: string[];
   status: StepStatus;
   information: Information[];
   inferred?: string[];      // 推定値のフィールド名リスト

@@ -9,7 +9,7 @@ import {
   Text,
   TextInput,
 } from "@mantine/core";
-import { IconChevronDown, IconChevronUp, IconX } from "@tabler/icons-react";
+import { IconChevronDown, IconChevronLeft, IconChevronRight, IconX } from "@tabler/icons-react";
 import classes from "./StepEditModal.module.css";
 import type { StepCategory, StepSource, Information } from "@/lib/types";
 import { getFixedFields, formatTimeDisplay, isInternational } from "@/lib/ocr-rules";
@@ -53,16 +53,18 @@ type Props = {
   isEdit: boolean;
   editingTitle?: string;
   sourceImageUrl?: string;
+  sourceImageUrls?: string[];
   needsReview?: boolean;
   inferred?: string[];
 };
 
 export function StepEditModal({
-  opened, onClose, draft, onChange, onSave, isEdit, editingTitle, sourceImageUrl,
+  opened, onClose, draft, onChange, onSave, isEdit, editingTitle, sourceImageUrl, sourceImageUrls,
   needsReview, inferred,
 }: Props) {
   const [editing, setEditing] = useState(!isEdit);
   const [previewExpanded, setPreviewExpanded] = useState(false);
+  const [previewPage, setPreviewPage] = useState(0);
 
   const [prevOpened, setPrevOpened] = useState(false);
   if (opened !== prevOpened) {
@@ -70,6 +72,7 @@ export function StepEditModal({
     if (opened) {
       setEditing(!isEdit);
       setPreviewExpanded(false);
+      setPreviewPage(0);
     }
   }
 
@@ -120,28 +123,63 @@ export function StepEditModal({
           </ActionIcon>
         </Box>
         <Box className={classes.body}>
-          {/* スキャン元アコーディオンプレビュー */}
-          {sourceImageUrl && (
-            <Box
-              className={classes.sourceAccordion}
-              onClick={() => setPreviewExpanded((v) => !v)}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={sourceImageUrl}
-                alt="スキャン元"
-                className={classes.sourceImage}
-                style={{ height: previewExpanded ? "auto" : 60 }}
-              />
-              <Box className={classes.sourceToggle}>
-                {previewExpanded ? (
-                  <><IconChevronUp size={14} />閉じる</>
-                ) : (
-                  <><IconChevronDown size={14} />スキャン元データを表示</>
+          {/* スキャン元プレビュー */}
+          {(() => {
+            const images = sourceImageUrls && sourceImageUrls.length > 0 ? sourceImageUrls : sourceImageUrl ? [sourceImageUrl] : [];
+            if (images.length === 0) return null;
+            return previewExpanded ? (
+              <Box className={classes.sourceAccordion}>
+                <Box className={classes.sourceSlider}>
+                  {images.length > 1 && (
+                    <button
+                      className={classes.sourceArrow}
+                      onClick={() => setPreviewPage((p) => Math.max(0, p - 1))}
+                      disabled={previewPage === 0}
+                    >
+                      <IconChevronLeft size={18} />
+                    </button>
+                  )}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={images[previewPage]}
+                    alt={`ページ ${previewPage + 1}`}
+                    className={classes.sourceImageFull}
+                  />
+                  {images.length > 1 && (
+                    <button
+                      className={classes.sourceArrow}
+                      onClick={() => setPreviewPage((p) => Math.min(images.length - 1, p + 1))}
+                      disabled={previewPage === images.length - 1}
+                    >
+                      <IconChevronRight size={18} />
+                    </button>
+                  )}
+                </Box>
+                {images.length > 1 && (
+                  <Text size="xs" c="dimmed" ta="center" mt={4}>
+                    {previewPage + 1} / {images.length} ページ
+                  </Text>
                 )}
+                <Box className={classes.sourceToggle} onClick={() => setPreviewExpanded(false)}>
+                  閉じる
+                </Box>
               </Box>
-            </Box>
-          )}
+            ) : (
+              <Box className={classes.sourceAccordion}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={images[0]}
+                  alt="スキャン元"
+                  className={classes.sourceImage}
+                  style={{ height: 60 }}
+                />
+                <Box className={classes.sourceToggle} onClick={() => setPreviewExpanded(true)}>
+                  <IconChevronDown size={14} />
+                  スキャン元データを表示
+                </Box>
+              </Box>
+            );
+          })()}
 
           {/* サマリーカード（閲覧モード） */}
           {isEdit && !editing && (

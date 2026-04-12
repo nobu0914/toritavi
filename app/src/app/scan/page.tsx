@@ -600,8 +600,18 @@ export default function ScanPage() {
 
   const createStep = async () => {
     let savedImageUrl: string | undefined;
+    let savedImageUrls: string[] | undefined;
     if (imageUrl) {
       try { savedImageUrl = await blobToBase64(imageUrl); } catch { /* ignore */ }
+    }
+    if (pageUrls.length > 1) {
+      try {
+        const urls: string[] = [];
+        for (const u of pageUrls) {
+          urls.push(await blobToBase64(u));
+        }
+        savedImageUrls = urls;
+      } catch { /* ignore */ }
     }
 
     const now = new Date().toISOString();
@@ -632,7 +642,7 @@ export default function ScanPage() {
           confNumber: f.confNumber || undefined,
           timezone: f.timezone || undefined,
           source: inputSource,
-          sourceImageUrl: savedImageUrl,
+          sourceImageUrl: savedImageUrl, sourceImageUrls: savedImageUrls,
           status: "未開始",
           inferred: Array.isArray(s.inferred) ? s.inferred : undefined,
           needsReview: s.needsReview || undefined,
@@ -655,7 +665,7 @@ export default function ScanPage() {
         title, date: stepDate, endDate: fixedValues.endDate || undefined,
         time, endTime, from, to, confNumber,
         timezone: fixedValues.timezone || undefined,
-        source: inputSource, sourceImageUrl: savedImageUrl,
+        source: inputSource, sourceImageUrl: savedImageUrl, sourceImageUrls: savedImageUrls,
         status: "未開始",
         inferred: inferredFields.length > 0 ? inferredFields : undefined,
         needsReview: needsReview || undefined,
@@ -671,7 +681,7 @@ export default function ScanPage() {
         id: generateId(),
         category: detectedCategory,
         title, time, detail, confNumber,
-        source: inputSource, sourceImageUrl: savedImageUrl,
+        source: inputSource, sourceImageUrl: savedImageUrl, sourceImageUrls: savedImageUrls,
         status: "未開始", information: [],
       });
     }
