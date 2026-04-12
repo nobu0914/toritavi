@@ -223,6 +223,21 @@
   font-family: monospace;
 }
 
+.reviewMark {
+  padding: 3px 8px;
+  margin-left: 4px;
+  border-radius: 4px;
+  background: var(--mantine-color-yellow-0);
+  border: 1px solid var(--mantine-color-yellow-5);
+  color: var(--mantine-color-yellow-8);
+  display: inline-block;
+}
+
+.timelineDotReview {
+  border-color: var(--mantine-color-yellow-5) !important;
+  background: var(--mantine-color-yellow-1) !important;
+}
+
 .timelineBadge {
   font-size: 10px;
   font-weight: 700;

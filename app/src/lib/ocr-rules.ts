@@ -104,6 +104,133 @@ export const VARIABLE_RULES = {
   ],
 } as const;
 
+/* ====== カテゴリ別固定項目定義（UI共有） ====== */
+
+export type FixedFieldDef = {
+  key: string;
+  label: string;
+  placeholder: string;
+};
+
+export const CATEGORY_FIXED_FIELDS: Record<string, FixedFieldDef[]> = {
+  飛行機: [
+    { key: "title", label: "便名", placeholder: "NH225" },
+    { key: "date", label: "出発日", placeholder: "2026-04-15" },
+    { key: "startTime", label: "出発時刻", placeholder: "10:00" },
+    { key: "endDate", label: "到着日", placeholder: "2026-04-15" },
+    { key: "endTime", label: "到着時刻", placeholder: "12:00" },
+    { key: "from", label: "出発地", placeholder: "NRT" },
+    { key: "to", label: "到着地", placeholder: "KIX" },
+    { key: "timezone", label: "タイムゾーン", placeholder: "JST（国内は省略可）" },
+    { key: "confNumber", label: "確認番号", placeholder: "ANA-882541" },
+  ],
+  列車: [
+    { key: "title", label: "列車名", placeholder: "のぞみ 225号" },
+    { key: "date", label: "乗車日", placeholder: "2026-04-15" },
+    { key: "startTime", label: "出発時刻", placeholder: "10:00" },
+    { key: "endTime", label: "到着時刻", placeholder: "12:30" },
+    { key: "from", label: "出発駅", placeholder: "東京" },
+    { key: "to", label: "到着駅", placeholder: "新大阪" },
+    { key: "confNumber", label: "確認番号", placeholder: "TK-882541" },
+  ],
+  宿泊: [
+    { key: "title", label: "施設名", placeholder: "ホテル大阪ベイ" },
+    { key: "date", label: "チェックイン日", placeholder: "2026-04-15" },
+    { key: "startTime", label: "チェックイン時刻", placeholder: "15:00" },
+    { key: "endDate", label: "チェックアウト日", placeholder: "2026-04-17" },
+    { key: "endTime", label: "チェックアウト時刻", placeholder: "11:00" },
+    { key: "confNumber", label: "確認番号", placeholder: "HB-394021" },
+  ],
+  バス: [
+    { key: "title", label: "路線名", placeholder: "関西空港交通バス" },
+    { key: "date", label: "乗車日", placeholder: "2026-04-15" },
+    { key: "startTime", label: "出発時刻", placeholder: "7:30" },
+    { key: "endTime", label: "到着時刻", placeholder: "8:45" },
+    { key: "from", label: "出発地", placeholder: "大阪駅前" },
+    { key: "to", label: "到着地", placeholder: "関西空港" },
+    { key: "confNumber", label: "確認番号", placeholder: "KB-553012" },
+  ],
+  食事: [
+    { key: "title", label: "店名", placeholder: "レストランオルフェ" },
+    { key: "date", label: "予約日", placeholder: "2026-04-16" },
+    { key: "startTime", label: "予約時刻", placeholder: "19:00" },
+    { key: "guests", label: "人数", placeholder: "4名" },
+    { key: "confNumber", label: "確認番号", placeholder: "RF-120456" },
+  ],
+  病院: [
+    { key: "title", label: "施設名", placeholder: "田中内科クリニック" },
+    { key: "date", label: "受診日", placeholder: "2026-04-18" },
+    { key: "startTime", label: "予約時刻", placeholder: "10:30" },
+    { key: "department", label: "診療科", placeholder: "内科" },
+    { key: "confNumber", label: "診察券番号", placeholder: "58234" },
+  ],
+  商談: [
+    { key: "title", label: "タイトル", placeholder: "ABC社 商談" },
+    { key: "date", label: "日付", placeholder: "2026-04-17" },
+    { key: "startTime", label: "開始時刻", placeholder: "14:00" },
+    { key: "endTime", label: "終了時刻", placeholder: "16:00" },
+    { key: "from", label: "場所", placeholder: "グランフロント大阪" },
+    { key: "confNumber", label: "確認番号", placeholder: "" },
+  ],
+  観光: [
+    { key: "title", label: "イベント名", placeholder: "Mr.Children DOME TOUR" },
+    { key: "date", label: "日付", placeholder: "2026-04-20" },
+    { key: "startTime", label: "開演時刻", placeholder: "18:00" },
+    { key: "from", label: "会場", placeholder: "東京ドーム" },
+    { key: "confNumber", label: "確認番号", placeholder: "TC-440291" },
+  ],
+  その他: [
+    { key: "title", label: "タイトル", placeholder: "内容" },
+    { key: "date", label: "日付", placeholder: "2026-04-15" },
+    { key: "startTime", label: "時刻", placeholder: "10:00" },
+    { key: "confNumber", label: "確認番号", placeholder: "" },
+  ],
+};
+
+/** カテゴリに応じた固定項目定義を返す */
+export function getFixedFields(category: string): FixedFieldDef[] {
+  return CATEGORY_FIXED_FIELDS[category] || CATEGORY_FIXED_FIELDS["その他"];
+}
+
+/* ====== 要確認判定ロール ====== */
+
+export type NeedsReviewReason = {
+  field: string;
+  reason: string;
+};
+
+/** Stepの要確認理由を判定する */
+export function checkNeedsReview(
+  category: string,
+  fixed: Record<string, string | null | undefined>,
+  inferred?: string[],
+): NeedsReviewReason[] {
+  const reasons: NeedsReviewReason[] = [];
+
+  // 必須項目チェック
+  if (!fixed.title) reasons.push({ field: "title", reason: "未読取" });
+  if (!fixed.date && !fixed.startTime) reasons.push({ field: "date", reason: "日時未読取" });
+
+  // カテゴリ固有チェック
+  if (category === "飛行機" || category === "列車" || category === "バス") {
+    if (!fixed.from) reasons.push({ field: "from", reason: "出発地なし" });
+    if (!fixed.to) reasons.push({ field: "to", reason: "到着地なし" });
+  }
+  if (category === "宿泊") {
+    if (!fixed.endDate) reasons.push({ field: "endDate", reason: "チェックアウト日なし" });
+  }
+  if (!fixed.confNumber) reasons.push({ field: "confNumber", reason: "確認番号なし" });
+
+  // 推定値チェック
+  if (inferred && inferred.length > 0) {
+    for (const f of inferred) {
+      reasons.push({ field: f, reason: "推定値" });
+    }
+  }
+
+  return reasons;
+}
+
 /* ====== プロンプト生成 ====== */
 
 /**

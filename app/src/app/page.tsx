@@ -283,6 +283,7 @@ export default function TripsPage() {
               const state = stateLabel(journey);
               const nextStep = getNextActionStep(sortStepsByTime(journey.steps));
               const coverVariant = index === 0 ? "primary" : index === 1 ? "dark" : "muted";
+              const reviewCount = journey.steps.filter((s) => s.needsReview).length;
 
               return (
                 <Box
@@ -304,8 +305,15 @@ export default function TripsPage() {
                         {nextStep ? `${nextStep.title}${nextStep.time ? ` ${nextStep.time}` : ""}` : "次のステップを追加"}
                       </Text>
                     </Box>
-                    <Box className={classes.journeyBadge} data-state={state}>
-                      {state}
+                    <Box style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      {reviewCount > 0 && (
+                        <Box className={classes.reviewBadge}>
+                          要確認 {reviewCount}
+                        </Box>
+                      )}
+                      <Box className={classes.journeyBadge} data-state={state}>
+                        {state}
+                      </Box>
                     </Box>
                   </Box>
                 </Box>

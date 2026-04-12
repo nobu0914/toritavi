@@ -361,11 +361,18 @@ export default function TripDetailPage() {
                   : "";
             return (
               <Box key={step.id} className={`${classes.timelineItem} ${itemClass}`}>
+                {/* 要確認マーク */}
+                {step.needsReview && (
+                  <Box className={classes.reviewMark}>
+                    <Text size="xs" fw={600}>要確認</Text>
+                  </Box>
+                )}
                 {/* 時間行: ● 時間 ... ステータス */}
                 <Box className={classes.timelineTimeRow}>
-                  <Box className={`${classes.timelineDot} ${dotClass}`} />
+                  <Box className={`${classes.timelineDot} ${dotClass} ${step.needsReview ? classes.timelineDotReview : ""}`} />
                   <Text className={classes.timelineTimeText}>
                     {step.time?.match(/\d{1,2}:\d{2}/)?.[0] || "--:--"}
+                    {step.timezone ? ` (${step.timezone})` : ""}
                   </Text>
                   <Box style={{ flex: 1 }} />
                   <Box
@@ -416,6 +423,18 @@ export default function TripDetailPage() {
                       )}
                       {step.time && step.time !== (step.time.match(/\d{1,2}:\d{2}/)?.[0] || "") && (
                         <Text className={classes.timelineDetail}>{step.time}</Text>
+                      )}
+                      {/* 期間表示（宿泊等） */}
+                      {step.endDate && step.date && step.endDate !== step.date && (
+                        <Text className={classes.timelineDetail}>
+                          {step.date} → {step.endDate}
+                        </Text>
+                      )}
+                      {/* 到着時刻（翌日到着） */}
+                      {step.endTime && (
+                        <Text className={classes.timelineDetail}>
+                          → {step.endTime}{step.endDate && step.date && step.endDate !== step.date ? " (翌日到着)" : ""}
+                        </Text>
                       )}
                       {step.confNumber && (
                         <Text className={classes.timelineConf}>Conf# {step.confNumber}</Text>

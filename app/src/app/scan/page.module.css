@@ -230,6 +230,43 @@
   color: var(--mantine-color-blue-7);
 }
 
+.reviewBanner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--mantine-color-yellow-0);
+  border: 1px solid var(--mantine-color-yellow-5);
+  color: var(--mantine-color-yellow-8);
+  margin-bottom: 12px;
+}
+
+.formLabelRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+
+.inferredBadge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--mantine-color-orange-0);
+  color: var(--mantine-color-orange-7);
+}
+
+.formInputInferred {
+  border-color: var(--mantine-color-orange-3) !important;
+}
+
+.formInputEmpty {
+  border-style: dashed !important;
+  border-color: var(--mantine-color-red-3) !important;
+}
+
 .formCard {
   background: white;
   border: 1px solid var(--mantine-color-gray-2);

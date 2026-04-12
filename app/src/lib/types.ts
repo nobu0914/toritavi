@@ -39,6 +39,8 @@ export type Step = {
   sourceImageUrl?: string;
   status: StepStatus;
   information: Information[];
+  inferred?: string[];      // 推定値のフィールド名リスト
+  needsReview?: boolean;    // 要確認フラグ
 };
 
 export type Journey = {

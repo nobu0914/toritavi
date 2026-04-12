@@ -16,6 +16,7 @@ import {
   IconScan,
   IconCheck,
   IconAlertCircle,
+  IconAlertTriangle,
   IconChevronDown,
   IconChevronLeft,
   IconChevronRight,
@@ -29,6 +30,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { TabBar } from "@/components/TabBar";
 import { addJourney, getJourneys, updateJourney, generateId } from "@/lib/store";
 import type { Step, StepCategory } from "@/lib/types";
+import { getFixedFields } from "@/lib/ocr-rules";
 import classes from "./page.module.css";
 
 /* ====== カテゴリ定義 ====== */
@@ -339,17 +341,6 @@ function formToStep(category: StepCategory, values: Record<string, string>): { t
 
 /* ====== 固定フィールド定義（AI OCR用） ====== */
 
-const fixedFieldDefs: { key: string; label: string; placeholder: string }[] = [
-  { key: "title", label: "タイトル", placeholder: "NH225 / のぞみ225号 / ホテル名" },
-  { key: "date", label: "開始日", placeholder: "2026-04-15" },
-  { key: "endDate", label: "終了日", placeholder: "2026-04-17（宿泊checkout等）" },
-  { key: "startTime", label: "開始時刻", placeholder: "10:00" },
-  { key: "endTime", label: "終了時刻", placeholder: "12:00" },
-  { key: "from", label: "出発地・場所", placeholder: "NRT / 東京" },
-  { key: "to", label: "到着地", placeholder: "KIX / 新大阪" },
-  { key: "confNumber", label: "確認番号", placeholder: "ABC-123456" },
-];
-
 /* ====== コンポーネント ====== */
 
 type ScanStatus = "idle" | "processing" | "done" | "error";
@@ -377,6 +368,8 @@ export default function ScanPage() {
   const [variableFields, setVariableFields] = useState<{ label: string; value: string }[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [aiSteps, setAiSteps] = useState<any[]>([]);
+  const [inferredFields, setInferredFields] = useState<string[]>([]);
+  const [needsReview, setNeedsReview] = useState(false);
 
   const pdfToImages = async (file: File): Promise<Blob[]> => {
     const pdfjsLib = await import("pdfjs-dist");
@@ -545,6 +538,8 @@ export default function ScanPage() {
     }
     setVariableFields(vars);
     setFormValues({ ...fixed });
+    setInferredFields(Array.isArray(stepData.inferred) ? stepData.inferred : []);
+    setNeedsReview(!!stepData.needsReview);
   };
 
   const handleTextSubmit = () => {
@@ -639,6 +634,8 @@ export default function ScanPage() {
           source: inputSource,
           sourceImageUrl: savedImageUrl,
           status: "未開始",
+          inferred: Array.isArray(s.inferred) ? s.inferred : undefined,
+          needsReview: s.needsReview || undefined,
           information: (s.variable || [])
             .filter((v: { label?: string; value?: string }) => v?.label && v?.value)
             .map((v: { label: string; value: string }, i: number) => ({ id: `var-${si}-${i}`, label: v.label, value: v.value })),
@@ -660,6 +657,8 @@ export default function ScanPage() {
         timezone: fixedValues.timezone || undefined,
         source: inputSource, sourceImageUrl: savedImageUrl,
         status: "未開始",
+        inferred: inferredFields.length > 0 ? inferredFields : undefined,
+        needsReview: needsReview || undefined,
         information: variableFields.map((v, i) => ({ id: `var-${i}`, label: v.label, value: v.value })),
       });
     } else {
@@ -721,6 +720,8 @@ export default function ScanPage() {
     setFixedValues({});
     setVariableFields([]);
     setAiSteps([]);
+    setInferredFields([]);
+    setNeedsReview(false);
   };
 
   const catDef = getCategoryDef(detectedCategory);
@@ -951,20 +952,45 @@ export default function ScanPage() {
             {/* フォーム: AI時は固定+変動、ブラウザ時は従来 */}
             {aiMode && Object.keys(fixedValues).length > 0 ? (
               <>
-                {/* 固定項目 */}
+                {/* 要確認警告 */}
+                {needsReview && (
+                  <Box className={classes.reviewBanner}>
+                    <IconAlertTriangle size={16} />
+                    <Text size="xs" fw={600}>要確認: 一部の項目が読み取れませんでした</Text>
+                  </Box>
+                )}
+
+                {/* カテゴリ別固定項目 */}
                 <Box className={classes.formCard}>
-                  {fixedFieldDefs.map((f) => (
-                    <Box key={f.key} className={classes.formRow}>
-                      <Text className={classes.formLabel}>{f.label}</Text>
-                      <TextInput
-                        classNames={{ input: classes.formInput }}
-                        variant="unstyled"
-                        placeholder={f.placeholder}
-                        value={fixedValues[f.key] || ""}
-                        onChange={(e) => setFixedValues((prev) => ({ ...prev, [f.key]: e.currentTarget.value }))}
-                      />
-                    </Box>
-                  ))}
+                  {getFixedFields(detectedCategory).map((f) => {
+                    const isInferred = inferredFields.includes(f.key);
+                    const isEmpty = !fixedValues[f.key];
+                    return (
+                      <Box key={f.key} className={classes.formRow}>
+                        <Box className={classes.formLabelRow}>
+                          <Text className={classes.formLabel}>{f.label}</Text>
+                          {isInferred && <Text className={classes.inferredBadge}>推定</Text>}
+                        </Box>
+                        {isEmpty ? (
+                          <TextInput
+                            classNames={{ input: `${classes.formInput} ${classes.formInputEmpty}` }}
+                            variant="unstyled"
+                            placeholder={f.placeholder}
+                            value=""
+                            onChange={(e) => setFixedValues((prev) => ({ ...prev, [f.key]: e.currentTarget.value }))}
+                          />
+                        ) : (
+                          <TextInput
+                            classNames={{ input: `${classes.formInput} ${isInferred ? classes.formInputInferred : ""}` }}
+                            variant="unstyled"
+                            placeholder={f.placeholder}
+                            value={fixedValues[f.key] || ""}
+                            onChange={(e) => setFixedValues((prev) => ({ ...prev, [f.key]: e.currentTarget.value }))}
+                          />
+                        )}
+                      </Box>
+                    );
+                  })}
                 </Box>
 
                 {/* 変動項目 */}

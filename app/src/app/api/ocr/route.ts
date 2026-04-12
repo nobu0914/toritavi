@@ -39,10 +39,24 @@ const SYSTEM_PROMPT = `あなたは旅行・予約文書の情報抽出専門家
       },
       "variable": [
         { "label": "項目名（日本語）", "value": "値" }
-      ]
+      ],
+      "inferred": ["推定したフィールド名をリストで返す。確実に読み取れた値は含めない"],
+      "needsReview": true
     }
   ]
 }
+
+## inferred/needsReviewルール
+- inferred: 文書に明記されておらず文脈から推定した値のフィールド名を配列で返す
+  - 例: タイムゾーンを空港コードから推定 → ["timezone"]
+  - 例: 到着日を出発日+所要時間から推定 → ["endDate"]
+  - 確実に読み取れた項目は含めない
+- needsReview: 以下のいずれかに該当する場合 true
+  - 必須項目（title, date/startTime）が読み取れない
+  - 飛行機/列車/バスで出発地または到着地が不明
+  - 宿泊でチェックアウト日が不明
+  - 確認番号が見つからない
+  - 推定値が2つ以上ある
 
 ${buildOcrRulesPrompt()}
 

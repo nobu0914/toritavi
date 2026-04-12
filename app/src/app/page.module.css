@@ -262,6 +262,17 @@
   color: var(--mantine-color-gray-7);
 }
 
+.reviewBadge {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  background: var(--mantine-color-yellow-0);
+  color: var(--mantine-color-yellow-8);
+  border: 1px solid var(--mantine-color-yellow-5);
+  white-space: nowrap;
+}
+
 .journeyBadge {
   padding: 3px 10px;
   border-radius: 32px;

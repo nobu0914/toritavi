@@ -12,6 +12,7 @@ import {
 import { IconChevronDown, IconChevronUp, IconX } from "@tabler/icons-react";
 import classes from "./StepEditModal.module.css";
 import type { StepCategory, StepSource, Information } from "@/lib/types";
+import { getFixedFields } from "@/lib/ocr-rules";
 
 const categories: StepCategory[] = [
   "列車", "飛行機", "バス", "車", "徒歩",
@@ -70,16 +71,12 @@ export function StepEditModal({
 
   const update = (patch: Partial<StepDraft>) => onChange({ ...draft, ...patch });
 
-  const fixedFields: { key: keyof StepDraft; label: string; placeholder: string }[] = [
-    { key: "title", label: "タイトル", placeholder: "NH225 / のぞみ225号" },
-    { key: "date", label: "開始日", placeholder: "2026-04-15" },
-    { key: "endDate", label: "終了日", placeholder: "2026-04-17" },
-    { key: "time", label: "開始時刻", placeholder: "10:00" },
-    { key: "endTime", label: "終了時刻", placeholder: "12:00" },
-    { key: "from", label: "出発地・場所", placeholder: "NRT / 東京" },
-    { key: "to", label: "到着地", placeholder: "KIX / 新大阪" },
-    { key: "confNumber", label: "確認番号", placeholder: "ABC-123456" },
-  ];
+  // カテゴリに応じた固定項目（ocr-rulesから取得）
+  // key名のマッピング: startTime→time（StepDraft互換）
+  const categoryFields = getFixedFields(draft.category).map((f) => ({
+    ...f,
+    draftKey: (f.key === "startTime" ? "time" : f.key) as keyof StepDraft,
+  }));
 
   return (
     <Modal
@@ -178,25 +175,28 @@ export function StepEditModal({
             </Box>
           </Box>
 
-          {/* 固定項目 */}
+          {/* カテゴリ別固定項目 */}
           <Box className={classes.formSection} style={{ marginTop: 12 }}>
-            {fixedFields.map((f) => (
-              <Box key={f.key} className={classes.formRow}>
-                <Text className={classes.formLabel}>{f.label}</Text>
-                {editing ? (
-                  <TextInput
-                    classNames={{ input: classes.fieldInput }}
-                    placeholder={f.placeholder}
-                    value={String(draft[f.key] || "")}
-                    onChange={(e) => update({ [f.key]: e.currentTarget.value })}
-                  />
-                ) : (
-                  <Text className={classes.readOnlyValue}>
-                    {String(draft[f.key] || "") || "未設定"}
-                  </Text>
-                )}
-              </Box>
-            ))}
+            {categoryFields.map((f) => {
+              const val = String(draft[f.draftKey] || "");
+              return (
+                <Box key={f.key} className={classes.formRow}>
+                  <Text className={classes.formLabel}>{f.label}</Text>
+                  {editing ? (
+                    <TextInput
+                      classNames={{ input: classes.fieldInput }}
+                      placeholder={f.placeholder}
+                      value={val}
+                      onChange={(e) => update({ [f.draftKey]: e.currentTarget.value })}
+                    />
+                  ) : (
+                    <Text className={classes.readOnlyValue}>
+                      {val || <span style={{ color: "var(--mantine-color-gray-4)", fontStyle: "italic" }}>未読取</span>}
+                    </Text>
+                  )}
+                </Box>
+              );
+            })}
           </Box>
 
           {/* 変動項目（information） */}
