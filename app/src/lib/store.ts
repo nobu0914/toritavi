@@ -1,6 +1,4 @@
 import { Journey, JourneyDraft, Step, StepCategory, StepSource, StepStatus } from "./types";
-import { db } from "./db";
-import { syncToCloud } from "./sync";
 
 const STORAGE_KEY = "toritavi_journeys";
 const DRAFT_STORAGE_KEY = "toritavi_journey_draft";
@@ -22,14 +20,16 @@ function save(journeys: Journey[]) {
   syncToIndexedDB(journeys);
 }
 
-/** localStorageの内容をIndexedDBに同期 */
+/** localStorageの内容をIndexedDBに同期（動的import） */
 async function syncToIndexedDB(journeys: Journey[]) {
+  if (typeof window === "undefined") return;
   try {
-    // 全Journey+Stepsをupsert
+    const { db } = await import("./db");
+    const { syncToCloud } = await import("./sync");
+
     for (const journey of journeys) {
       const { steps, ...rest } = journey;
       await db.journeys.put({ ...rest, dirty: true });
-      // 既存steps削除→再挿入
       await db.steps.where("journeyId").equals(journey.id).delete();
       if (steps.length > 0) {
         await db.steps.bulkPut(
@@ -37,7 +37,6 @@ async function syncToIndexedDB(journeys: Journey[]) {
         );
       }
     }
-    // 削除されたJourneyをIndexedDBからも削除
     const localIds = new Set(journeys.map((j) => j.id));
     const allIds = await db.journeys.toCollection().primaryKeys();
     for (const id of allIds) {
@@ -46,10 +45,9 @@ async function syncToIndexedDB(journeys: Journey[]) {
         await db.journeys.delete(id);
       }
     }
-    // クラウド同期をトリガー
     syncToCloud();
   } catch {
-    // IndexedDBエラーは握りつぶす（localStorageは正常動作）
+    // IndexedDBエラーは握りつぶす
   }
 }
 
