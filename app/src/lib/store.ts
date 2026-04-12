@@ -1,4 +1,6 @@
 import { Journey, JourneyDraft, Step, StepCategory, StepSource, StepStatus } from "./types";
+import { db } from "./db";
+import { syncToCloud } from "./sync";
 
 const STORAGE_KEY = "toritavi_journeys";
 const DRAFT_STORAGE_KEY = "toritavi_journey_draft";
@@ -16,6 +18,39 @@ function load(): Journey[] {
 
 function save(journeys: Journey[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(journeys));
+  // IndexedDBにも非同期で保存（バックグラウンド）
+  syncToIndexedDB(journeys);
+}
+
+/** localStorageの内容をIndexedDBに同期 */
+async function syncToIndexedDB(journeys: Journey[]) {
+  try {
+    // 全Journey+Stepsをupsert
+    for (const journey of journeys) {
+      const { steps, ...rest } = journey;
+      await db.journeys.put({ ...rest, dirty: true });
+      // 既存steps削除→再挿入
+      await db.steps.where("journeyId").equals(journey.id).delete();
+      if (steps.length > 0) {
+        await db.steps.bulkPut(
+          steps.map((s, i) => ({ ...s, journeyId: journey.id, sortOrder: i, dirty: true }))
+        );
+      }
+    }
+    // 削除されたJourneyをIndexedDBからも削除
+    const localIds = new Set(journeys.map((j) => j.id));
+    const allIds = await db.journeys.toCollection().primaryKeys();
+    for (const id of allIds) {
+      if (!localIds.has(id as string)) {
+        await db.steps.where("journeyId").equals(id).delete();
+        await db.journeys.delete(id);
+      }
+    }
+    // クラウド同期をトリガー
+    syncToCloud();
+  } catch {
+    // IndexedDBエラーは握りつぶす（localStorageは正常動作）
+  }
 }
 
 function loadDraft(): JourneyDraft | null {
