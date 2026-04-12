@@ -86,7 +86,6 @@ export async function restoreFromCloud(): Promise<number> {
   if (!navigator.onLine) return 0;
   if (!supabase) return 0;
 
-  const deviceId = getDeviceId();
   let restored = 0;
 
   // 既にローカルにデータがあれば復元しない
@@ -94,10 +93,10 @@ export async function restoreFromCloud(): Promise<number> {
   if (localCount > 0) return 0;
 
   try {
+    // 認証未実装のため全データを復元（認証実装後はuser_idでフィルタ）
     const { data: journeys, error: jError } = await supabase
       .from("toritavi_journeys")
-      .select("*")
-      .eq("device_id", deviceId);
+      .select("*");
 
     if (jError || !journeys) return 0;
 
