@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { MantineProvider } from "@mantine/core";
 import { Notifications } from "@mantine/notifications";
-import { PullToRefresh } from "@/components/PullToRefresh";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 import { theme } from "./theme";
 import "@mantine/core/styles.css";
@@ -39,7 +38,7 @@ export default function RootLayout({
         <MantineProvider theme={theme} defaultColorScheme="light">
           <Notifications position="top-center" />
           <ServiceWorkerRegister />
-          <PullToRefresh>{children}</PullToRefresh>
+          {children}
         </MantineProvider>
       </body>
     </html>
