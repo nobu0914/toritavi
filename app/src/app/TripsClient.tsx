@@ -12,9 +12,9 @@ import {
   IconTrain,
 } from "@tabler/icons-react";
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
 import { TabBar } from "@/components/TabBar";
+import { LoadingOverlay, useNavigateWithLoading } from "@/components/LoadingOverlay";
 import {
   formatDateRange,
   getJourneyState,
@@ -25,7 +25,7 @@ import type { Journey } from "@/lib/types";
 import classes from "./page.module.css";
 
 export default function TripsClient({ journeys }: { journeys: Journey[] }) {
-  const router = useRouter();
+  const { navigating, navigate } = useNavigateWithLoading();
 
   useEffect(() => {
     const toast = sessionStorage.getItem("toritavi_toast");
@@ -138,6 +138,7 @@ export default function TripsClient({ journeys }: { journeys: Journey[] }) {
 
   return (
     <>
+      {navigating && <LoadingOverlay message="読み込み中..." />}
       <AppHeader title="toritavi" />
       <Box className={classes.screen} pb={110}>
         <Box className={classes.hero}>
@@ -167,7 +168,7 @@ export default function TripsClient({ journeys }: { journeys: Journey[] }) {
           </Box>
 
           {focusJourney && (
-            <Box className={classes.heroFocus} onClick={() => router.push(`/trips/${focusJourney.id}`)}>
+            <Box className={classes.heroFocus} onClick={() => navigate(`/trips/${focusJourney.id}`)}>
               <Box className={classes.focusIcon}>
                 <IconTrain size={18} />
               </Box>
@@ -189,7 +190,7 @@ export default function TripsClient({ journeys }: { journeys: Journey[] }) {
           <Box className={classes.section}>
             <Box className={classes.sectionHead}>
               <Text className={classes.sectionLabel}>Need Attention</Text>
-              <button className={classes.sectionLink} onClick={() => router.push("/unfiled")}>
+              <button className={classes.sectionLink} onClick={() => navigate("/unfiled")}>
                 すべて見る
               </button>
             </Box>
@@ -234,7 +235,7 @@ export default function TripsClient({ journeys }: { journeys: Journey[] }) {
                 <Box
                   key={journey.id}
                   className={classes.journeyCard}
-                  onClick={() => router.push(`/trips/${journey.id}`)}
+                  onClick={() => navigate(`/trips/${journey.id}`)}
                 >
                   <Box className={classes.journeyCover} data-variant={coverVariant}>
                     <Text className={classes.journeyEyebrow}>{stateEyebrow(journey)}</Text>
@@ -271,7 +272,7 @@ export default function TripsClient({ journeys }: { journeys: Journey[] }) {
           <Box className={classes.section}>
             <Box className={classes.sectionHead}>
               <Text className={classes.sectionLabel}>Capture Queue</Text>
-              <button className={classes.sectionLink} onClick={() => router.push("/unfiled")}>
+              <button className={classes.sectionLink} onClick={() => navigate("/unfiled")}>
                 未整理を見る
               </button>
             </Box>

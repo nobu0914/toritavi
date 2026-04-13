@@ -8,7 +8,8 @@ import {
   IconInbox,
   IconUser,
 } from "@tabler/icons-react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
+import { LoadingOverlay, useNavigateWithLoading } from "@/components/LoadingOverlay";
 import classes from "./TabBar.module.css";
 
 const tabs = [
@@ -21,29 +22,41 @@ const tabs = [
 
 export function TabBar() {
   const pathname = usePathname();
-  const router = useRouter();
+  const { navigating, navigate } = useNavigateWithLoading();
+
+  const handleTab = (href: string) => {
+    const isCurrentTab =
+      href === "/"
+        ? pathname === "/" || pathname.startsWith("/trips")
+        : pathname.startsWith(href);
+    if (isCurrentTab) return;
+    navigate(href);
+  };
 
   return (
-    <Box className={classes.tabbar}>
-      {tabs.map((tab) => {
-        const active =
-          tab.href === "/"
-            ? pathname === "/" || pathname.startsWith("/trips")
-            : pathname.startsWith(tab.href);
-        return (
-          <UnstyledButton
-            key={tab.href}
-            className={classes.tab}
-            data-active={active || undefined}
-            onClick={() => router.push(tab.href)}
-          >
-            <tab.icon size={22} stroke={2} />
-            <Text size="10px" fw={600} lh={1}>
-              {tab.label}
-            </Text>
-          </UnstyledButton>
-        );
-      })}
-    </Box>
+    <>
+      {navigating && <LoadingOverlay message="読み込み中..." />}
+      <Box className={classes.tabbar}>
+        {tabs.map((tab) => {
+          const active =
+            tab.href === "/"
+              ? pathname === "/" || pathname.startsWith("/trips")
+              : pathname.startsWith(tab.href);
+          return (
+            <UnstyledButton
+              key={tab.href}
+              className={classes.tab}
+              data-active={active || undefined}
+              onClick={() => handleTab(tab.href)}
+            >
+              <tab.icon size={22} stroke={2} />
+              <Text size="10px" fw={600} lh={1}>
+                {tab.label}
+              </Text>
+            </UnstyledButton>
+          );
+        })}
+      </Box>
+    </>
   );
 }

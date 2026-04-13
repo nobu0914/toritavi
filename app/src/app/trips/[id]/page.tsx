@@ -29,6 +29,7 @@ import { useDisclosure } from "@mantine/hooks";
 import { useParams, useRouter } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
 import { TabBar } from "@/components/TabBar";
+import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { StepDetailDrawer, emptyStepDraft } from "@/components/StepDetailDrawer";
 import type { StepDraft } from "@/components/StepDetailDrawer";
 import classes from "./page.module.css";
@@ -97,6 +98,8 @@ export default function TripDetailPage() {
   const [editingStepId, setEditingStepId] = useState<string>("new");
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [pendingStepDeleteIndex, setPendingStepDeleteIndex] = useState<number | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     loadPageData(id, today).then((nextPageData) => {
@@ -154,9 +157,14 @@ export default function TripDetailPage() {
   const sortedSteps = sortStepsByTime(journey.steps);
   const nextAction = getNextActionStep(sortedSteps);
 
-  const persist = (updated: Journey) => {
+  const persist = async (updated: Journey) => {
     setJourney(updated);
-    updateJourney(updated.id, updated); // async but fire-and-forget
+    setSaving(true);
+    try {
+      await updateJourney(updated.id, updated);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const openEdit = (index: number) => {
@@ -286,6 +294,7 @@ export default function TripDetailPage() {
   };
 
   const handleDelete = async () => {
+    setDeleting(true);
     sessionStorage.setItem("toritavi_toast", "journey_deleted");
     await deleteJourney(journey.id);
     router.push("/");
@@ -293,6 +302,8 @@ export default function TripDetailPage() {
 
   return (
     <>
+      {saving && <LoadingOverlay message="保存中..." />}
+      {deleting && <LoadingOverlay message="削除中..." />}
       <AppHeader
         title={journey.title}
         back
@@ -615,11 +626,11 @@ export default function TripDetailPage() {
             「{journey.title}」とすべてのPlanが削除されます。この操作は取り消せません。
           </Text>
           <Box className={classes.confirmFooter}>
-            <button className={classes.confirmCancel} onClick={closeDeleteModal}>
+            <button className={classes.confirmCancel} onClick={closeDeleteModal} disabled={deleting}>
               キャンセル
             </button>
-            <button className={classes.confirmDelete} onClick={handleDelete}>
-              削除する
+            <button className={classes.confirmDelete} onClick={handleDelete} disabled={deleting}>
+              {deleting ? "削除中..." : "削除する"}
             </button>
           </Box>
         </Box>

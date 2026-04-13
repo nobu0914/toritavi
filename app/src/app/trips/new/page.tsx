@@ -26,6 +26,7 @@ import { useRouter } from "next/navigation";
 import { useDisclosure } from "@mantine/hooks";
 import { AppHeader } from "@/components/AppHeader";
 import { TabBar } from "@/components/TabBar";
+import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { StepDetailDrawer, emptyStepDraft } from "@/components/StepDetailDrawer";
 import type { StepDraft } from "@/components/StepDetailDrawer";
 import classes from "./page.module.css";
@@ -151,6 +152,7 @@ export default function NewTripPage() {
   const [targetItemId, setTargetItemId] = useState<string | null>(null);
   const [targetSource, setTargetSource] = useState<StepSource>("手入力");
   const [pendingDeleteItemId, setPendingDeleteItemId] = useState<string | null>(null);
+  const [processing, setProcessing] = useState<string | null>(null);
   const [removingItemId, setRemovingItemId] = useState<string | null>(null);
 
   const openManualInput = (itemId: string) => {
@@ -259,28 +261,34 @@ export default function NewTripPage() {
 
   const handleCreate = async () => {
     if (!title.trim() || !startDate || !endDate) return;
-    const now = new Date().toISOString();
-    const steps = items.filter((item) => item.registered && item.step).map((item) => item.step!);
-    const sortedDates =
-      startDate <= endDate ? { startDate, endDate } : { startDate: endDate, endDate: startDate };
+    setProcessing("作成中...");
+    try {
+      const now = new Date().toISOString();
+      const steps = items.filter((item) => item.registered && item.step).map((item) => item.step!);
+      const sortedDates =
+        startDate <= endDate ? { startDate, endDate } : { startDate: endDate, endDate: startDate };
 
-    await addJourney({
-      id: generateId(),
-      title: title.trim(),
-      startDate: sortedDates.startDate,
-      endDate: sortedDates.endDate,
-      memo: memo.trim() || undefined,
-      steps,
-      createdAt: now,
-      updatedAt: now,
-    });
+      await addJourney({
+        id: generateId(),
+        title: title.trim(),
+        startDate: sortedDates.startDate,
+        endDate: sortedDates.endDate,
+        memo: memo.trim() || undefined,
+        steps,
+        createdAt: now,
+        updatedAt: now,
+      });
 
-    clearJourneyDraft();
-    sessionStorage.setItem("toritavi_toast", "journey_created");
-    router.push("/");
+      clearJourneyDraft();
+      sessionStorage.setItem("toritavi_toast", "journey_created");
+      router.push("/");
+    } catch {
+      setProcessing(null);
+    }
   };
 
   const handleSaveJourneyDraft = () => {
+    setProcessing("下書き保存中...");
     const sortedDates =
       startDate && endDate && startDate > endDate
         ? { startDate: endDate, endDate: startDate }
@@ -298,6 +306,7 @@ export default function NewTripPage() {
   };
 
   const handleDeleteSchedule = () => {
+    setProcessing("削除中...");
     clearJourneyDraft();
     sessionStorage.setItem("toritavi_toast", "schedule_deleted");
     router.push("/");
@@ -305,6 +314,7 @@ export default function NewTripPage() {
 
   return (
     <>
+      {processing && <LoadingOverlay message={processing} />}
       <AppHeader title="新規作成" back backHref="/" />
 
       <Box className={classes.screen} pt="xs" pb={110}>
@@ -492,13 +502,14 @@ export default function NewTripPage() {
           <button
             className={classes.createButton}
             onClick={handleCreate}
-            disabled={!title.trim()}
+            disabled={!title.trim() || !!processing}
           >
-            作成
+            {processing === "作成中..." ? "作成中..." : "作成"}
           </button>
           <button
             className={classes.draftButton}
             onClick={handleSaveJourneyDraft}
+            disabled={!!processing}
           >
             <IconDeviceFloppy size={16} />
             下書き保存
