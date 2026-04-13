@@ -7,11 +7,14 @@ import type { Journey, Step, JourneyDraft } from "./types";
 
 /* ====== Journey CRUD ====== */
 
+// 一覧用: 画像データを除外して軽量取得
+const STEP_COLUMNS_LIGHT = "id,journey_id,category,title,date,end_date,time,end_time,from,to,detail,conf_number,memo,source,timezone,status,inferred,needs_review,information,sort_order";
+
 export async function getJourneys(): Promise<Journey[]> {
   if (!supabase) return [];
   const { data, error } = await supabase
     .from("toritavi_journeys")
-    .select("*, toritavi_steps(*)")
+    .select(`*, toritavi_steps(${STEP_COLUMNS_LIGHT})`)
     .order("updated_at", { ascending: false });
 
   if (error || !data) return [];
@@ -27,7 +30,7 @@ export async function getJourney(id: string): Promise<Journey | undefined> {
   if (!supabase) return undefined;
   const { data: j } = await supabase
     .from("toritavi_journeys")
-    .select("*, toritavi_steps(*)")
+    .select(`*, toritavi_steps(${STEP_COLUMNS_LIGHT})`)
     .eq("id", id)
     .single();
 
@@ -36,6 +39,21 @@ export async function getJourney(id: string): Promise<Journey | undefined> {
   const steps = ((j.toritavi_steps as Record<string, unknown>[]) || [])
     .sort((a, b) => (a.sort_order as number) - (b.sort_order as number));
   return rowToJourney(j, steps);
+}
+
+/** ステップの画像データだけを取得（ドロワー表示時に使用） */
+export async function getStepImages(stepId: string): Promise<{ sourceImageUrl?: string; sourceImageUrls?: string[] }> {
+  if (!supabase) return {};
+  const { data } = await supabase
+    .from("toritavi_steps")
+    .select("source_image_url, source_image_urls")
+    .eq("id", stepId)
+    .single();
+  if (!data) return {};
+  return {
+    sourceImageUrl: data.source_image_url || undefined,
+    sourceImageUrls: data.source_image_urls || undefined,
+  };
 }
 
 export async function addJourney(journey: Journey): Promise<void> {

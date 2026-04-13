@@ -11,10 +11,10 @@ import {
   IconInfoCircle,
   IconTrain,
 } from "@tabler/icons-react";
+import Link from "next/link";
 import { useEffect } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { TabBar } from "@/components/TabBar";
-import { LoadingOverlay, useNavigateWithLoading } from "@/components/LoadingOverlay";
 import {
   formatDateRange,
   getJourneyState,
@@ -25,8 +25,6 @@ import type { Journey } from "@/lib/types";
 import classes from "./page.module.css";
 
 export default function TripsClient({ journeys }: { journeys: Journey[] }) {
-  const { navigating, navigate } = useNavigateWithLoading();
-
   useEffect(() => {
     const toast = sessionStorage.getItem("toritavi_toast");
     if (!toast) return;
@@ -138,7 +136,6 @@ export default function TripsClient({ journeys }: { journeys: Journey[] }) {
 
   return (
     <>
-      {navigating && <LoadingOverlay message="読み込み中..." />}
       <AppHeader title="toritavi" />
       <Box className={classes.screen} pb={110}>
         <Box className={classes.hero}>
@@ -168,7 +165,7 @@ export default function TripsClient({ journeys }: { journeys: Journey[] }) {
           </Box>
 
           {focusJourney && (
-            <Box className={classes.heroFocus} onClick={() => navigate(`/trips/${focusJourney.id}`)}>
+            <Link href={`/trips/${focusJourney.id}`} className={classes.heroFocus} style={{ textDecoration: "none", color: "inherit" }}>
               <Box className={classes.focusIcon}>
                 <IconTrain size={18} />
               </Box>
@@ -182,7 +179,7 @@ export default function TripsClient({ journeys }: { journeys: Journey[] }) {
                 </Text>
               </Box>
               <IconChevronRight size={18} className={classes.focusChevron} />
-            </Box>
+            </Link>
           )}
         </Box>
 
@@ -190,9 +187,9 @@ export default function TripsClient({ journeys }: { journeys: Journey[] }) {
           <Box className={classes.section}>
             <Box className={classes.sectionHead}>
               <Text className={classes.sectionLabel}>Need Attention</Text>
-              <button className={classes.sectionLink} onClick={() => navigate("/unfiled")}>
+              <Link href="/unfiled" className={classes.sectionLink} style={{ textDecoration: "none" }}>
                 すべて見る
-              </button>
+              </Link>
             </Box>
             <Box className={classes.stack}>
               {attentionCards.map((card) => (
@@ -232,10 +229,11 @@ export default function TripsClient({ journeys }: { journeys: Journey[] }) {
               const reviewCount = journey.steps.filter((s) => s.needsReview).length;
 
               return (
-                <Box
+                <Link
                   key={journey.id}
+                  href={`/trips/${journey.id}`}
                   className={classes.journeyCard}
-                  onClick={() => navigate(`/trips/${journey.id}`)}
+                  style={{ textDecoration: "none", color: "inherit" }}
                 >
                   <Box className={classes.journeyCover} data-variant={coverVariant}>
                     <Text className={classes.journeyEyebrow}>{stateEyebrow(journey)}</Text>
@@ -262,7 +260,7 @@ export default function TripsClient({ journeys }: { journeys: Journey[] }) {
                       </Box>
                     </Box>
                   </Box>
-                </Box>
+                </Link>
               );
             })}
           </Box>
@@ -272,9 +270,9 @@ export default function TripsClient({ journeys }: { journeys: Journey[] }) {
           <Box className={classes.section}>
             <Box className={classes.sectionHead}>
               <Text className={classes.sectionLabel}>Capture Queue</Text>
-              <button className={classes.sectionLink} onClick={() => navigate("/unfiled")}>
+              <Link href="/unfiled" className={classes.sectionLink} style={{ textDecoration: "none" }}>
                 未整理を見る
-              </button>
+              </Link>
             </Box>
 
             <Box className={classes.queueCard}>
