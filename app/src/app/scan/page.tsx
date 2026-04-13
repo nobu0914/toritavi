@@ -370,6 +370,7 @@ export default function ScanPage() {
   const [aiSteps, setAiSteps] = useState<any[]>([]);
   const [inferredFields, setInferredFields] = useState<string[]>([]);
   const [needsReview, setNeedsReview] = useState(false);
+  const [registering, setRegistering] = useState(false);
 
   const pdfToImages = async (file: File): Promise<Blob[]> => {
     const pdfjsLib = await import("pdfjs-dist");
@@ -609,6 +610,9 @@ export default function ScanPage() {
   };
 
   const createStep = async () => {
+    if (registering) return;
+    setRegistering(true);
+    try {
     let savedImageUrl: string | undefined;
     let savedImageUrls: string[] | undefined;
     if (imageUrl) {
@@ -728,6 +732,9 @@ export default function ScanPage() {
 
     sessionStorage.setItem("toritavi_toast", "journey_created");
     router.push(`/trips/${journeyId}`);
+  } catch {
+    setRegistering(false);
+  }
   };
 
   const reset = () => {
@@ -1076,11 +1083,25 @@ export default function ScanPage() {
 
             {/* アクションボタン */}
             <Box className={classes.resultButtons}>
-              <button className={classes.createButton} onClick={createStep}>
-                <IconCheck size={18} />
-                登録
+              <button
+                className={classes.createButton}
+                onClick={createStep}
+                disabled={registering}
+                style={registering ? { opacity: 0.7, pointerEvents: "none" } : undefined}
+              >
+                {registering ? (
+                  <>
+                    <Loader size={16} color="white" />
+                    登録中...
+                  </>
+                ) : (
+                  <>
+                    <IconCheck size={18} />
+                    登録
+                  </>
+                )}
               </button>
-              <button className={classes.retryButton} onClick={reset}>
+              <button className={classes.retryButton} onClick={reset} disabled={registering}>
                 やり直す
               </button>
             </Box>
