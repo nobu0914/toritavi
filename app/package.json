@@ -15,7 +15,6 @@
     "@mantine/next": "^6.0.22",
     "@mantine/notifications": "^9.0.1",
     "@supabase/supabase-js": "^2.103.0",
-    "dexie": "^4.4.2",
     "next": "16.2.3",
     "pdfjs-dist": "^5.6.205",
     "postcss": "^8.5.9",

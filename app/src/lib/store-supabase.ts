@@ -11,38 +11,31 @@ export async function getJourneys(): Promise<Journey[]> {
   if (!supabase) return [];
   const { data, error } = await supabase
     .from("toritavi_journeys")
-    .select("*")
+    .select("*, toritavi_steps(*)")
     .order("updated_at", { ascending: false });
 
   if (error || !data) return [];
 
-  const journeyIds = data.map((j: Record<string, unknown>) => j.id as string);
-  const { data: steps } = await supabase
-    .from("toritavi_steps")
-    .select("*")
-    .in("journey_id", journeyIds.length > 0 ? journeyIds : ["__none__"])
-    .order("sort_order", { ascending: true });
-
-  return data.map((j: Record<string, unknown>) => rowToJourney(j, (steps || []).filter((s: Record<string, unknown>) => s.journey_id === j.id)));
+  return data.map((j: Record<string, unknown>) => {
+    const steps = ((j.toritavi_steps as Record<string, unknown>[]) || [])
+      .sort((a, b) => (a.sort_order as number) - (b.sort_order as number));
+    return rowToJourney(j, steps);
+  });
 }
 
 export async function getJourney(id: string): Promise<Journey | undefined> {
   if (!supabase) return undefined;
   const { data: j } = await supabase
     .from("toritavi_journeys")
-    .select("*")
+    .select("*, toritavi_steps(*)")
     .eq("id", id)
     .single();
 
   if (!j) return undefined;
 
-  const { data: steps } = await supabase
-    .from("toritavi_steps")
-    .select("*")
-    .eq("journey_id", id)
-    .order("sort_order", { ascending: true });
-
-  return rowToJourney(j, steps || []);
+  const steps = ((j.toritavi_steps as Record<string, unknown>[]) || [])
+    .sort((a, b) => (a.sort_order as number) - (b.sort_order as number));
+  return rowToJourney(j, steps);
 }
 
 export async function addJourney(journey: Journey): Promise<void> {
