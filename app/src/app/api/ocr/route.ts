@@ -106,9 +106,11 @@ export async function POST(request: NextRequest) {
 
     const textBlock = response.content.find((b) => b.type === "text");
     const raw = textBlock?.type === "text" ? textBlock.text : "";
+    console.log("[OCR] Claude response:", raw.substring(0, 500));
 
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
+      console.error("[OCR] Failed to parse JSON from:", raw);
       return NextResponse.json({ error: "Failed to parse response", raw }, { status: 500 });
     }
 

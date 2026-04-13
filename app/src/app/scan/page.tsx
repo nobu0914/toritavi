@@ -379,7 +379,7 @@ export default function ScanPage() {
     const blobs: Blob[] = [];
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
-      const scale = 2;
+      const scale = 3;
       const viewport = page.getViewport({ scale });
       const canvas = document.createElement("canvas");
       canvas.width = viewport.width;
@@ -483,9 +483,14 @@ export default function ScanPage() {
         body: JSON.stringify({ images: base64Images }),
       });
 
-      if (!res.ok) throw new Error("API error");
+      if (!res.ok) {
+        const errBody = await res.text();
+        console.error("[OCR] API error:", res.status, errBody);
+        throw new Error(`API error ${res.status}: ${errBody}`);
+      }
 
       const result = await res.json();
+      console.log("[OCR] API result:", JSON.stringify(result, null, 2));
       setProgress(90);
 
       // steps配列から処理（TODO: 往復時は複数Step登録UI）
@@ -497,7 +502,8 @@ export default function ScanPage() {
       setOcrText(`[AI OCR] ${JSON.stringify(result, null, 2)}`);
       setProgress(100);
       setStatus("done");
-    } catch {
+    } catch (err) {
+      console.error("[OCR] Error:", err);
       setStatus("error");
     }
   };
