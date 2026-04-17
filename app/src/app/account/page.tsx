@@ -1,16 +1,63 @@
 "use client";
 
-import { Box, Text } from "@mantine/core";
-import { IconChevronRight } from "@tabler/icons-react";
+import { Box, Button, Loader, Stack, Text } from "@mantine/core";
+import { IconChevronRight, IconFlask, IconLogout, IconUser } from "@tabler/icons-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { TabBar } from "@/components/TabBar";
+import { createClient } from "@/lib/supabase-browser";
+import { disableGuestMode, isGuestMode } from "@/lib/guest";
+import { clearGuestData } from "@/lib/store-guest";
 
 export default function AccountPage() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [email, setEmail] = useState<string | null>(null);
+  const [isGuest, setIsGuest] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+
+  useEffect(() => {
+    const guest = isGuestMode();
+    setIsGuest(guest);
+    if (guest) {
+      setLoading(false);
+      return;
+    }
+    (async () => {
+      try {
+        const sb = createClient();
+        const { data: { user } } = await sb.auth.getUser();
+        setEmail(user?.email ?? null);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const handleSignOut = async () => {
+    setSigningOut(true);
+    try {
+      const sb = createClient();
+      await sb.auth.signOut();
+      router.replace("/login");
+    } catch {
+      setSigningOut(false);
+    }
+  };
+
+  const handleExitGuest = () => {
+    disableGuestMode();
+    clearGuestData();
+    router.replace("/login");
+  };
+
   return (
     <>
-      <AppHeader title="Account" />
+      <AppHeader title="アカウント" />
       <Box pb={110}>
-        {/* Profile */}
+        {/* Profile / status card */}
         <Box
           style={{
             background: "white",
@@ -28,29 +75,54 @@ export default function AccountPage() {
               width: 56,
               height: 56,
               borderRadius: "50%",
-              background: "var(--mantine-color-blue-7)",
+              background: isGuest ? "var(--mantine-color-yellow-6)" : "var(--mantine-color-blue-7)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: 20,
               color: "white",
               fontWeight: 700,
               flexShrink: 0,
             }}
           >
-            T
+            {isGuest ? <IconFlask size={24} /> : <IconUser size={24} />}
           </Box>
-          <Box>
-            <Text fw={700} size="18px">
-              田中 太郎
-            </Text>
-            <Text size="13px" c="gray.6" mt={2}>
-              tanaka@example.com
-            </Text>
+          <Box style={{ flex: 1, minWidth: 0 }}>
+            {loading ? (
+              <Loader size="xs" />
+            ) : isGuest ? (
+              <>
+                <Text fw={700} size="16px">ゲストユーザー</Text>
+                <Text size="12px" c="gray.6" mt={2}>未登録（サンプルデータを閲覧中）</Text>
+              </>
+            ) : (
+              <>
+                <Text fw={700} size="16px">ログイン中</Text>
+                <Text size="12px" c="gray.6" mt={2} style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {email ?? "—"}
+                </Text>
+              </>
+            )}
           </Box>
         </Box>
 
-        {/* Section label */}
+        {/* Guest mode CTA */}
+        {isGuest && (
+          <Box style={{ margin: "0 16px 16px" }}>
+            <Stack gap={8}>
+              <Button component={Link} href="/signup" fullWidth>
+                無料で会員登録する
+              </Button>
+              <Button component={Link} href="/login" variant="default" fullWidth>
+                既存アカウントでログイン
+              </Button>
+              <Text size="xs" c="dimmed" mt={6} ta="center" lh={1.6}>
+                会員登録するとデータがクラウドに保存され、端末を超えて同期されます。
+              </Text>
+            </Stack>
+          </Box>
+        )}
+
+        {/* Menu */}
         <Text
           size="11px"
           fw={700}
@@ -59,85 +131,60 @@ export default function AccountPage() {
           lts={0.5}
           style={{ padding: "16px 16px 8px" }}
         >
-          Travel Stats
+          設定
         </Text>
-
-        {/* Stats grid */}
-        <Box
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(2, 1fr)",
-            gap: 10,
-            margin: "0 16px 16px",
-          }}
-        >
-          {[
-            { v: "12", l: "Trips" },
-            { v: "24", l: "Days" },
-            { v: "8", l: "Cities" },
-            { v: "4,820", l: "km" },
-          ].map((item) => (
-            <Box
-              key={item.l}
-              style={{
-                background: "white",
-                borderRadius: 8,
-                border: "1px solid var(--mantine-color-gray-2)",
-                padding: 16,
-                textAlign: "center",
-              }}
-            >
-              <Text fw={700} size="28px" c="blue.7">
-                {item.v}
-              </Text>
-              <Text size="12px" c="gray.6" mt={4}>
-                {item.l}
-              </Text>
-            </Box>
-          ))}
-        </Box>
-
-        {/* Menu */}
         <Box
           style={{
             background: "white",
-            margin: "0 16px",
+            margin: "0 16px 16px",
             borderRadius: 8,
             border: "1px solid var(--mantine-color-gray-2)",
             overflow: "hidden",
           }}
         >
-          {["Profile Settings", "Notification Settings", "Connected Accounts", "Help & Support"].map(
-            (item) => (
-              <Box
-                key={item}
-                style={{
-                  padding: 14,
-                  borderBottom: "1px solid var(--mantine-color-gray-1)",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  cursor: "pointer",
-                  fontSize: 15,
-                }}
-              >
-                {item}
-                <Box style={{ color: "var(--mantine-color-gray-4)", display: "flex" }}>
-                  <IconChevronRight size={20} />
-                </Box>
-              </Box>
-            )
+          {["プロフィール設定", "通知設定", "ヘルプ・サポート"].map((item) => (
+            <Box
+              key={item}
+              style={{
+                padding: 14,
+                borderBottom: "1px solid var(--mantine-color-gray-1)",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                fontSize: 15,
+                color: "var(--mantine-color-gray-5)",
+              }}
+            >
+              {item}
+              <IconChevronRight size={18} color="var(--mantine-color-gray-3)" />
+            </Box>
+          ))}
+        </Box>
+
+        {/* Sign out / exit guest */}
+        <Box style={{ margin: "0 16px 16px" }}>
+          {isGuest ? (
+            <Button
+              leftSection={<IconLogout size={16} />}
+              color="red"
+              variant="light"
+              fullWidth
+              onClick={handleExitGuest}
+            >
+              ゲストモードを終了（データ削除）
+            </Button>
+          ) : (
+            <Button
+              leftSection={<IconLogout size={16} />}
+              color="red"
+              variant="light"
+              fullWidth
+              loading={signingOut}
+              onClick={handleSignOut}
+            >
+              ログアウト
+            </Button>
           )}
-          <Box
-            style={{
-              padding: 14,
-              cursor: "pointer",
-              fontSize: 15,
-              color: "var(--mantine-color-red-6)",
-            }}
-          >
-            Sign Out
-          </Box>
         </Box>
       </Box>
       <TabBar />

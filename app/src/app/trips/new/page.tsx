@@ -36,7 +36,7 @@ import {
   generateId,
   getJourneyDraft,
   saveJourneyDraft,
-} from "@/lib/store-supabase";
+} from "@/lib/store-client";
 import { getCategoryIcon, getSourceIcon, getSourceLabel, getTodayDateString } from "@/lib/helpers";
 import type { JourneyDraftItem, Step, StepCategory, StepSource } from "@/lib/types";
 

@@ -1,18 +1,17 @@
 /**
- * Supabase直接データストア
- * localStorage/IndexedDB不要。Supabaseが唯一のデータソース。
+ * Supabase data layer (core).
+ * Accepts a SupabaseClient + userId. Caller is responsible for passing
+ * the right client (server vs browser) and resolving the current user.
  */
-import { supabase } from "./supabase";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Journey, Step, JourneyDraft } from "./types";
 
 /* ====== Journey CRUD ====== */
 
-// 一覧用: 画像データを除外して軽量取得
 const STEP_COLUMNS_LIGHT = "id,journey_id,category,title,date,end_date,time,end_time,from,to,detail,conf_number,memo,source,timezone,status,inferred,needs_review,information,sort_order";
 
-export async function getJourneys(): Promise<Journey[]> {
-  if (!supabase) return [];
-  const { data, error } = await supabase
+export async function getJourneys(sb: SupabaseClient): Promise<Journey[]> {
+  const { data, error } = await sb
     .from("toritavi_journeys")
     .select(`*, toritavi_steps(${STEP_COLUMNS_LIGHT})`)
     .order("updated_at", { ascending: false });
@@ -26,9 +25,8 @@ export async function getJourneys(): Promise<Journey[]> {
   });
 }
 
-export async function getJourney(id: string): Promise<Journey | undefined> {
-  if (!supabase) return undefined;
-  const { data: j } = await supabase
+export async function getJourney(sb: SupabaseClient, id: string): Promise<Journey | undefined> {
+  const { data: j } = await sb
     .from("toritavi_journeys")
     .select(`*, toritavi_steps(${STEP_COLUMNS_LIGHT})`)
     .eq("id", id)
@@ -41,10 +39,11 @@ export async function getJourney(id: string): Promise<Journey | undefined> {
   return rowToJourney(j, steps);
 }
 
-/** ステップの画像データだけを取得（ドロワー表示時に使用） */
-export async function getStepImages(stepId: string): Promise<{ sourceImageUrl?: string; sourceImageUrls?: string[] }> {
-  if (!supabase) return {};
-  const { data } = await supabase
+export async function getStepImages(
+  sb: SupabaseClient,
+  stepId: string
+): Promise<{ sourceImageUrl?: string; sourceImageUrls?: string[] }> {
+  const { data } = await sb
     .from("toritavi_steps")
     .select("source_image_url, source_image_urls")
     .eq("id", stepId)
@@ -56,30 +55,33 @@ export async function getStepImages(stepId: string): Promise<{ sourceImageUrl?: 
   };
 }
 
-export async function addJourney(journey: Journey): Promise<void> {
-  if (!supabase) return;
+export async function addJourney(sb: SupabaseClient, userId: string, journey: Journey): Promise<void> {
   const { steps, ...rest } = journey;
 
-  await supabase.from("toritavi_journeys").upsert({
+  await sb.from("toritavi_journeys").upsert({
     id: rest.id,
+    user_id: userId,
     title: rest.title,
     start_date: rest.startDate,
     end_date: rest.endDate,
     memo: rest.memo || null,
     created_at: rest.createdAt,
     updated_at: rest.updatedAt,
-    device_id: getDeviceId(),
   });
 
   if (steps.length > 0) {
-    await supabase.from("toritavi_steps").upsert(
-      steps.map((s, i) => stepToRow(s, journey.id, i))
+    await sb.from("toritavi_steps").upsert(
+      steps.map((s, i) => stepToRow(s, journey.id, userId, i))
     );
   }
 }
 
-export async function updateJourney(id: string, updates: Partial<Journey>): Promise<void> {
-  if (!supabase) return;
+export async function updateJourney(
+  sb: SupabaseClient,
+  userId: string,
+  id: string,
+  updates: Partial<Journey>
+): Promise<void> {
   const { steps, ...rest } = updates;
 
   const updateData: Record<string, unknown> = { updated_at: new Date().toISOString() };
@@ -88,29 +90,27 @@ export async function updateJourney(id: string, updates: Partial<Journey>): Prom
   if (rest.endDate !== undefined) updateData.end_date = rest.endDate;
   if (rest.memo !== undefined) updateData.memo = rest.memo;
 
-  await supabase.from("toritavi_journeys").update(updateData).eq("id", id);
+  await sb.from("toritavi_journeys").update(updateData).eq("id", id);
 
   if (steps) {
-    await supabase.from("toritavi_steps").delete().eq("journey_id", id);
+    await sb.from("toritavi_steps").delete().eq("journey_id", id);
     if (steps.length > 0) {
-      await supabase.from("toritavi_steps").upsert(
-        steps.map((s, i) => stepToRow(s, id, i))
+      await sb.from("toritavi_steps").upsert(
+        steps.map((s, i) => stepToRow(s, id, userId, i))
       );
     }
   }
 }
 
-export async function deleteJourney(id: string): Promise<void> {
-  if (!supabase) return;
-  // steps are cascade deleted
-  await supabase.from("toritavi_journeys").delete().eq("id", id);
+export async function deleteJourney(sb: SupabaseClient, id: string): Promise<void> {
+  await sb.from("toritavi_journeys").delete().eq("id", id);
 }
 
 export function generateId(): string {
   return crypto.randomUUID();
 }
 
-/* ====== Draft (localStorage — 一時データなので残す) ====== */
+/* ====== Draft (localStorage — 一時データ) ====== */
 
 const DRAFT_KEY = "toritavi_journey_draft";
 
@@ -132,17 +132,7 @@ export function clearJourneyDraft(): void {
   localStorage.removeItem(DRAFT_KEY);
 }
 
-/* ====== ヘルパー ====== */
-
-function getDeviceId(): string {
-  if (typeof window === "undefined") return "server";
-  let id = localStorage.getItem("toritavi_device_id");
-  if (!id) {
-    id = crypto.randomUUID();
-    localStorage.setItem("toritavi_device_id", id);
-  }
-  return id;
-}
+/* ====== row <-> object 変換 ====== */
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function rowToJourney(row: any, stepRows: any[]): Journey {
@@ -184,10 +174,11 @@ function rowToStep(row: any): Step {
   };
 }
 
-function stepToRow(step: Step, journeyId: string, sortOrder: number): Record<string, unknown> {
+function stepToRow(step: Step, journeyId: string, userId: string, sortOrder: number): Record<string, unknown> {
   return {
     id: step.id,
     journey_id: journeyId,
+    user_id: userId,
     category: step.category,
     title: step.title,
     date: step.date || null,

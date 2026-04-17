@@ -28,7 +28,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
 import { TabBar } from "@/components/TabBar";
-import { addJourney, getJourneys, updateJourney, generateId } from "@/lib/store-supabase";
+import { addJourney, getJourneys, updateJourney, generateId } from "@/lib/store-client";
 import type { Step, StepCategory } from "@/lib/types";
 import { getFixedFields } from "@/lib/ocr-rules";
 import classes from "./page.module.css";

@@ -32,7 +32,7 @@ import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { StepDetailDrawer, emptyStepDraft } from "@/components/StepDetailDrawer";
 import type { StepDraft } from "@/components/StepDetailDrawer";
 import classes from "./page.module.css";
-import { deleteJourney, updateJourney } from "@/lib/store-supabase";
+import { deleteJourney, getJourney, updateJourney } from "@/lib/store-client";
 import {
   formatDateRange,
   formatDateJP,
@@ -50,15 +50,43 @@ type JourneyForm = {
   memo: string;
 };
 
-export default function TripDetailClient({ initialJourney }: { initialJourney: Journey }) {
+export default function TripDetailClient({
+  initialJourney,
+  journeyId,
+}: {
+  initialJourney: Journey | null;
+  journeyId: string;
+}) {
   const router = useRouter();
   const [journey, setJourney] = useState<Journey | null>(initialJourney);
   const [journeyForm, setJourneyForm] = useState<JourneyForm>({
-    title: initialJourney.title,
-    startDate: initialJourney.startDate,
-    endDate: initialJourney.endDate,
-    memo: initialJourney.memo ?? "",
+    title: initialJourney?.title ?? "",
+    startDate: initialJourney?.startDate ?? "",
+    endDate: initialJourney?.endDate ?? "",
+    memo: initialJourney?.memo ?? "",
   });
+
+  // Guest mode: hydrate from localStorage after mount
+  useEffect(() => {
+    if (initialJourney) return;
+    let cancelled = false;
+    (async () => {
+      const j = await getJourney(journeyId);
+      if (cancelled) return;
+      if (!j) {
+        router.replace("/");
+        return;
+      }
+      setJourney(j);
+      setJourneyForm({
+        title: j.title,
+        startDate: j.startDate,
+        endDate: j.endDate,
+        memo: j.memo ?? "",
+      });
+    })();
+    return () => { cancelled = true; };
+  }, [initialJourney, journeyId, router]);
   const [modalOpened, { open: openModal, close: closeModal }] = useDisclosure(false);
   const [journeyModalOpened, { open: openJourneyModal, close: closeJourneyModal }] =
     useDisclosure(false);
@@ -95,8 +123,7 @@ export default function TripDetailClient({ initialJourney }: { initialJourney: J
   }, []);
 
   if (!journey) {
-    router.replace("/");
-    return null;
+    return <LoadingOverlay />;
   }
 
   const sortedSteps = sortStepsByTime(journey.steps);
