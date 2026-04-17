@@ -1103,15 +1103,17 @@ export default function ScanPage() {
               </Box>
             )}
 
-            {/* OCR全文 */}
-            <details className={classes.ocrDetails}>
-              <summary className={classes.ocrSummary}>OCR全文を表示</summary>
-              <Box className={classes.ocrTextBox}>
-                <Text size="xs" style={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }} c="dimmed">
-                  {ocrText || "テキストなし"}
-                </Text>
-              </Box>
-            </details>
+            {/* OCR全文（ブラウザOCR時のみ表示） */}
+            {!aiMode && (
+              <details className={classes.ocrDetails}>
+                <summary className={classes.ocrSummary}>OCR全文を表示</summary>
+                <Box className={classes.ocrTextBox}>
+                  <Text size="xs" style={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }} c="dimmed">
+                    {ocrText || "テキストなし"}
+                  </Text>
+                </Box>
+              </details>
+            )}
 
             {/* 同じ日の予定に追加チェック */}
             {(
