@@ -371,6 +371,7 @@ export default function ScanPage() {
   const [inferredFields, setInferredFields] = useState<string[]>([]);
   const [needsReview, setNeedsReview] = useState(false);
   const [registering, setRegistering] = useState(false);
+  const [errorDetail, setErrorDetail] = useState("");
 
   const pdfToImages = async (file: File): Promise<Blob[]> => {
     const pdfjsLib = await import("pdfjs-dist");
@@ -384,7 +385,7 @@ export default function ScanPage() {
     const blobs: Blob[] = [];
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
-      const scale = 3;
+      const scale = 2;
       const viewport = page.getViewport({ scale });
       const canvas = document.createElement("canvas");
       canvas.width = viewport.width;
@@ -392,11 +393,41 @@ export default function ScanPage() {
       const ctx = canvas.getContext("2d")!;
       await page.render({ canvas, canvasContext: ctx, viewport }).promise;
       const blob = await new Promise<Blob>((resolve) =>
-        canvas.toBlob((b) => resolve(b!), "image/png")
+        canvas.toBlob((b) => resolve(b!), "image/jpeg", 0.85)
       );
       blobs.push(blob);
     }
     return blobs;
+  };
+
+  const resizeImage = async (file: File | Blob, maxDim = 1600, quality = 0.8): Promise<Blob> => {
+    const objectUrl = URL.createObjectURL(file);
+    try {
+      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = () => reject(new Error("画像の読み込みに失敗しました"));
+        image.src = objectUrl;
+      });
+      const longest = Math.max(img.width, img.height);
+      const scale = longest > maxDim ? maxDim / longest : 1;
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d")!;
+      ctx.drawImage(img, 0, 0, w, h);
+      return await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob(
+          (b) => (b ? resolve(b) : reject(new Error("圧縮に失敗しました"))),
+          "image/jpeg",
+          quality
+        );
+      });
+    } finally {
+      URL.revokeObjectURL(objectUrl);
+    }
   };
 
   const handleFile = async (file: File) => {
@@ -450,9 +481,10 @@ export default function ScanPage() {
     setStatus("processing");
     setProgress(0);
     setCurrentPage(0);
+    setErrorDetail("");
 
     try {
-      // 画像化
+      // 画像化（PDFはページ毎にJPEG化、画像はリサイズ＋JPEG圧縮）
       let imageBlobs: Blob[];
       if (file.type === "application/pdf") {
         imageBlobs = await pdfToImages(file);
@@ -460,13 +492,17 @@ export default function ScanPage() {
         setPageUrls(urls);
         setImageUrl(urls[0]);
       } else {
-        const url = URL.createObjectURL(file);
+        const resized = await resizeImage(file);
+        const url = URL.createObjectURL(resized);
         setImageUrl(url);
         setPageUrls([url]);
-        imageBlobs = [file];
+        imageBlobs = [resized];
       }
 
       setProgress(30);
+
+      const totalBytes = imageBlobs.reduce((sum, b) => sum + b.size, 0);
+      console.log(`[OCR] ${imageBlobs.length} image(s), total ${(totalBytes / 1024 / 1024).toFixed(2)}MB`);
 
       // base64変換
       const base64Images: string[] = [];
@@ -491,7 +527,12 @@ export default function ScanPage() {
       if (!res.ok) {
         const errBody = await res.text();
         console.error("[OCR] API error:", res.status, errBody);
-        throw new Error(`API error ${res.status}: ${errBody}`);
+        const hint = res.status === 413
+          ? "画像サイズが大きすぎます。別の画像をお試しください。"
+          : res.status >= 500
+            ? "サーバーエラーが発生しました。"
+            : "";
+        throw new Error(`${hint} (HTTP ${res.status}) ${errBody.slice(0, 200)}`);
       }
 
       const result = await res.json();
@@ -509,6 +550,7 @@ export default function ScanPage() {
       setStatus("done");
     } catch (err) {
       console.error("[OCR] Error:", err);
+      setErrorDetail(err instanceof Error ? err.message : String(err));
       setStatus("error");
     }
   };
@@ -753,6 +795,7 @@ export default function ScanPage() {
     setAiSteps([]);
     setInferredFields([]);
     setNeedsReview(false);
+    setErrorDetail("");
   };
 
   const catDef = getCategoryDef(detectedCategory);
@@ -1118,6 +1161,16 @@ export default function ScanPage() {
             <Text size="sm" c="dimmed" ta="center" mt={4}>
               画像が不鮮明か、対応していない形式です。
             </Text>
+            {errorDetail && (
+              <details style={{ marginTop: 12, width: "100%" }}>
+                <summary style={{ fontSize: 12, color: "var(--mantine-color-gray-6)", cursor: "pointer", textAlign: "center" }}>
+                  詳細を表示
+                </summary>
+                <Text size="xs" c="dimmed" mt={8} style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                  {errorDetail}
+                </Text>
+              </details>
+            )}
             <Box className={classes.buttons} style={{ marginTop: 24 }}>
               <button className={classes.captureButton} onClick={reset}>
                 やり直す
