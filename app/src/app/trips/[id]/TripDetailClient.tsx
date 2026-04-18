@@ -41,7 +41,7 @@ import {
   sortStepsByTime,
 } from "@/lib/helpers";
 import type { Journey, Step, StepStatus } from "@/lib/types";
-import { formatTimeDisplay, isInternational } from "@/lib/ocr-rules";
+import { formatTimeDisplay, isInternational, formatInferredFields } from "@/lib/ocr-rules";
 
 type JourneyForm = {
   title: string;
@@ -406,7 +406,9 @@ export default function TripDetailClient({
                     {/* 4行目: 要確認（ある場合のみ） */}
                     {step.needsReview && (
                       <Text className={classes.timelineReviewInline}>
-                        要確認{step.inferred && step.inferred.length > 0 ? `: ${step.inferred.join(", ")}` : ""}
+                        {step.inferred && step.inferred.length > 0
+                          ? `AI推定: ${formatInferredFields(step.inferred, step.category)}（要確認）`
+                          : "要確認"}
                       </Text>
                     )}
                   </Box>

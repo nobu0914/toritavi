@@ -277,6 +277,35 @@ export function checkNeedsReview(
   return reasons;
 }
 
+/* ====== 推定フィールドのラベル変換 ====== */
+
+const GENERIC_INFERRED_LABELS: Record<string, string> = {
+  title: "タイトル",
+  date: "日付",
+  endDate: "終了日",
+  startTime: "開始時刻",
+  time: "開始時刻",
+  endTime: "終了時刻",
+  from: "出発地",
+  to: "到着地",
+  confNumber: "確認番号",
+  timezone: "タイムゾーン",
+  memo: "メモ",
+};
+
+/** inferredフィールド名を、カテゴリに応じた表示ラベルに変換する */
+export function formatInferredFields(inferred: string[] | undefined, category?: string): string {
+  if (!inferred || inferred.length === 0) return "";
+  const fixed = category ? CATEGORY_FIXED_FIELDS[category] : undefined;
+  const byKey: Record<string, string> = {};
+  if (fixed) {
+    for (const f of fixed) byKey[f.key] = f.label;
+  }
+  return inferred
+    .map((f) => byKey[f] ?? (f === "time" ? byKey["startTime"] : undefined) ?? GENERIC_INFERRED_LABELS[f] ?? f)
+    .join("、");
+}
+
 /* ====== プロンプト生成 ====== */
 
 /**

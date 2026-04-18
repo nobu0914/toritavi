@@ -18,7 +18,7 @@ import {
 } from "@tabler/icons-react";
 import classes from "./StepDetailDrawer.module.css";
 import type { StepCategory, StepSource, Information } from "@/lib/types";
-import { getFixedFields, formatTimeDisplay, isInternational } from "@/lib/ocr-rules";
+import { getFixedFields, formatTimeDisplay, isInternational, formatInferredFields } from "@/lib/ocr-rules";
 
 const categories: StepCategory[] = [
   "列車", "飛行機", "バス", "車", "徒歩",
@@ -163,7 +163,9 @@ export function StepDetailDrawer({
               <Box className={classes.reviewBanner}>
                 <IconAlertTriangle size={16} />
                 <Text size="xs" fw={600}>
-                  要確認{inferred && inferred.length > 0 ? `: ${inferred.join(", ")}` : ""}
+                  {inferred && inferred.length > 0
+                    ? `AIが推定した項目があります: ${formatInferredFields(inferred, draft.category)}。内容をご確認ください`
+                    : "要確認: 一部の項目を読み取れませんでした"}
                 </Text>
               </Box>
             )}
