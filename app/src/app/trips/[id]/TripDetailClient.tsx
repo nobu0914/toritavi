@@ -169,6 +169,7 @@ export default function TripDetailClient({
       to: step.to ?? "",
       confNumber: step.confNumber ?? "",
       information: step.information ?? [],
+      memo: step.memo,
     });
     setEditingStepId(step.id);
     setEditingIndex(index);
@@ -553,6 +554,7 @@ export default function TripDetailClient({
         sourceImageUrls={stepImages.sourceImageUrls}
         needsReview={editingIndex !== null ? journey.steps[editingIndex]?.needsReview : undefined}
         inferred={editingIndex !== null ? journey.steps[editingIndex]?.inferred : undefined}
+        status={editingIndex !== null ? journey.steps[editingIndex]?.status : undefined}
         onCancelEdit={() => {
           if (editingIndex === null) return;
           openEdit(editingIndex);

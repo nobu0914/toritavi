@@ -11,11 +11,8 @@ import {
   TextInput,
 } from "@mantine/core";
 import {
-  IconAlertTriangle,
   IconCalendarPlus,
   IconChevronDown,
-  IconChevronLeft,
-  IconChevronRight,
   IconCopy,
   IconDotsVertical,
   IconDownload,
@@ -25,8 +22,9 @@ import {
   IconX,
 } from "@tabler/icons-react";
 import classes from "./StepDetailDrawer.module.css";
-import type { StepCategory, StepSource, Information } from "@/lib/types";
-import { getFixedFields, formatTimeDisplay, isInternational, formatInferredFields } from "@/lib/ocr-rules";
+import type { StepCategory, StepSource, Information, StepStatus } from "@/lib/types";
+import { getFixedFields } from "@/lib/ocr-rules";
+import { Ticket } from "./Ticket";
 
 const categories: StepCategory[] = [
   "列車", "飛行機", "バス", "車", "徒歩",
@@ -47,6 +45,7 @@ export type StepDraft = {
   to: string;
   confNumber: string;
   information: Information[];
+  memo?: string;
 };
 
 export function emptyStepDraft(): StepDraft {
@@ -69,6 +68,7 @@ type Props = {
   sourceImageUrls?: string[];
   needsReview?: boolean;
   inferred?: string[];
+  status?: StepStatus;
   onCancelEdit?: () => void;
   onDelete?: () => void;
   onDuplicate?: () => void;
@@ -76,31 +76,18 @@ type Props = {
 
 export function StepDetailDrawer({
   opened, onClose, draft, onChange, onSave, isEdit, editingTitle,
-  sourceImageUrl, sourceImageUrls, needsReview, inferred,
+  sourceImageUrl, sourceImageUrls, needsReview, inferred, status,
   onCancelEdit, onDelete, onDuplicate,
 }: Props) {
   const [mode, setMode] = useState<"view" | "edit">("view");
-  const [previewExpanded, setPreviewExpanded] = useState(false);
-  const [previewPage, setPreviewPage] = useState(0);
-  const [quickEdit, setQuickEdit] = useState<{ key: keyof StepDraft; value: string } | null>(null);
 
   const [prevOpened, setPrevOpened] = useState(false);
   if (opened !== prevOpened) {
     setPrevOpened(opened);
     if (opened) {
       setMode(isEdit ? "view" : "edit");
-      setPreviewExpanded(false);
-      setPreviewPage(0);
-      setQuickEdit(null);
     }
   }
-
-  const commitQuickEdit = () => {
-    if (!quickEdit) return;
-    update({ [quickEdit.key]: quickEdit.value } as Partial<StepDraft>);
-    setQuickEdit(null);
-    onSave();
-  };
 
   const update = (patch: Partial<StepDraft>) => onChange({ ...draft, ...patch });
 
@@ -112,8 +99,6 @@ export function StepDetailDrawer({
   const images = sourceImageUrls && sourceImageUrls.length > 0
     ? sourceImageUrls
     : sourceImageUrl ? [sourceImageUrl] : [];
-
-  const isIntl = isInternational(undefined); // TODO: pass timezone
 
   const buildShareText = (): string => {
     const lines: string[] = [];
@@ -269,164 +254,31 @@ export function StepDetailDrawer({
       <Box className={classes.body}>
         {mode === "view" ? (
           <>
-            {/* 1. サマリー */}
-            <Box className={classes.summary}>
-              <Box className={classes.summaryRow}>
-                <Text className={classes.summaryLabel}>出発</Text>
-                <Text className={classes.summaryValue}>
-                  {draft.date || "未設定"} {draft.time || ""}
-                </Text>
-              </Box>
-              {(draft.endTime || draft.endDate) && (
-                <Box className={classes.summaryRow}>
-                  <Text className={classes.summaryLabel}>到着</Text>
-                  <Text className={classes.summaryValue}>
-                    {draft.endDate || draft.date || ""} {draft.endTime || ""}
-                    {draft.endDate && draft.date && draft.endDate !== draft.date ? "（翌日）" : ""}
-                  </Text>
-                </Box>
-              )}
-              {(draft.from || draft.to) && (
-                <Box className={classes.summaryRow}>
-                  <Text className={classes.summaryLabel}>区間</Text>
-                  <Text className={classes.summaryValue}>
-                    {[draft.from, draft.to].filter(Boolean).join(" → ")}
-                  </Text>
-                </Box>
-              )}
-              {draft.confNumber && (
-                <Box className={classes.summaryRow}>
-                  <Text className={classes.summaryLabel}>確認番号</Text>
-                  <Text className={classes.summaryValue} style={{ fontFamily: "monospace" }}>
-                    {draft.confNumber}
-                  </Text>
-                </Box>
-              )}
-            </Box>
-
-            {/* 2. 要確認バナー */}
-            {needsReview && (
-              <Box className={classes.reviewBanner}>
-                <IconAlertTriangle size={16} />
-                <Text size="xs" fw={600}>
-                  {inferred && inferred.length > 0
-                    ? `AIが推定した項目があります: ${formatInferredFields(inferred, draft.category)}。内容をご確認ください`
-                    : "要確認: 一部の項目を読み取れませんでした"}
-                </Text>
-              </Box>
-            )}
-
-            {/* 3. 原本プレビュー（アコーディオン） */}
-            {images.length > 0 && (
-              <Box className={classes.previewSection}>
-                <Box className={classes.previewHeader}>
-                  <Box className={classes.previewMeta}>
-                    <IconDownload size={13} />
-                    <Text component="span">スキャン元{images.length > 1 ? ` · ${images.length} ページ` : ""}</Text>
-                  </Box>
-                  <button
-                    className={classes.previewDlBtn}
-                    onClick={(e) => { e.stopPropagation(); handleDownloadAll(); }}
-                    aria-label="原本をダウンロード"
-                    type="button"
-                  >
-                    <IconDownload size={15} />
-                  </button>
-                </Box>
-                {previewExpanded ? (
-                  <>
-                    <Box className={classes.previewSlider}>
-                      {images.length > 1 && (
-                        <button className={classes.previewArrow} onClick={() => setPreviewPage((p) => Math.max(0, p - 1))} disabled={previewPage === 0}>
-                          <IconChevronLeft size={18} />
-                        </button>
-                      )}
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={images[previewPage]} alt={`ページ ${previewPage + 1}`} className={classes.previewImageFull} />
-                      {images.length > 1 && (
-                        <button className={classes.previewArrow} onClick={() => setPreviewPage((p) => Math.min(images.length - 1, p + 1))} disabled={previewPage === images.length - 1}>
-                          <IconChevronRight size={18} />
-                        </button>
-                      )}
-                    </Box>
-                    {images.length > 1 && (
-                      <Text size="xs" c="dimmed" ta="center" mt={4}>{previewPage + 1} / {images.length} ページ</Text>
-                    )}
-                    <Text className={classes.previewToggle} onClick={() => setPreviewExpanded(false)}>閉じる</Text>
-                  </>
-                ) : (
-                  <Box onClick={() => setPreviewExpanded(true)} style={{ cursor: "pointer" }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={images[0]} alt="スキャン元" className={classes.previewImageCropped} />
-                    <Text className={classes.previewToggle}>
-                      <IconChevronDown size={14} /> スキャン元データを表示
-                    </Text>
-                  </Box>
-                )}
-              </Box>
-            )}
-
-            {/* 4. 固定項目 */}
-            <Text className={classes.sectionLabel}>基本情報</Text>
-            <Box className={classes.fieldSection}>
-              <Box className={classes.fieldRow}>
-                <Text className={classes.fieldLabel}>カテゴリ</Text>
-                <Text className={classes.fieldValue}>{draft.category}</Text>
-              </Box>
-              <Box className={classes.fieldRow}>
-                <Text className={classes.fieldLabel}>取り込み元</Text>
-                <Text className={classes.fieldValue}>{draft.source}</Text>
-              </Box>
-              {categoryFields.map((f) => {
-                const val = String(draft[f.draftKey] || "");
-                const isEditing = quickEdit?.key === f.draftKey;
-                return (
-                  <Box
-                    key={f.key}
-                    className={`${classes.fieldRow} ${isEditing ? classes.fieldRowEditing : classes.fieldRowTappable}`}
-                    onClick={() => !isEditing && isEdit && setQuickEdit({ key: f.draftKey, value: val })}
-                  >
-                    <Text className={classes.fieldLabel}>{f.label}</Text>
-                    {isEditing ? (
-                      <Box className={classes.quickEditRow} onClick={(e) => e.stopPropagation()}>
-                        <TextInput
-                          value={quickEdit.value}
-                          onChange={(e) => setQuickEdit({ key: f.draftKey, value: e.currentTarget.value })}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") commitQuickEdit();
-                            if (e.key === "Escape") setQuickEdit(null);
-                          }}
-                          autoFocus
-                          size="sm"
-                          style={{ flex: 1 }}
-                        />
-                        <button className={classes.quickEditConfirm} onClick={commitQuickEdit} aria-label="確定" type="button">✓</button>
-                        <button className={classes.quickEditCancel} onClick={() => setQuickEdit(null)} aria-label="キャンセル" type="button">✕</button>
-                      </Box>
-                    ) : (
-                      <Text className={`${classes.fieldValue} ${!val ? classes.fieldEmpty : ""}`}>
-                        {val || "未読取"}
-                      </Text>
-                    )}
-                  </Box>
-                );
-              })}
-            </Box>
-
-            {/* 5. 補助項目 */}
-            {draft.information.length > 0 && (
-              <>
-                <Text className={classes.sectionLabel}>その他の情報</Text>
-                <Box className={classes.fieldSection}>
-                  {draft.information.map((info) => (
-                    <Box key={info.id} className={classes.fieldRow}>
-                      <Text className={classes.fieldLabel}>{info.label}</Text>
-                      <Text className={classes.fieldValue}>{info.value}</Text>
-                    </Box>
-                  ))}
-                </Box>
-              </>
-            )}
+            <Ticket
+              data={{
+                category: draft.category,
+                source: draft.source,
+                title: draft.title,
+                date: draft.date,
+                endDate: draft.endDate,
+                time: draft.time,
+                endTime: draft.endTime,
+                from: draft.from,
+                to: draft.to,
+                confNumber: draft.confNumber,
+                information: draft.information,
+                memo: draft.memo,
+              }}
+              status={status}
+              needsReview={needsReview}
+              inferred={inferred}
+              sourceImageUrl={sourceImageUrl}
+              sourceImageUrls={sourceImageUrls}
+              onCopyMailBody={async () => {
+                if (!draft.memo) return;
+                try { await navigator.clipboard.writeText(draft.memo); } catch { /* ignore */ }
+              }}
+            />
           </>
         ) : (
           /* 編集モード */
