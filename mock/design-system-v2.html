@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>toritavi Design System v2 (Grocery-inspired)</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    /* === Core Palette === */
+    /* Ink: dark navy — primary surface for nav & active states */
+    --ink-50:  #F2F4F8;
+    --ink-100: #D9DEE7;
+    --ink-200: #B2BCCC;
+    --ink-300: #8594AB;
+    --ink-400: #5A6B85;
+    --ink-500: #3C4B64;
+    --ink-600: #253348;
+    --ink-700: #17233A;
+    --ink-800: #0F1B2D;
+    --ink-900: #0A1322;
+
+    /* Accent: warm orange — prices, CTAs */
+    --accent-50:  #FFF0EC;
+    --accent-100: #FFDBCF;
+    --accent-300: #FF9976;
+    --accent-500: #FF5722;
+    --accent-600: #EA461A;
+    --accent-700: #C93A14;
+
+    /* Neutral: page & cards */
+    --n-0:  #FFFFFF;
+    --n-50: #F7F8FA;
+    --n-100: #EEF0F4;
+    --n-200: #E2E6EC;
+    --n-300: #C9CFD9;
+    --n-500: #8891A1;
+    --n-700: #4A5364;
+    --n-900: #1C2230;
+
+    /* Semantic */
+    --success-50:  #E9F8EF;
+    --success-500: #2BB673;
+    --success-700: #1E8A57;
+    --warn-50:     #FFF5E0;
+    --warn-500:    #F5B041;
+    --warn-700:    #C48012;
+    --info-50:     #E6F0FF;
+    --info-500:    #3B82F6;
+    --info-700:    #1D4ED8;
+    --danger-50:   #FEE8EA;
+    --danger-500:  #E74C3C;
+    --danger-700:  #B33425;
+
+    /* === Typography === */
+    --font-sans: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Yu Gothic UI', 'Segoe UI', Roboto, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+    --fs-xs: 11px;
+    --fs-sm: 13px;
+    --fs-md: 15px;
+    --fs-lg: 17px;
+    --fs-xl: 20px;
+    --fs-2xl: 26px;
+    --fs-3xl: 34px;
+    --fw-regular: 400;
+    --fw-medium: 600;
+    --fw-bold: 700;
+    --fw-heavy: 800;
+
+    /* === Spacing === */
+    --sp-xxs: 4px;
+    --sp-xs:  8px;
+    --sp-sm:  12px;
+    --sp-md:  16px;
+    --sp-lg:  24px;
+    --sp-xl:  32px;
+    --sp-2xl: 48px;
+
+    /* === Radius — rounded-forward === */
+    --r-sm:   8px;
+    --r-md:   14px;
+    --r-lg:   20px;    /* cards */
+    --r-xl:   28px;    /* nav top corners, modal */
+    --r-pill: 999px;   /* filter/status pills */
+
+    /* === Shadow — soft & lifted === */
+    --shadow-xs: 0 1px 2px rgba(15,27,45,0.05);
+    --shadow-sm: 0 2px 8px rgba(15,27,45,0.06);
+    --shadow-md: 0 6px 18px rgba(15,27,45,0.08);
+    --shadow-lg: 0 12px 32px rgba(15,27,45,0.12);
+    --shadow-nav: 0 -8px 24px rgba(15,27,45,0.18);
+
+    /* === Aliases === */
+    --bg: var(--n-50);
+    --surface: var(--n-0);
+    --text: var(--ink-800);
+    --text-dim: var(--n-500);
+    --text-muted: var(--n-300);
+    --border: var(--n-200);
+    --primary: var(--ink-800);
+    --accent: var(--accent-500);
+  }
+
+  body { font-family: var(--font-sans); background: #FFFFFF; color: var(--text); -webkit-font-smoothing: antialiased; }
+  button { font-family: inherit; }
+
+  /* === Page layout === */
+  .page { max-width: 1040px; margin: 0 auto; padding: 48px 32px 120px; }
+  .hero { margin-bottom: 40px; padding-bottom: 24px; border-bottom: 1px solid var(--border); }
+  .title { font-size: var(--fs-3xl); font-weight: var(--fw-heavy); letter-spacing: -0.5px; }
+  .subtitle { color: var(--text-dim); margin-top: 8px; font-size: var(--fs-md); }
+  .tag { display: inline-block; background: var(--accent-50); color: var(--accent-700); font-size: var(--fs-xs); font-weight: var(--fw-bold); padding: 4px 10px; border-radius: var(--r-pill); margin-bottom: 12px; letter-spacing: 0.5px; }
+
+  .section { margin-bottom: 56px; }
+  .section-title { font-size: var(--fs-xl); font-weight: var(--fw-heavy); margin-bottom: 4px; }
+  .section-desc { font-size: var(--fs-sm); color: var(--text-dim); margin-bottom: var(--sp-md); }
+  .section-divider { height: 1px; background: var(--border); margin-bottom: var(--sp-lg); }
+
+  /* === Color grid === */
+  .color-row { display: grid; grid-template-columns: 140px 1fr; gap: var(--sp-md); align-items: center; margin-bottom: var(--sp-sm); }
+  .color-row-name { font-size: var(--fs-sm); font-weight: var(--fw-bold); color: var(--text); }
+  .color-scale { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; }
+  .scale-chip { height: 44px; border-radius: var(--r-sm); position: relative; display: flex; align-items: flex-end; padding: 4px 6px; font-size: 9px; font-family: var(--font-mono); color: rgba(255,255,255,0.9); }
+  .scale-chip.light { color: rgba(15,27,45,0.7); }
+
+  .semantic { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--sp-sm); }
+  .sem-card { border-radius: var(--r-md); padding: 16px; }
+  .sem-label { font-size: var(--fs-xs); font-weight: var(--fw-bold); text-transform: uppercase; letter-spacing: 0.8px; }
+  .sem-hex { font-family: var(--font-mono); font-size: var(--fs-xs); opacity: 0.75; margin-top: 4px; }
+
+  /* === Typography demo === */
+  .type-row { display: grid; grid-template-columns: 110px 1fr 120px; gap: 16px; align-items: baseline; padding: 12px 0; border-bottom: 1px dashed var(--border); }
+  .type-label { font-size: var(--fs-xs); color: var(--text-dim); font-weight: var(--fw-bold); text-transform: uppercase; letter-spacing: 0.6px; }
+  .type-meta { font-size: var(--fs-xs); color: var(--text-dim); font-family: var(--font-mono); text-align: right; }
+
+  /* === Tokens === */
+  .tokens { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--sp-md); }
+  .token-card { padding: 20px; border: 1px solid var(--border); border-radius: var(--r-lg); }
+  .token-title { font-weight: var(--fw-bold); margin-bottom: 12px; }
+  .token-item { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px dashed var(--border); font-size: var(--fs-sm); }
+  .token-item:last-child { border-bottom: none; }
+  .token-demo-box { background: var(--accent-50); border: 1px solid var(--accent-100); }
+  .token-demo-elevate { background: var(--surface); }
+  .token-name { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--text-dim); margin-left: auto; }
+
+  /* === Component grid === */
+  .components { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--sp-lg); }
+  .comp-card { background: var(--bg); border-radius: var(--r-lg); padding: 24px; }
+  .comp-label { font-size: var(--fs-xs); font-weight: var(--fw-bold); text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-dim); margin-bottom: 14px; }
+  .comp-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+  .comp-row:last-child { margin-bottom: 0; }
+
+  /* ============================ */
+  /* === UI Component Styles  === */
+  /* ============================ */
+
+  /* Buttons */
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-size: var(--fs-md); font-weight: var(--fw-bold); border-radius: var(--r-pill); cursor: pointer; border: none; transition: transform 0.1s, box-shadow 0.15s, background 0.15s; padding: 12px 22px; }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary { background: var(--ink-800); color: #fff; }
+  .btn-primary:hover { background: var(--ink-700); box-shadow: var(--shadow-md); }
+  .btn-accent { background: var(--accent-500); color: #fff; }
+  .btn-accent:hover { background: var(--accent-600); box-shadow: var(--shadow-md); }
+  .btn-outline { background: transparent; color: var(--ink-800); border: 1.5px solid var(--ink-800); }
+  .btn-outline:hover { background: var(--ink-800); color: #fff; }
+  .btn-ghost { background: var(--n-100); color: var(--ink-800); }
+  .btn-ghost:hover { background: var(--n-200); }
+  .btn-icon { width: 46px; height: 46px; padding: 0; border-radius: 50%; background: var(--surface); border: 1px solid var(--border); color: var(--ink-800); box-shadow: var(--shadow-xs); }
+  .btn-sm { padding: 8px 14px; font-size: var(--fs-sm); }
+  .btn-lg { padding: 16px 28px; font-size: var(--fs-lg); }
+
+  /* Filter pill tabs */
+  .pills { display: flex; gap: 10px; flex-wrap: wrap; }
+  .pill { padding: 10px 18px; border-radius: var(--r-pill); font-size: var(--fs-sm); font-weight: var(--fw-bold); background: var(--n-100); color: var(--ink-800); border: none; cursor: pointer; }
+  .pill.active { background: var(--ink-800); color: #fff; }
+
+  /* Status badges */
+  .badge { display: inline-flex; align-items: center; padding: 6px 14px; border-radius: var(--r-pill); font-size: var(--fs-xs); font-weight: var(--fw-bold); }
+  .badge-success { background: var(--success-50); color: var(--success-700); }
+  .badge-warn { background: var(--warn-50); color: var(--warn-700); }
+  .badge-info { background: var(--info-50); color: var(--info-700); }
+  .badge-danger { background: var(--danger-50); color: var(--danger-700); }
+  .badge-neutral { background: var(--n-100); color: var(--n-700); }
+
+  /* Input */
+  .input { width: 100%; padding: 14px 18px; border: 1.5px solid var(--border); border-radius: var(--r-md); font-size: var(--fs-md); background: var(--surface); outline: none; transition: border-color 0.15s, box-shadow 0.15s; }
+  .input:focus { border-color: var(--ink-800); box-shadow: 0 0 0 3px rgba(15,27,45,0.1); }
+  .search-bar { display: flex; gap: 12px; align-items: center; }
+
+  /* Card - list item */
+  .list-card { background: var(--surface); border-radius: var(--r-lg); padding: 14px; display: flex; gap: 14px; align-items: center; box-shadow: var(--shadow-sm); margin-bottom: 12px; }
+  .list-thumb { width: 72px; height: 72px; border-radius: var(--r-md); background: linear-gradient(135deg, var(--accent-100), var(--accent-50)); display: flex; align-items: center; justify-content: center; font-size: 34px; flex-shrink: 0; }
+  .list-body { flex: 1; min-width: 0; }
+  .list-title { font-size: var(--fs-lg); font-weight: var(--fw-bold); color: var(--text); }
+  .list-sub { font-size: var(--fs-xs); color: var(--text-dim); margin: 2px 0 6px; }
+  .list-price { font-size: var(--fs-md); font-weight: var(--fw-bold); color: var(--accent-500); }
+  .list-price small { font-size: var(--fs-xs); color: var(--text-dim); font-weight: var(--fw-medium); }
+  .list-status { flex-shrink: 0; }
+
+  /* Section header (Title + search icon) */
+  .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .page-title { font-size: var(--fs-2xl); font-weight: var(--fw-heavy); line-height: 1.15; letter-spacing: -0.3px; }
+
+  /* Bottom nav */
+  .bottom-nav { position: relative; background: var(--ink-800); border-radius: var(--r-xl) var(--r-xl) 0 0; padding: 16px 10px 26px; display: flex; box-shadow: var(--shadow-nav); }
+  .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; padding: 6px 4px; color: rgba(255,255,255,0.55); font-size: var(--fs-xs); font-weight: var(--fw-bold); background: none; border: none; cursor: pointer; position: relative; }
+  .nav-item.active { color: #fff; }
+  .nav-item.active::before { content: ""; position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 48px; height: 36px; border: 1.5px solid rgba(255,255,255,0.85); border-radius: 10px; pointer-events: none; }
+
+  /* Preview device frame */
+  .device { max-width: 380px; margin: 0 auto; background: var(--bg); border-radius: 40px; border: 10px solid #111; overflow: hidden; box-shadow: var(--shadow-lg); height: 780px; display: flex; flex-direction: column; }
+  .device-statusbar { height: 36px; background: var(--bg); display: flex; align-items: center; justify-content: space-between; padding: 8px 28px 0; font-size: var(--fs-xs); font-weight: var(--fw-bold); color: var(--ink-800); }
+  .device-body { flex: 1; padding: 12px 20px 0; overflow-y: auto; }
+  .device-nav { padding-bottom: 0; }
+
+  /* Icon system (flat SVG) */
+  .ic { display: inline-flex; align-items: center; justify-content: center; line-height: 0; }
+  .ic-svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; display: block; }
+  .btn-icon .ic-svg { width: 20px; height: 20px; }
+  .thumb-svg { width: 38px; height: 38px; fill: none; stroke: var(--ink-700); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; display: block; }
+  .inline-svg { width: 17px; height: 17px; display: inline-block; vertical-align: -3px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* Utility */
+  .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .stack { display: flex; flex-direction: column; gap: 14px; }
+  .muted { color: var(--text-dim); }
+  .mono { font-family: var(--font-mono); font-size: var(--fs-xs); }
+
+</style>
+</head>
+<body>
+  <div class="page">
+
+    <!-- === Hero === -->
+    <div class="hero">
+      <span class="tag">DESIGN SYSTEM v2</span>
+      <h1 class="title">toritavi — Grocery-inspired</h1>
+      <p class="subtitle">参考: Grocery Shop Mobile App UI Kit。ダークネイビー × 温かいオレンジの 2軸で、丸みのある浮遊感のあるデザインを採用。</p>
+    </div>
+
+    <!-- === 1. Color Palette === -->
+    <section class="section">
+      <h2 class="section-title">1. カラーパレット</h2>
+      <p class="section-desc">Ink（ダーク基調）+ Accent（食欲・行動喚起のオレンジ）+ Neutral + Semantic</p>
+      <div class="section-divider"></div>
+
+      <div class="color-row">
+        <div class="color-row-name">Ink<br><span class="mono muted">--ink-*</span></div>
+        <div class="color-scale">
+          <div class="scale-chip light" style="background:#F2F4F8">50</div>
+          <div class="scale-chip light" style="background:#D9DEE7">100</div>
+          <div class="scale-chip light" style="background:#B2BCCC">200</div>
+          <div class="scale-chip" style="background:#8594AB">300</div>
+          <div class="scale-chip" style="background:#5A6B85">400</div>
+          <div class="scale-chip" style="background:#3C4B64">500</div>
+          <div class="scale-chip" style="background:#253348">600</div>
+          <div class="scale-chip" style="background:#17233A">700</div>
+          <div class="scale-chip" style="background:#0F1B2D">800</div>
+          <div class="scale-chip" style="background:#0A1322">900</div>
+        </div>
+      </div>
+
+      <div class="color-row">
+        <div class="color-row-name">Accent<br><span class="mono muted">--accent-*</span></div>
+        <div class="color-scale" style="grid-template-columns:repeat(7,1fr)">
+          <div class="scale-chip light" style="background:#FFF0EC">50</div>
+          <div class="scale-chip light" style="background:#FFDBCF">100</div>
+          <div class="scale-chip light" style="background:#FFB89B">200</div>
+          <div class="scale-chip" style="background:#FF9976">300</div>
+          <div class="scale-chip" style="background:#FF7549">400</div>
+          <div class="scale-chip" style="background:#FF5722">500</div>
+          <div class="scale-chip" style="background:#C93A14">700</div>
+        </div>
+      </div>
+
+      <div class="color-row">
+        <div class="color-row-name">Neutral<br><span class="mono muted">--n-*</span></div>
+        <div class="color-scale" style="grid-template-columns:repeat(7,1fr)">
+          <div class="scale-chip light" style="background:#FFFFFF;border:1px solid #EEF0F4">0</div>
+          <div class="scale-chip light" style="background:#F7F8FA">50</div>
+          <div class="scale-chip light" style="background:#EEF0F4">100</div>
+          <div class="scale-chip light" style="background:#E2E6EC">200</div>
+          <div class="scale-chip light" style="background:#C9CFD9">300</div>
+          <div class="scale-chip" style="background:#8891A1">500</div>
+          <div class="scale-chip" style="background:#4A5364">700</div>
+        </div>
+      </div>
+
+      <h3 class="section-desc" style="margin-top:24px;font-weight:700;color:var(--text);font-size:var(--fs-md)">Semantic</h3>
+      <div class="semantic">
+        <div class="sem-card" style="background:var(--success-50);color:var(--success-700)">
+          <div class="sem-label">Success</div>
+          <div class="sem-hex">#2BB673 / #1E8A57</div>
+        </div>
+        <div class="sem-card" style="background:var(--warn-50);color:var(--warn-700)">
+          <div class="sem-label">Warning</div>
+          <div class="sem-hex">#F5B041 / #C48012</div>
+        </div>
+        <div class="sem-card" style="background:var(--info-50);color:var(--info-700)">
+          <div class="sem-label">Info</div>
+          <div class="sem-hex">#3B82F6 / #1D4ED8</div>
+        </div>
+        <div class="sem-card" style="background:var(--danger-50);color:var(--danger-700)">
+          <div class="sem-label">Danger</div>
+          <div class="sem-hex">#E74C3C / #B33425</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- === 2. Typography === -->
+    <section class="section">
+      <h2 class="section-title">2. タイポグラフィ</h2>
+      <p class="section-desc">見出しは太字・締まった字間、本文は読みやすい 15px を基準</p>
+      <div class="section-divider"></div>
+
+      <div class="type-row">
+        <div class="type-label">Title L</div>
+        <div style="font-size:var(--fs-3xl);font-weight:var(--fw-heavy);letter-spacing:-0.5px;line-height:1.1">Daily Journey Today</div>
+        <div class="type-meta">34px / 800</div>
+      </div>
+      <div class="type-row">
+        <div class="type-label">Title M</div>
+        <div style="font-size:var(--fs-2xl);font-weight:var(--fw-heavy);letter-spacing:-0.3px">次の予定をつくろう</div>
+        <div class="type-meta">26px / 800</div>
+      </div>
+      <div class="type-row">
+        <div class="type-label">Heading</div>
+        <div style="font-size:var(--fs-xl);font-weight:var(--fw-bold)">大阪出張 2026/04</div>
+        <div class="type-meta">20px / 700</div>
+      </div>
+      <div class="type-row">
+        <div class="type-label">Body L</div>
+        <div style="font-size:var(--fs-lg);font-weight:var(--fw-bold)">新幹線のぞみ203号</div>
+        <div class="type-meta">17px / 700</div>
+      </div>
+      <div class="type-row">
+        <div class="type-label">Body</div>
+        <div style="font-size:var(--fs-md)">新大阪駅 → 東京駅 指定席 7号車</div>
+        <div class="type-meta">15px / 400</div>
+      </div>
+      <div class="type-row">
+        <div class="type-label">Body S</div>
+        <div style="font-size:var(--fs-sm);color:var(--text-dim)">20 sep 2026 · 出張 · 3名</div>
+        <div class="type-meta">13px / 400</div>
+      </div>
+      <div class="type-row">
+        <div class="type-label">Caption</div>
+        <div style="font-size:var(--fs-xs);color:var(--text-dim);text-transform:uppercase;letter-spacing:0.6px">CONFIRMED · 20 SEP</div>
+        <div class="type-meta">11px / 700</div>
+      </div>
+    </section>
+
+    <!-- === 3. Radius / Shadow / Spacing === -->
+    <section class="section">
+      <h2 class="section-title">3. Radius / Shadow / Spacing</h2>
+      <p class="section-desc">角丸強めで "浮き上がる" 印象。影は柔らかく深い</p>
+      <div class="section-divider"></div>
+
+      <div class="tokens">
+        <div class="token-card">
+          <div class="token-title">角丸 (Radius)</div>
+          <div class="token-item"><div style="width:60px;height:36px;background:var(--accent-50);border-radius:var(--r-sm)"></div>sm - 小さな要素<span class="token-name">8px</span></div>
+          <div class="token-item"><div style="width:60px;height:36px;background:var(--accent-50);border-radius:var(--r-md)"></div>md - 入力・バッジ内側<span class="token-name">14px</span></div>
+          <div class="token-item"><div style="width:60px;height:36px;background:var(--accent-50);border-radius:var(--r-lg)"></div>lg - カード<span class="token-name">20px</span></div>
+          <div class="token-item"><div style="width:60px;height:36px;background:var(--accent-50);border-radius:var(--r-xl)"></div>xl - ナビ・モーダル<span class="token-name">28px</span></div>
+          <div class="token-item"><div style="width:60px;height:36px;background:var(--accent-50);border-radius:var(--r-pill)"></div>pill - ボタン・タブ<span class="token-name">999px</span></div>
+        </div>
+        <div class="token-card">
+          <div class="token-title">シャドウ (Shadow)</div>
+          <div class="token-item"><div style="width:60px;height:36px;background:#fff;border-radius:var(--r-md);box-shadow:var(--shadow-xs)"></div>xs<span class="token-name">--shadow-xs</span></div>
+          <div class="token-item"><div style="width:60px;height:36px;background:#fff;border-radius:var(--r-md);box-shadow:var(--shadow-sm)"></div>sm - カード標準<span class="token-name">--shadow-sm</span></div>
+          <div class="token-item"><div style="width:60px;height:36px;background:#fff;border-radius:var(--r-md);box-shadow:var(--shadow-md)"></div>md - hover時<span class="token-name">--shadow-md</span></div>
+          <div class="token-item"><div style="width:60px;height:36px;background:#fff;border-radius:var(--r-md);box-shadow:var(--shadow-lg)"></div>lg - モーダル<span class="token-name">--shadow-lg</span></div>
+          <div class="token-item"><div style="width:60px;height:36px;background:var(--ink-800);border-radius:var(--r-md);box-shadow:var(--shadow-nav)"></div>nav - ボトムナビ<span class="token-name">--shadow-nav</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- === 4. Components === -->
+    <section class="section">
+      <h2 class="section-title">4. コンポーネント</h2>
+      <div class="section-divider"></div>
+
+      <div class="components">
+
+        <!-- Buttons -->
+        <div class="comp-card">
+          <div class="comp-label">Buttons</div>
+          <div class="comp-row">
+            <button class="btn btn-primary">登録する</button>
+            <button class="btn btn-accent">予定を追加</button>
+          </div>
+          <div class="comp-row">
+            <button class="btn btn-outline">キャンセル</button>
+            <button class="btn btn-ghost">スキップ</button>
+          </div>
+          <div class="comp-row">
+            <button class="btn btn-primary btn-sm">Small</button>
+            <button class="btn btn-primary">Medium</button>
+            <button class="btn btn-primary btn-lg">Large</button>
+          </div>
+          <div class="comp-row">
+            <button class="btn btn-icon">🔍</button>
+            <button class="btn btn-icon">🔔</button>
+            <button class="btn btn-icon">＋</button>
+          </div>
+        </div>
+
+        <!-- Pills / Filter tabs -->
+        <div class="comp-card">
+          <div class="comp-label">Filter Tabs (Pills)</div>
+          <div class="pills">
+            <button class="pill active">すべて</button>
+            <button class="pill">予定</button>
+            <button class="pill">進行中</button>
+            <button class="pill">完了</button>
+          </div>
+          <div style="height:14px"></div>
+          <div class="comp-label">Status Badges</div>
+          <div class="comp-row">
+            <span class="badge badge-success">確定</span>
+            <span class="badge badge-warn">仮予約</span>
+            <span class="badge badge-info">予定</span>
+            <span class="badge badge-danger">中止</span>
+            <span class="badge badge-neutral">未整理</span>
+          </div>
+        </div>
+
+        <!-- Input / Search -->
+        <div class="comp-card">
+          <div class="comp-label">Search & Input</div>
+          <div class="search-bar">
+            <input class="input" placeholder="旅程を検索..." style="flex:1">
+            <button class="btn btn-icon">🔍</button>
+          </div>
+          <div style="height:12px"></div>
+          <input class="input" placeholder="メールアドレス">
+          <div style="height:8px"></div>
+          <input class="input" type="password" placeholder="パスワード">
+        </div>
+
+        <!-- Section header -->
+        <div class="comp-card">
+          <div class="comp-label">Section Header</div>
+          <div style="background:var(--surface);padding:20px;border-radius:var(--r-lg)">
+            <div class="section-header">
+              <div class="page-title">Daily<br>Journey Today</div>
+              <button class="btn btn-icon">🔍</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- List cards -->
+        <div class="comp-card" style="grid-column:1/-1">
+          <div class="comp-label">List Card</div>
+          <div style="background:var(--n-50);padding:16px;border-radius:var(--r-lg)">
+            <div class="list-card">
+              <div class="list-thumb">✈️</div>
+              <div class="list-body">
+                <div class="list-title">JAL 101便</div>
+                <div class="list-sub">20 sep 2026 · 羽田→伊丹</div>
+                <div class="list-price">¥14,750<small> / 片道</small></div>
+              </div>
+              <div class="list-status"><span class="badge badge-success">確定</span></div>
+            </div>
+            <div class="list-card">
+              <div class="list-thumb" style="background:linear-gradient(135deg,#FFE5B4,#FFF6E0)">🏨</div>
+              <div class="list-body">
+                <div class="list-title">ホテル日航大阪</div>
+                <div class="list-sub">20-22 sep 2026 · チェックイン 15:00</div>
+                <div class="list-price">¥12,750<small> / 泊</small></div>
+              </div>
+              <div class="list-status"><span class="badge badge-success">確定</span></div>
+            </div>
+            <div class="list-card">
+              <div class="list-thumb" style="background:linear-gradient(135deg,#D4EDDA,#EAF7EE)">🚅</div>
+              <div class="list-body">
+                <div class="list-title">のぞみ203号</div>
+                <div class="list-sub">20 sep 2026 · 新大阪→東京</div>
+                <div class="list-price">¥22,680<small> / 指定</small></div>
+              </div>
+              <div class="list-status"><span class="badge badge-warn">仮予約</span></div>
+            </div>
+            <div class="list-card">
+              <div class="list-thumb" style="background:linear-gradient(135deg,#FFD3D3,#FFF0F0)">🍽️</div>
+              <div class="list-body">
+                <div class="list-title">懐石 青山</div>
+                <div class="list-sub">20 sep 2026 · 19:00 · 3名</div>
+                <div class="list-price">¥11,750<small> / 名</small></div>
+              </div>
+              <div class="list-status"><span class="badge badge-info">予定</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bottom nav -->
+        <div class="comp-card" style="grid-column:1/-1">
+          <div class="comp-label">Bottom Navigation</div>
+          <div style="max-width:380px;margin:0 auto;background:var(--n-50);padding-top:40px;border-radius:var(--r-lg)">
+            <nav class="bottom-nav">
+              <button class="nav-item active"><span class="ic">✈️</span>旅程</button>
+              <button class="nav-item"><span class="ic">📷</span>予定登録</button>
+              <button class="nav-item"><span class="ic">🔔</span>通知</button>
+              <button class="nav-item"><span class="ic">👤</span>アカウント</button>
+            </nav>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- === 5. Preview (Full Screen) === -->
+    <section class="section">
+      <h2 class="section-title">5. プレビュー — 旅程一覧画面</h2>
+      <p class="section-desc">上記トークンを全て組み合わせたフル画面イメージ</p>
+      <div class="section-divider"></div>
+
+      <div class="device">
+        <div class="device-statusbar">
+          <span>9:41</span>
+          <span>●●●● 100%</span>
+        </div>
+        <div class="device-body">
+          <div class="section-header" style="margin-top:8px">
+            <div class="page-title">Daily<br>Journey Today</div>
+            <button class="btn btn-icon">🔍</button>
+          </div>
+          <div class="pills" style="margin-bottom:18px">
+            <button class="pill active">すべて</button>
+            <button class="pill">予定</button>
+            <button class="pill">進行中</button>
+            <button class="pill">完了</button>
+          </div>
+
+          <div class="list-card">
+            <div class="list-thumb">✈️</div>
+            <div class="list-body">
+              <div class="list-title">JAL 101便</div>
+              <div class="list-sub">20 sep 2026</div>
+              <div class="list-price">¥14,750<small> / 片道</small></div>
+            </div>
+            <span class="badge badge-success">確定</span>
+          </div>
+          <div class="list-card">
+            <div class="list-thumb" style="background:linear-gradient(135deg,#FFE5B4,#FFF6E0)">🏨</div>
+            <div class="list-body">
+              <div class="list-title">ホテル日航</div>
+              <div class="list-sub">20 sep 2026</div>
+              <div class="list-price">¥12,750<small> / 泊</small></div>
+            </div>
+            <span class="badge badge-success">確定</span>
+          </div>
+          <div class="list-card">
+            <div class="list-thumb" style="background:linear-gradient(135deg,#D4EDDA,#EAF7EE)">🚅</div>
+            <div class="list-body">
+              <div class="list-title">のぞみ203号</div>
+              <div class="list-sub">20 sep 2026</div>
+              <div class="list-price">¥22,680<small> / 指定</small></div>
+            </div>
+            <span class="badge badge-warn">仮予約</span>
+          </div>
+          <div class="list-card">
+            <div class="list-thumb" style="background:linear-gradient(135deg,#FFD3D3,#FFF0F0)">🍽️</div>
+            <div class="list-body">
+              <div class="list-title">懐石 青山</div>
+              <div class="list-sub">20 sep 2026</div>
+              <div class="list-price">¥11,750<small> / 名</small></div>
+            </div>
+            <span class="badge badge-info">予定</span>
+          </div>
+        </div>
+        <div class="device-nav">
+          <nav class="bottom-nav" style="border-radius:var(--r-xl) var(--r-xl) 0 0">
+            <button class="nav-item active"><span class="ic">✈️</span>旅程</button>
+            <button class="nav-item"><span class="ic">📷</span>予定登録</button>
+            <button class="nav-item"><span class="ic">🔔</span>通知</button>
+            <button class="nav-item"><span class="ic">👤</span>アカウント</button>
+          </nav>
+        </div>
+      </div>
+    </section>
+
+    <!-- === 6. 適用ガイドライン === -->
+    <section class="section">
+      <h2 class="section-title">6. 適用ガイドライン</h2>
+      <div class="section-divider"></div>
+      <div class="tokens">
+        <div class="token-card">
+          <div class="token-title">✅ DO</div>
+          <div style="font-size:var(--fs-sm);color:var(--text);line-height:1.7">
+            ・カードは <code class="mono">--r-lg (20px)</code> で統一<br>
+            ・価格・CTA には Accent 500 を使う<br>
+            ・ボトムナビは Ink 800 + 上側シャドウ<br>
+            ・フィルタタブは Pill 形状、active は Ink 800 塗り<br>
+            ・背景は <code class="mono">--n-50</code>、カードは白
+          </div>
+        </div>
+        <div class="token-card">
+          <div class="token-title">🚫 DON'T</div>
+          <div style="font-size:var(--fs-sm);color:var(--text);line-height:1.7">
+            ・複数の角丸値を混在させない（sm/md/lg の 3段まで）<br>
+            ・Accent を面積広く使わない（点でアクセント）<br>
+            ・ナビを純黒にしない（#0F1B2D のネイビー）<br>
+            ・カードに強い影を重ねない<br>
+            ・ボーダーと影を同時に濃くしない
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <p class="muted" style="text-align:center;font-size:var(--fs-xs);margin-top:60px">toritavi Design System v2 · Grocery-inspired · 2026-04-18</p>
+
+  </div>
+</body>
+</html>
