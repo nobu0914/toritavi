@@ -920,6 +920,277 @@
   .muted { color: var(--text-dim); }
   .mono { font-family: var(--font-mono); font-size: var(--fs-xs); }
 
+  /* ============================================================ */
+  /* === 13. TICKET PATTERN                                     === */
+  /* ============================================================ */
+
+  .ticket {
+    position: relative;
+    background: var(--surface);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    max-width: 420px;
+    margin: 0 auto;
+  }
+
+  /* ---------- Hero (Primary zone) ---------- */
+  .ticket-hero {
+    position: relative;
+    padding: 20px 22px 22px;
+    color: #fff;
+    background: linear-gradient(135deg, #14253B 0%, #0F1B2D 55%, #1E3456 100%);
+  }
+  .ticket-hero-top {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .ticket-hero-category {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.8px;
+    text-transform: uppercase; opacity: 0.85;
+  }
+  .ticket-hero-category .ic-svg { width: 14px; height: 14px; color: var(--accent-500); }
+  .ticket-hero-flag {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.4px;
+    padding: 3px 8px; border-radius: var(--r-pill);
+    background: rgba(255,255,255,0.12); color: #fff;
+  }
+  .ticket-hero-flag.danger { background: var(--danger-500); }
+  .ticket-hero-flag.warn { background: var(--warn-500); color: #1a1a1a; }
+  .ticket-hero-flag.success { background: var(--success-500); }
+  .ticket-hero-flag.muted { background: rgba(255,255,255,0.06); opacity: 0.6; }
+
+  .ticket-route {
+    display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+    gap: 12px;
+  }
+  .ticket-port { min-width: 0; }
+  .ticket-port--right { text-align: right; }
+  .ticket-port-code {
+    font-family: var(--font-mono);
+    font-size: 30px; font-weight: 800; letter-spacing: 1px;
+    line-height: 1;
+  }
+  .ticket-port-name {
+    font-size: 11px; opacity: 0.75; margin-top: 4px;
+    font-weight: 600; line-height: 1.3;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .ticket-port-time {
+    font-size: 20px; font-weight: 700; margin-top: 10px;
+    font-family: var(--font-mono); letter-spacing: 0.5px;
+  }
+  .ticket-port-date {
+    font-size: 11px; opacity: 0.7; margin-top: 2px; font-weight: 600;
+  }
+  .ticket-arrow {
+    display: flex; flex-direction: column; align-items: center;
+    color: var(--accent-500); flex-shrink: 0;
+  }
+  .ticket-arrow-line {
+    width: 60px; height: 2px; background: rgba(255,87,34,0.4);
+    position: relative; margin: 8px 0;
+  }
+  .ticket-arrow-line::after {
+    content: ""; position: absolute; right: -2px; top: -3px;
+    border-left: 6px solid var(--accent-500);
+    border-top: 4px solid transparent;
+    border-bottom: 4px solid transparent;
+  }
+  .ticket-arrow-duration {
+    font-size: 9px; opacity: 0.8; font-weight: 600;
+    font-family: var(--font-mono); letter-spacing: 0.3px;
+  }
+
+  /* Lodging / Event layout — no "port A → port B" but single subject */
+  .ticket-hero-single {
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .ticket-hero-subject {
+    font-size: 22px; font-weight: 800; letter-spacing: -0.2px;
+    line-height: 1.2;
+  }
+  .ticket-hero-subject-sub {
+    font-size: 13px; font-weight: 600; opacity: 0.8;
+  }
+
+  /* ---------- Perforation ---------- */
+  .ticket-perf {
+    position: relative; height: 1px;
+    background: transparent;
+    margin: 0 16px;
+    border-top: 2px dashed var(--n-200);
+  }
+  .ticket-perf::before, .ticket-perf::after {
+    content: ""; position: absolute; top: -12px;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--bg);
+    box-shadow: inset 0 0 0 1px var(--n-200);
+  }
+  .ticket-perf::before { left: -28px; }
+  .ticket-perf::after  { right: -28px; }
+
+  /* When ticket sits on dark background, fill with dark bg color */
+  .ticket-on-dark .ticket-perf::before,
+  .ticket-on-dark .ticket-perf::after { background: var(--ink-800); box-shadow: none; }
+
+  /* ---------- Body (Secondary / Meta) ---------- */
+  .ticket-body {
+    padding: 16px 22px 18px;
+    background: var(--surface);
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px 12px;
+  }
+  .ticket-body--2col { grid-template-columns: repeat(2, 1fr); }
+  .ticket-meta-cell {}
+  .ticket-meta-label {
+    font-size: 10px; font-weight: 700; color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: 0.5px;
+    margin-bottom: 2px;
+  }
+  .ticket-meta-value {
+    font-family: var(--font-mono);
+    font-size: 15px; font-weight: 700; color: var(--text);
+    letter-spacing: 0.3px;
+    line-height: 1.3;
+  }
+  .ticket-meta-value.plain { font-family: var(--font-sans); letter-spacing: 0; }
+  .ticket-meta-value.empty {
+    color: #C99F99; font-style: italic;
+    font-family: var(--font-sans); font-weight: 500;
+    font-size: 13px;
+  }
+  .ticket-meta-value.inferred {
+    color: var(--text);
+    background: linear-gradient(transparent 70%, rgba(245,176,65,0.35) 70%);
+  }
+  .ticket-meta-badge {
+    display: inline-block; margin-left: 4px;
+    font-size: 9px; font-weight: 700;
+    padding: 1px 5px; border-radius: 3px;
+    background: var(--infer-bg); color: var(--infer-fg);
+    letter-spacing: 0.3px; vertical-align: 2px;
+  }
+
+  /* ---------- Code Zone (Tertiary) ---------- */
+  .ticket-code-zone {
+    padding: 14px 22px;
+    background: var(--n-50);
+    border-top: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px;
+  }
+  .ticket-code-main {}
+  .ticket-code-label {
+    font-size: 10px; font-weight: 700; color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;
+  }
+  .ticket-code-value {
+    font-family: var(--font-mono); font-size: 17px; font-weight: 800;
+    letter-spacing: 2px; color: var(--text);
+  }
+  .ticket-barcode {
+    display: flex; align-items: center; gap: 2px;
+    height: 36px;
+  }
+  .ticket-bar { width: 2px; height: 100%; background: var(--ink-800); }
+  .ticket-bar.thin { width: 1px; }
+  .ticket-bar.thick { width: 3px; }
+  .ticket-bar.short { height: 70%; align-self: center; }
+  .ticket-qr {
+    width: 48px; height: 48px;
+    background:
+      linear-gradient(135deg,
+        #000 0 2px, transparent 2px 4px,
+        #000 4px 6px, transparent 6px 8px) 0 0 / 8px 8px;
+    border: 2px solid var(--ink-800);
+    border-radius: 3px;
+    position: relative;
+  }
+  .ticket-qr::before, .ticket-qr::after {
+    content: ""; position: absolute;
+    width: 12px; height: 12px;
+    border: 2px solid var(--ink-800);
+    background: #fff;
+  }
+  .ticket-qr::before { top: 2px; left: 2px; }
+  .ticket-qr::after { top: 2px; right: 2px; }
+
+  /* ---------- Size variants ---------- */
+  .ticket--compact { max-width: 360px; }
+  .ticket--compact .ticket-hero { padding: 14px 16px; }
+  .ticket--compact .ticket-hero-top { margin-bottom: 10px; }
+  .ticket--compact .ticket-port-code { font-size: 22px; }
+  .ticket--compact .ticket-port-time { font-size: 15px; margin-top: 6px; }
+  .ticket--compact .ticket-port-name { display: none; }
+  .ticket--compact .ticket-arrow-line { width: 32px; }
+  .ticket--compact .ticket-arrow-duration { display: none; }
+  .ticket--compact .ticket-body { padding: 10px 16px 12px; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .ticket--compact .ticket-meta-value { font-size: 13px; }
+  .ticket--compact .ticket-code-zone { padding: 8px 16px; }
+  .ticket--compact .ticket-code-value { font-size: 14px; letter-spacing: 1.2px; }
+  .ticket--compact .ticket-barcode { height: 22px; }
+  .ticket--compact .ticket-qr { display: none; }
+
+  .ticket--large .ticket-hero { padding: 24px 26px 26px; }
+  .ticket--large .ticket-port-code { font-size: 34px; }
+  .ticket--large .ticket-port-time { font-size: 22px; }
+
+  .ticket--incomplete .ticket-meta-value.empty {
+    border-bottom: 1px dashed var(--danger-500);
+    padding-bottom: 1px;
+  }
+  .ticket--incomplete .ticket-body { background: rgba(245,176,65,0.04); }
+
+  /* Category tint bands (subtle top accent stripe) */
+  .ticket--train .ticket-hero { background: linear-gradient(135deg,#13332A 0%,#0F2A23 55%,#1A4D3F 100%); }
+  .ticket--lodge .ticket-hero { background: linear-gradient(135deg,#32230F 0%,#241808 55%,#4D371A 100%); }
+  .ticket--sight .ticket-hero { background: linear-gradient(135deg,#231332 0%,#180824 55%,#3F1A4D 100%); }
+  .ticket--bus   .ticket-hero { background: linear-gradient(135deg,#13293A 0%,#0A1929 55%,#1B3E5D 100%); }
+  .ticket--hospital .ticket-hero { background: linear-gradient(135deg,#1E2B3A 0%,#131F2E 55%,#35495E 100%); }
+  .ticket--meet  { border-left: 3px solid var(--info-500); }
+  .ticket--dine  { border-left: 3px solid var(--accent-500); }
+
+  /* "Quiet" variant for meet/dine/etc. — no ticket hero, simpler */
+  .ticket--quiet .ticket-hero { background: var(--surface); color: var(--text); }
+  .ticket--quiet .ticket-hero-category { opacity: 1; color: var(--text-dim); }
+  .ticket--quiet .ticket-port-code { color: var(--text); }
+  .ticket--quiet .ticket-port-time { color: var(--text); }
+  .ticket--quiet .ticket-arrow { color: var(--ink-700); }
+  .ticket--quiet .ticket-arrow-line { background: var(--n-200); }
+  .ticket--quiet .ticket-arrow-line::after { border-left-color: var(--ink-700); }
+  .ticket--quiet .ticket-hero-subject { color: var(--text); }
+  .ticket--quiet .ticket-hero-subject-sub { color: var(--text-dim); opacity: 1; }
+  .ticket--quiet .ticket-hero { border-bottom: 1px solid var(--border); }
+
+  /* State overlays */
+  .ticket--done { opacity: 0.72; filter: saturate(0.85); }
+  .ticket--done .ticket-hero { filter: grayscale(0.3); }
+  .ticket--canceled .ticket-hero { filter: grayscale(0.6) brightness(0.9); }
+  .ticket--canceled .ticket-code-value,
+  .ticket--canceled .ticket-meta-value,
+  .ticket--canceled .ticket-port-code,
+  .ticket--canceled .ticket-port-time { text-decoration: line-through; text-decoration-thickness: 1.5px; }
+
+  /* Schema diagram */
+  .ticket-schema {
+    display: grid; grid-template-columns: 1fr;
+    gap: 0; max-width: 420px; margin: 0 auto;
+    border: 2px dashed var(--border); border-radius: var(--r-lg);
+    overflow: hidden;
+  }
+  .ticket-schema > div {
+    padding: 14px 20px; font-size: var(--fs-sm); font-weight: var(--fw-bold);
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .ticket-schema .zone-hero { background: var(--ink-800); color: #fff; border-bottom: 2px dashed var(--accent-500); }
+  .ticket-schema .zone-body { background: var(--surface); color: var(--text); border-bottom: 2px dashed var(--border); }
+  .ticket-schema .zone-code { background: var(--n-50); color: var(--text); }
+  .ticket-schema .zone-tag { font-size: var(--fs-xs); opacity: 0.7; font-weight: var(--fw-medium); text-transform: uppercase; letter-spacing: 0.5px; }
+
 </style>
 </head>
 <body class="lang-ja">
@@ -4078,9 +4349,545 @@ HND → ITM
         <strong>基礎 (Foundations):</strong> 1 カラー / 2 タイポ / 3 Radius・Shadow / 4 アイコン<br>
         <strong>コンポーネント:</strong> 5 汎用 / 6 Toritaviコンテンツ<br>
         <strong>状態別パターン:</strong> 7 認証 / 8 スキャン&OCR / 9 システムフィードバック / 10 Journey詳細<br>
-        <strong>統合:</strong> 11 プレビュー（デバイスフレーム） / 12 ガイドライン（このページ）<br>
-        <span class="muted">依存関係: 1→4 はすべての章の前提。5→6 は独立。7-10 は 1-6 のトークン/コンポーネントに依存。</span>
+        <strong>統合:</strong> 11 プレビュー（デバイスフレーム） / 12 ガイドライン（このページ） / <strong>13 チケット風UI</strong><br>
+        <span class="muted">依存関係: 1→4 はすべての章の前提。5→6 は独立。7-10・13 は 1-6 のトークン/コンポーネントに依存。</span>
       </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- === 13. Ticket Pattern                                    === -->
+  <!-- ============================================================ -->
+  <section class="section">
+    <h2 class="section-title">13. チケット風 UI パターン</h2>
+    <p class="section-desc">
+      Journey 内の Step を「疑似チケット」として視覚化し、<strong>最重要情報を一瞥で把握</strong>できるようにするための抽象化パターン。
+      過度な搭乗券の模倣は避け、toritavi の ink / accent トーンに寄せた情報設計を主目的とする。対応実装候補: <code class="mono">components/Ticket.tsx, app/trips/[id]/TripDetailClient.tsx</code>
+    </p>
+    <div class="section-divider"></div>
+
+    <div class="components">
+
+      <!-- 13.1 情報階層の三原則 -->
+      <div class="comp-card full">
+        <div class="comp-label">13.1 情報階層の三原則</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">
+          <div style="background:var(--info-50);border-radius:var(--r-md);padding:16px">
+            <div style="font-size:var(--fs-xs);font-weight:var(--fw-bold);color:var(--info-700);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px">PRIMARY · Hero</div>
+            <div style="font-size:var(--fs-md);font-weight:var(--fw-bold);margin-bottom:6px">いつ・どこ</div>
+            <div style="font-size:var(--fs-sm);line-height:1.65;color:var(--text-dim)">タップせず視認できるべき情報。時刻・空港コード・駅名・施設名など、行動の即時判断に必要なもの。font-size ≥ 22px, monospace 強調。</div>
+          </div>
+          <div style="background:var(--n-50);border-radius:var(--r-md);padding:16px">
+            <div style="font-size:var(--fs-xs);font-weight:var(--fw-bold);color:var(--text-dim);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px">SECONDARY · Meta</div>
+            <div style="font-size:var(--fs-md);font-weight:var(--fw-bold);margin-bottom:6px">行動に影響する属性</div>
+            <div style="font-size:var(--fs-sm);line-height:1.65;color:var(--text-dim)">便名・ゲート・座席・号車・チェックアウト時刻など。12-15px のグリッドで 2-3 列に配置し、ラベル + 値で提示。</div>
+          </div>
+          <div style="background:var(--n-50);border-radius:var(--r-md);padding:16px;border:1px solid var(--border)">
+            <div style="font-size:var(--fs-xs);font-weight:var(--fw-bold);color:var(--text-dim);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px">TERTIARY · Code</div>
+            <div style="font-size:var(--fs-md);font-weight:var(--fw-bold);margin-bottom:6px">参照 / 認証</div>
+            <div style="font-size:var(--fs-sm);line-height:1.65;color:var(--text-dim)">確認番号・予約番号・QR / バーコード。下段フッターゾーンに固定。monospace + letter-spacing で可読性。</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 13.2 3段構造 -->
+      <div class="comp-card full">
+        <div class="comp-label">13.2 3 段構造（Hero / Meta / Code）</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:center">
+          <div>
+            <div class="ticket-schema">
+              <div class="zone-hero">Hero Zone<span class="zone-tag">Primary</span></div>
+              <div class="zone-body">Meta Zone<span class="zone-tag">Secondary</span></div>
+              <div class="zone-code">Code Zone<span class="zone-tag">Tertiary</span></div>
+            </div>
+          </div>
+          <div>
+            <ul style="font-size:var(--fs-sm);line-height:1.9;padding-left:18px;color:var(--text-dim);margin:0">
+              <li><strong style="color:var(--text)">Hero</strong>: ink グラデ背景。カテゴリアイコン(左) / 状態チップ(右) + メインルート/件名</li>
+              <li><strong style="color:var(--text)">Perforation</strong>: Hero と Meta の境界に破線 + 両端の半円ノッチで「切り取り感」を演出</li>
+              <li><strong style="color:var(--text)">Meta</strong>: 白背景。2-3 列グリッドで 4-8 項目</li>
+              <li><strong style="color:var(--text)">Code</strong>: n-50 背景。確認番号 + 疑似バーコード/QR</li>
+            </ul>
+            <p class="muted" style="font-size:var(--fs-xs);margin-top:10px">
+              <strong style="color:var(--text)">余白基準:</strong> Hero 20-22px / Meta 16-22px / Code 14-22px。
+              一貫性のため <code class="mono">padding-inline: 22px</code> を基準とする。
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 13.3 構造要素カタログ -->
+      <div class="comp-card full">
+        <div class="comp-label">13.3 構造要素カタログ — Notch / Perforation / Code</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">
+          <div>
+            <div style="font-size:var(--fs-xs);font-weight:var(--fw-bold);color:var(--text-dim);margin-bottom:8px">① ノッチ + ミシン目</div>
+            <div style="background:var(--bg);padding:20px;border-radius:var(--r-md)">
+              <div style="background:var(--surface);border-radius:var(--r-md);overflow:hidden;box-shadow:var(--shadow-xs)">
+                <div style="height:50px;background:var(--ink-800)"></div>
+                <div class="ticket-perf"></div>
+                <div style="height:60px"></div>
+              </div>
+            </div>
+            <p class="muted" style="font-size:var(--fs-xs);margin-top:6px">background 色に合わせたノッチ。親の <code class="mono">--bg</code> トークンを優先</p>
+          </div>
+          <div>
+            <div style="font-size:var(--fs-xs);font-weight:var(--fw-bold);color:var(--text-dim);margin-bottom:8px">② バーコード（疑似）</div>
+            <div style="background:var(--n-50);padding:14px;border-radius:var(--r-md);display:flex;justify-content:flex-end">
+              <div class="ticket-barcode">
+                <span class="ticket-bar"></span><span class="ticket-bar thin"></span><span class="ticket-bar thick"></span><span class="ticket-bar thin"></span>
+                <span class="ticket-bar"></span><span class="ticket-bar thick"></span><span class="ticket-bar thin"></span>
+                <span class="ticket-bar"></span><span class="ticket-bar thin"></span><span class="ticket-bar"></span>
+                <span class="ticket-bar thick"></span><span class="ticket-bar thin"></span><span class="ticket-bar"></span>
+                <span class="ticket-bar"></span><span class="ticket-bar thin"></span><span class="ticket-bar thick"></span>
+                <span class="ticket-bar thin"></span><span class="ticket-bar"></span><span class="ticket-bar thin"></span>
+              </div>
+            </div>
+            <p class="muted" style="font-size:var(--fs-xs);margin-top:6px">純装飾。実データ走査不可のため意図的に非実用。実用QRはコード領域右端に差し替え</p>
+          </div>
+          <div>
+            <div style="font-size:var(--fs-xs);font-weight:var(--fw-bold);color:var(--text-dim);margin-bottom:8px">③ 確認番号 (monospace)</div>
+            <div style="background:var(--n-50);padding:14px;border-radius:var(--r-md)">
+              <div class="ticket-code-label">確認番号</div>
+              <div class="ticket-code-value">HHQL3Y</div>
+            </div>
+            <p class="muted" style="font-size:var(--fs-xs);margin-top:6px"><code class="mono">font-mono + letter-spacing:2px</code> で読み取り誤差防止</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 13.4 カテゴリ別 情報優先順位 -->
+      <div class="comp-card full">
+        <div class="comp-label">13.4 カテゴリ別 情報優先順位（Primary / Secondary / Tertiary）</div>
+        <div style="overflow-x:auto;margin-top:8px">
+          <table style="width:100%;border-collapse:collapse;font-size:var(--fs-sm);min-width:640px">
+            <thead>
+              <tr style="background:var(--n-50);text-align:left">
+                <th style="padding:10px 12px;font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);border-bottom:1px solid var(--border);width:110px">カテゴリ</th>
+                <th style="padding:10px 12px;font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:0.5px;color:var(--info-700);border-bottom:1px solid var(--border)">Primary (Hero)</th>
+                <th style="padding:10px 12px;font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);border-bottom:1px solid var(--border)">Secondary (Meta)</th>
+                <th style="padding:10px 12px;font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);border-bottom:1px solid var(--border);width:140px">Tertiary (Code)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td style="padding:10px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)">飛行機</td><td style="padding:10px 12px;border-bottom:1px dashed var(--border);font-weight:var(--fw-bold)">出発時刻 → 到着時刻 / 出発空港 → 到着空港</td><td style="padding:10px 12px;border-bottom:1px dashed var(--border)">便名, 日付, ゲート番号, 座席番号, タイムゾーン</td><td style="padding:10px 12px;border-bottom:1px dashed var(--border)" class="mono">確認番号 + QR</td></tr>
+              <tr><td style="padding:10px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)">列車</td><td style="padding:10px 12px;border-bottom:1px dashed var(--border);font-weight:var(--fw-bold)">発車時刻 → 到着時刻 / 乗車駅 → 降車駅</td><td style="padding:10px 12px;border-bottom:1px dashed var(--border)">列車名, 日付, 号車, 座席</td><td style="padding:10px 12px;border-bottom:1px dashed var(--border)" class="mono">確認番号</td></tr>
+              <tr><td style="padding:10px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)">バス</td><td style="padding:10px 12px;border-bottom:1px dashed var(--border);font-weight:var(--fw-bold)">出発時刻 → 到着時刻 / 乗車地 → 降車地</td><td style="padding:10px 12px;border-bottom:1px dashed var(--border)">路線名, 日付, 座席</td><td style="padding:10px 12px;border-bottom:1px dashed var(--border)" class="mono">確認番号</td></tr>
+              <tr><td style="padding:10px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)">宿泊</td><td style="padding:10px 12px;border-bottom:1px dashed var(--border);font-weight:var(--fw-bold)">施設名（大見出し） + 宿泊日数</td><td style="padding:10px 12px;border-bottom:1px dashed var(--border)">チェックイン / アウト日時, 住所, 部屋タイプ</td><td style="padding:10px 12px;border-bottom:1px dashed var(--border)" class="mono">予約番号</td></tr>
+              <tr><td style="padding:10px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)">観光 / チケット</td><td style="padding:10px 12px;border-bottom:1px dashed var(--border);font-weight:var(--fw-bold)">開演時刻 + 会場</td><td style="padding:10px 12px;border-bottom:1px dashed var(--border)">日付, 座席番号, 入場ゲート</td><td style="padding:10px 12px;border-bottom:1px dashed var(--border)" class="mono">QR コード</td></tr>
+              <tr><td style="padding:10px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)">商談</td><td style="padding:10px 12px;border-bottom:1px dashed var(--border);font-weight:var(--fw-bold)" class="muted">開始時刻 + 場所（quiet）</td><td style="padding:10px 12px;border-bottom:1px dashed var(--border)">タイトル, 終了時刻, 先方担当</td><td style="padding:10px 12px;border-bottom:1px dashed var(--border)">—</td></tr>
+              <tr><td style="padding:10px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)">食事</td><td style="padding:10px 12px;border-bottom:1px dashed var(--border);font-weight:var(--fw-bold)" class="muted">予約時刻 + 店名（quiet）</td><td style="padding:10px 12px;border-bottom:1px dashed var(--border)">日付, 人数, 住所</td><td style="padding:10px 12px;border-bottom:1px dashed var(--border)" class="mono">予約番号（任意）</td></tr>
+              <tr><td style="padding:10px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)">病院</td><td style="padding:10px 12px;border-bottom:1px dashed var(--border);font-weight:var(--fw-bold)">予約時刻 + 施設名</td><td style="padding:10px 12px;border-bottom:1px dashed var(--border)">受診日, 診療科</td><td style="padding:10px 12px;border-bottom:1px dashed var(--border)" class="mono">診察券番号</td></tr>
+              <tr><td style="padding:10px 12px;font-weight:var(--fw-bold)">その他</td><td style="padding:10px 12px;font-weight:var(--fw-bold)" class="muted">時刻 + タイトル（quiet）</td><td style="padding:10px 12px;">日付, 場所</td><td style="padding:10px 12px;" class="mono">確認番号（任意）</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="muted" style="font-size:var(--fs-xs);margin-top:10px">
+          <strong style="color:var(--text)">quiet 指定カテゴリ</strong>（商談 / 食事 / その他）はチケット化を強要しない。Hero 背景を white に落とし、border-left の accent 線でカテゴリだけ示す <code class="mono">.ticket--quiet</code> バリエーションで提示（13.5 ④参照）。
+        </p>
+      </div>
+
+      <!-- 13.5 サイズバリアント -->
+      <div class="comp-card full">
+        <div class="comp-label">13.5 サイズバリアント（Compact / Large / Drawer / Incomplete / Quiet）</div>
+
+        <!-- ① Compact -->
+        <div style="margin-top:14px">
+          <div style="font-size:var(--fs-sm);font-weight:var(--fw-bold);margin-bottom:8px">① コンパクト（一覧カード）</div>
+          <div class="ticket ticket--compact ticket--flight">
+            <div class="ticket-hero">
+              <div class="ticket-hero-top">
+                <span class="ticket-hero-category"><svg class="ic-svg sm"><use href="#i-plane"/></svg>飛行機 · 2024-09-08</span>
+                <span class="ticket-hero-flag">準備中</span>
+              </div>
+              <div class="ticket-route">
+                <div class="ticket-port"><div class="ticket-port-code">SJC</div><div class="ticket-port-time">22:55</div></div>
+                <div class="ticket-arrow"><div class="ticket-arrow-line"></div></div>
+                <div class="ticket-port ticket-port--right"><div class="ticket-port-code">NRT</div><div class="ticket-port-time">+1 06:30</div></div>
+              </div>
+            </div>
+            <div class="ticket-perf"></div>
+            <div class="ticket-code-zone">
+              <div class="ticket-code-main"><div class="ticket-code-label">便名 / 確認番号</div><div class="ticket-code-value" style="font-size:14px">ZG029 · W2TL8Q</div></div>
+              <div class="ticket-barcode"><span class="ticket-bar"></span><span class="ticket-bar thin"></span><span class="ticket-bar thick"></span><span class="ticket-bar"></span><span class="ticket-bar thin"></span><span class="ticket-bar"></span><span class="ticket-bar thick"></span><span class="ticket-bar thin"></span><span class="ticket-bar"></span></div>
+            </div>
+          </div>
+          <p class="muted" style="font-size:var(--fs-xs);margin-top:8px">Meta 行を省略し Hero + Code のみ。リストで視線が縦に流れやすくするため 2 階層に圧縮。高さ約 180px。</p>
+        </div>
+
+        <!-- ② Large -->
+        <div style="margin-top:22px">
+          <div style="font-size:var(--fs-sm);font-weight:var(--fw-bold);margin-bottom:8px">② ラージ（詳細上部サマリー）</div>
+          <div class="ticket ticket--large ticket--flight">
+            <div class="ticket-hero">
+              <div class="ticket-hero-top">
+                <span class="ticket-hero-category"><svg class="ic-svg sm"><use href="#i-plane"/></svg>ZIPAIR TOKYO · ZG029</span>
+                <span class="ticket-hero-flag warn">要確認</span>
+              </div>
+              <div class="ticket-route">
+                <div class="ticket-port"><div class="ticket-port-code">SJC</div><div class="ticket-port-name">サンノゼ国際空港</div><div class="ticket-port-time">22:55</div><div class="ticket-port-date">2024-09-08</div></div>
+                <div class="ticket-arrow"><div class="ticket-arrow-duration">約 11h 35m</div><div class="ticket-arrow-line"></div><div class="ticket-arrow-duration">翌日着</div></div>
+                <div class="ticket-port ticket-port--right"><div class="ticket-port-code">NRT</div><div class="ticket-port-name">東京成田空港</div><div class="ticket-port-time">06:30</div><div class="ticket-port-date">2024-09-09</div></div>
+              </div>
+            </div>
+            <div class="ticket-perf"></div>
+            <div class="ticket-body">
+              <div class="ticket-meta-cell"><div class="ticket-meta-label">ゲート</div><div class="ticket-meta-value empty">未読取</div></div>
+              <div class="ticket-meta-cell"><div class="ticket-meta-label">座席</div><div class="ticket-meta-value empty">未読取</div></div>
+              <div class="ticket-meta-cell"><div class="ticket-meta-label">タイムゾーン <span class="ticket-meta-badge">推定</span></div><div class="ticket-meta-value inferred">PST / JST</div></div>
+            </div>
+            <div class="ticket-code-zone">
+              <div class="ticket-code-main"><div class="ticket-code-label">確認番号</div><div class="ticket-code-value">W2TL8Q</div></div>
+              <div class="ticket-barcode">
+                <span class="ticket-bar"></span><span class="ticket-bar thin"></span><span class="ticket-bar thick"></span><span class="ticket-bar thin"></span>
+                <span class="ticket-bar"></span><span class="ticket-bar thick"></span><span class="ticket-bar thin"></span>
+                <span class="ticket-bar"></span><span class="ticket-bar thin"></span><span class="ticket-bar"></span>
+                <span class="ticket-bar thick"></span><span class="ticket-bar thin"></span><span class="ticket-bar"></span>
+                <span class="ticket-bar"></span><span class="ticket-bar thin"></span><span class="ticket-bar thick"></span>
+              </div>
+            </div>
+          </div>
+          <p class="muted" style="font-size:var(--fs-xs);margin-top:8px">Hero + Meta(3列) + Code の完全 3 段構造。現在の画面 2（ZIPAIR ZG029）の置き換え提案。</p>
+        </div>
+
+        <!-- ③ Drawer -->
+        <div style="margin-top:22px">
+          <div style="font-size:var(--fs-sm);font-weight:var(--fw-bold);margin-bottom:8px">③ Drawer（Bottom Sheet 内）</div>
+          <div style="background:var(--ink-800);padding:40px 18px 0;border-radius:var(--r-lg);max-width:420px;margin:0 auto">
+            <div style="background:var(--surface);border-radius:var(--r-xl) var(--r-xl) 0 0;padding:12px 18px">
+              <div style="height:4px;width:40px;background:var(--n-300);border-radius:2px;margin:0 auto 10px"></div>
+              <div class="ticket ticket--flight ticket-on-dark" style="box-shadow:none">
+                <div class="ticket-hero">
+                  <div class="ticket-hero-top">
+                    <span class="ticket-hero-category"><svg class="ic-svg sm"><use href="#i-plane"/></svg>ZG029</span>
+                    <span class="ticket-hero-flag warn">要確認</span>
+                  </div>
+                  <div class="ticket-route">
+                    <div class="ticket-port"><div class="ticket-port-code">SJC</div><div class="ticket-port-time">22:55</div><div class="ticket-port-date">09-08</div></div>
+                    <div class="ticket-arrow"><div class="ticket-arrow-line"></div></div>
+                    <div class="ticket-port ticket-port--right"><div class="ticket-port-code">NRT</div><div class="ticket-port-time">06:30</div><div class="ticket-port-date">09-09 翌</div></div>
+                  </div>
+                </div>
+                <div class="ticket-perf"></div>
+                <div class="ticket-code-zone" style="padding:10px 22px">
+                  <div class="ticket-code-value" style="font-size:15px">W2TL8Q</div>
+                  <div class="ticket-qr"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p class="muted" style="font-size:var(--fs-xs);margin-top:8px">Drawer の薄い上辺（dark navy）と馴染む <code class="mono">.ticket-on-dark</code> バリエーション。ノッチ内側色を ink-800 に合わせる。</p>
+        </div>
+
+        <!-- ④ Incomplete -->
+        <div style="margin-top:22px">
+          <div style="font-size:var(--fs-sm);font-weight:var(--fw-bold);margin-bottom:8px">④ 未完成（OCR 結果確認中）</div>
+          <div class="ticket ticket--flight ticket--incomplete">
+            <div class="ticket-hero">
+              <div class="ticket-hero-top">
+                <span class="ticket-hero-category"><svg class="ic-svg sm"><use href="#i-plane"/></svg>ZIPAIR · ZG029</span>
+                <span class="ticket-hero-flag danger">項目不足</span>
+              </div>
+              <div class="ticket-route">
+                <div class="ticket-port"><div class="ticket-port-code">SJC</div><div class="ticket-port-name">サンノゼ国際</div><div class="ticket-port-time" style="opacity:0.5">--:--</div><div class="ticket-port-date">未読取</div></div>
+                <div class="ticket-arrow"><div class="ticket-arrow-line"></div></div>
+                <div class="ticket-port ticket-port--right"><div class="ticket-port-code">NRT</div><div class="ticket-port-name">成田</div><div class="ticket-port-time" style="opacity:0.5">--:--</div><div class="ticket-port-date">未読取</div></div>
+              </div>
+            </div>
+            <div class="ticket-perf"></div>
+            <div class="ticket-body">
+              <div class="ticket-meta-cell"><div class="ticket-meta-label">ゲート</div><div class="ticket-meta-value empty">未読取</div></div>
+              <div class="ticket-meta-cell"><div class="ticket-meta-label">座席</div><div class="ticket-meta-value empty">未読取</div></div>
+              <div class="ticket-meta-cell"><div class="ticket-meta-label">便名</div><div class="ticket-meta-value">ZG029</div></div>
+            </div>
+            <div class="ticket-code-zone" style="background:var(--warn-50)">
+              <div>
+                <div class="ticket-code-label">確認番号</div>
+                <div class="ticket-code-value">W2TL8Q</div>
+              </div>
+              <button style="background:var(--accent-500);color:#fff;border:none;border-radius:var(--r-pill);padding:8px 14px;font-size:var(--fs-xs);font-weight:var(--fw-bold);cursor:pointer;display:flex;align-items:center;gap:6px"><svg class="ic-svg sm"><use href="#i-edit"/></svg>項目を補完</button>
+            </div>
+          </div>
+          <p class="muted" style="font-size:var(--fs-xs);margin-top:8px">未読取フィールドは斜体+破線下線。Code ゾーンが <code class="mono">warn-50</code> に変わり補完 CTA を常時露出。</p>
+        </div>
+
+        <!-- ⑤ Quiet (meet/dine) -->
+        <div style="margin-top:22px">
+          <div style="font-size:var(--fs-sm);font-weight:var(--fw-bold);margin-bottom:8px">⑤ Quiet バリエーション（商談 / 食事 / その他）</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+            <div class="ticket ticket--quiet ticket--meet">
+              <div class="ticket-hero">
+                <div class="ticket-hero-top"><span class="ticket-hero-category"><svg class="ic-svg sm"><use href="#i-meet"/></svg>商談</span></div>
+                <div class="ticket-hero-single">
+                  <div class="ticket-hero-subject">ABC 株式会社 定例</div>
+                  <div class="ticket-hero-subject-sub">04-18(木) 14:00 - 15:30 · グランフロント大阪</div>
+                </div>
+              </div>
+              <div class="ticket-body ticket-body--2col">
+                <div class="ticket-meta-cell"><div class="ticket-meta-label">先方</div><div class="ticket-meta-value plain">山田さん 他 2名</div></div>
+                <div class="ticket-meta-cell"><div class="ticket-meta-label">アジェンダ</div><div class="ticket-meta-value plain" style="font-size:13px">新サービス提案</div></div>
+              </div>
+            </div>
+            <div class="ticket ticket--quiet ticket--dine">
+              <div class="ticket-hero">
+                <div class="ticket-hero-top"><span class="ticket-hero-category"><svg class="ic-svg sm"><use href="#i-dine"/></svg>食事</span></div>
+                <div class="ticket-hero-single">
+                  <div class="ticket-hero-subject">レストラン オルフェ</div>
+                  <div class="ticket-hero-subject-sub">04-18(木) 19:00 · 大阪 西梅田</div>
+                </div>
+              </div>
+              <div class="ticket-body ticket-body--2col">
+                <div class="ticket-meta-cell"><div class="ticket-meta-label">人数</div><div class="ticket-meta-value">4名</div></div>
+                <div class="ticket-meta-cell"><div class="ticket-meta-label">予約番号</div><div class="ticket-meta-value">RF-120456</div></div>
+              </div>
+            </div>
+          </div>
+          <p class="muted" style="font-size:var(--fs-xs);margin-top:8px">Hero は白基調、左縁 3px の accent 帯でカテゴリを示す。バーコードやコードゾーンは省略。「航空券らしさ」を避け、カレンダーイベント寄りに。</p>
+        </div>
+      </div>
+
+      <!-- 13.6 状態の見せ分け -->
+      <div class="comp-card full">
+        <div class="comp-label">13.6 状態の見せ分け（5 state）</div>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px">
+          <div>
+            <div style="font-size:var(--fs-xs);font-weight:var(--fw-bold);color:var(--text-dim);margin-bottom:6px">未開始</div>
+            <div class="ticket ticket--compact ticket--flight" style="max-width:none">
+              <div class="ticket-hero">
+                <div class="ticket-hero-top"><span class="ticket-hero-category">飛行機</span><span class="ticket-hero-flag">準備中</span></div>
+                <div class="ticket-route"><div class="ticket-port"><div class="ticket-port-code">NRT</div><div class="ticket-port-time">10:00</div></div><div class="ticket-arrow"><div class="ticket-arrow-line"></div></div><div class="ticket-port ticket-port--right"><div class="ticket-port-code">KIX</div><div class="ticket-port-time">11:15</div></div></div>
+              </div>
+              <div class="ticket-perf"></div>
+              <div class="ticket-code-zone"><div class="ticket-code-value" style="font-size:14px">ABC123</div></div>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:var(--fs-xs);font-weight:var(--fw-bold);color:var(--info-700);margin-bottom:6px">進行中</div>
+            <div class="ticket ticket--compact ticket--flight" style="max-width:none;box-shadow:0 0 0 2px var(--info-500)">
+              <div class="ticket-hero">
+                <div class="ticket-hero-top"><span class="ticket-hero-category">飛行機</span><span class="ticket-hero-flag" style="background:var(--info-500)">進行中</span></div>
+                <div class="ticket-route"><div class="ticket-port"><div class="ticket-port-code">NRT</div><div class="ticket-port-time">10:00</div></div><div class="ticket-arrow"><div class="ticket-arrow-line"></div></div><div class="ticket-port ticket-port--right"><div class="ticket-port-code">KIX</div><div class="ticket-port-time">11:15</div></div></div>
+              </div>
+              <div class="ticket-perf"></div>
+              <div class="ticket-code-zone"><div class="ticket-code-value" style="font-size:14px">ABC123</div></div>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:var(--fs-xs);font-weight:var(--fw-bold);color:var(--success-500);margin-bottom:6px">完了</div>
+            <div class="ticket ticket--compact ticket--flight ticket--done" style="max-width:none">
+              <div class="ticket-hero">
+                <div class="ticket-hero-top"><span class="ticket-hero-category">飛行機</span><span class="ticket-hero-flag success">完了</span></div>
+                <div class="ticket-route"><div class="ticket-port"><div class="ticket-port-code">NRT</div><div class="ticket-port-time">10:00</div></div><div class="ticket-arrow"><div class="ticket-arrow-line"></div></div><div class="ticket-port ticket-port--right"><div class="ticket-port-code">KIX</div><div class="ticket-port-time">11:15</div></div></div>
+              </div>
+              <div class="ticket-perf"></div>
+              <div class="ticket-code-zone"><div class="ticket-code-value" style="font-size:14px">ABC123</div></div>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:var(--fs-xs);font-weight:var(--fw-bold);color:var(--warn-700);margin-bottom:6px">要確認</div>
+            <div class="ticket ticket--compact ticket--flight" style="max-width:none;box-shadow:0 0 0 2px var(--warn-500)">
+              <div class="ticket-hero">
+                <div class="ticket-hero-top"><span class="ticket-hero-category">飛行機</span><span class="ticket-hero-flag warn">要確認</span></div>
+                <div class="ticket-route"><div class="ticket-port"><div class="ticket-port-code">NRT</div><div class="ticket-port-time">10:00</div></div><div class="ticket-arrow"><div class="ticket-arrow-line"></div></div><div class="ticket-port ticket-port--right"><div class="ticket-port-code">KIX</div><div class="ticket-port-time">11:15</div></div></div>
+              </div>
+              <div class="ticket-perf"></div>
+              <div class="ticket-code-zone" style="background:var(--warn-50)"><div class="ticket-code-value" style="font-size:14px">ABC123</div></div>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:var(--fs-xs);font-weight:var(--fw-bold);color:var(--danger-500);margin-bottom:6px">遅延 / キャンセル</div>
+            <div class="ticket ticket--compact ticket--flight ticket--canceled" style="max-width:none">
+              <div class="ticket-hero">
+                <div class="ticket-hero-top"><span class="ticket-hero-category">飛行機</span><span class="ticket-hero-flag danger">キャンセル</span></div>
+                <div class="ticket-route"><div class="ticket-port"><div class="ticket-port-code">NRT</div><div class="ticket-port-time">10:00</div></div><div class="ticket-arrow"><div class="ticket-arrow-line"></div></div><div class="ticket-port ticket-port--right"><div class="ticket-port-code">KIX</div><div class="ticket-port-time">11:15</div></div></div>
+              </div>
+              <div class="ticket-perf"></div>
+              <div class="ticket-code-zone"><div class="ticket-code-value" style="font-size:14px">ABC123</div></div>
+            </div>
+          </div>
+        </div>
+        <p class="muted" style="font-size:var(--fs-xs);margin-top:12px">
+          <strong style="color:var(--text)">状態ルール:</strong>
+          (1) 状態は <strong>フラグチップ + 外枠 box-shadow</strong> の 2 方向で示す / (2) <strong>完了</strong> は opacity 0.72 + saturate 0.85 で退色 / (3) <strong>キャンセル</strong> は値に打ち消し線 + grayscale / (4) <strong>要確認</strong> は Code ゾーンを warn 背景に差し替え / (5) <strong>進行中</strong> は info-500 アウトラインで現在性を強調。
+        </p>
+      </div>
+
+      <!-- 13.7 OCR 相性 -->
+      <div class="comp-card full">
+        <div class="comp-label">13.7 OCR / AI 推定 との相性</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+          <div>
+            <div style="font-size:var(--fs-xs);font-weight:var(--fw-bold);margin-bottom:6px">① 未読取</div>
+            <div style="border:1px solid var(--border);border-radius:var(--r-md);padding:14px">
+              <div class="ticket-meta-label">ゲート</div>
+              <div class="ticket-meta-value empty">未読取</div>
+            </div>
+            <p class="muted" style="font-size:var(--fs-xs);margin-top:6px">斜体 + <code class="mono">#C99F99</code>。Compact ではサイズを落として配置優先。</p>
+          </div>
+          <div>
+            <div style="font-size:var(--fs-xs);font-weight:var(--fw-bold);margin-bottom:6px">② AI 推定</div>
+            <div style="border:1px solid var(--border);border-radius:var(--r-md);padding:14px">
+              <div class="ticket-meta-label">タイムゾーン <span class="ticket-meta-badge">推定</span></div>
+              <div class="ticket-meta-value inferred">PST / JST</div>
+            </div>
+            <p class="muted" style="font-size:var(--fs-xs);margin-top:6px">値にハイライター風の下半分塗り (warn 35%)。「推定」バッジを必ず添える。</p>
+          </div>
+          <div>
+            <div style="font-size:var(--fs-xs);font-weight:var(--fw-bold);margin-bottom:6px">③ 要確認（複数欠落）</div>
+            <div style="border:1.5px solid var(--warn-500);border-radius:var(--r-md);padding:14px;background:var(--warn-50)">
+              <div class="ticket-meta-label">状態</div>
+              <div style="font-size:var(--fs-xs);color:var(--warn-700);font-weight:var(--fw-bold);margin-top:2px">3 項目を補完してください</div>
+            </div>
+            <p class="muted" style="font-size:var(--fs-xs);margin-top:6px">Hero のフラグチップを <code class="mono">flag.danger</code> に切替え、Meta ではなく Code ゾーンを warn 背景 + 補完 CTA に差し替える。</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 13.8 プレビュー -->
+      <div class="comp-card full">
+        <div class="comp-label">13.8 プレビュー — カテゴリ別サンプル</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:12px">
+
+          <!-- 飛行機 ZIPAIR -->
+          <div>
+            <div style="font-size:var(--fs-xs);color:var(--text-dim);margin-bottom:8px;font-weight:var(--fw-bold)">飛行機（現行 ZIPAIR の置換提案）</div>
+            <div class="ticket ticket--flight">
+              <div class="ticket-hero">
+                <div class="ticket-hero-top"><span class="ticket-hero-category"><svg class="ic-svg sm"><use href="#i-plane"/></svg>ZIPAIR · ZG029</span><span class="ticket-hero-flag warn">要確認</span></div>
+                <div class="ticket-route">
+                  <div class="ticket-port"><div class="ticket-port-code">SJC</div><div class="ticket-port-name">San Jose INT'L</div><div class="ticket-port-time">22:55</div><div class="ticket-port-date">09-08</div></div>
+                  <div class="ticket-arrow"><div class="ticket-arrow-line"></div><div class="ticket-arrow-duration">11h 35m</div></div>
+                  <div class="ticket-port ticket-port--right"><div class="ticket-port-code">NRT</div><div class="ticket-port-name">成田</div><div class="ticket-port-time">06:30</div><div class="ticket-port-date">09-09 翌</div></div>
+                </div>
+              </div>
+              <div class="ticket-perf"></div>
+              <div class="ticket-body">
+                <div class="ticket-meta-cell"><div class="ticket-meta-label">ゲート</div><div class="ticket-meta-value empty">未読取</div></div>
+                <div class="ticket-meta-cell"><div class="ticket-meta-label">座席</div><div class="ticket-meta-value empty">未読取</div></div>
+                <div class="ticket-meta-cell"><div class="ticket-meta-label">TZ <span class="ticket-meta-badge">推定</span></div><div class="ticket-meta-value inferred">PST/JST</div></div>
+              </div>
+              <div class="ticket-code-zone">
+                <div><div class="ticket-code-label">確認番号</div><div class="ticket-code-value">W2TL8Q</div></div>
+                <div class="ticket-qr"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 列車 -->
+          <div>
+            <div style="font-size:var(--fs-xs);color:var(--text-dim);margin-bottom:8px;font-weight:var(--fw-bold)">列車（のぞみ 15 号）</div>
+            <div class="ticket ticket--train">
+              <div class="ticket-hero">
+                <div class="ticket-hero-top"><span class="ticket-hero-category"><svg class="ic-svg sm"><use href="#i-train"/></svg>東海道新幹線 · のぞみ15号</span><span class="ticket-hero-flag success">確定</span></div>
+                <div class="ticket-route">
+                  <div class="ticket-port"><div class="ticket-port-code">東京</div><div class="ticket-port-name">東京駅</div><div class="ticket-port-time">08:30</div><div class="ticket-port-date">04-22</div></div>
+                  <div class="ticket-arrow"><div class="ticket-arrow-line"></div><div class="ticket-arrow-duration">2h 30m</div></div>
+                  <div class="ticket-port ticket-port--right"><div class="ticket-port-code">新大阪</div><div class="ticket-port-name">新大阪</div><div class="ticket-port-time">11:00</div><div class="ticket-port-date">04-22</div></div>
+                </div>
+              </div>
+              <div class="ticket-perf"></div>
+              <div class="ticket-body">
+                <div class="ticket-meta-cell"><div class="ticket-meta-label">号車</div><div class="ticket-meta-value">7</div></div>
+                <div class="ticket-meta-cell"><div class="ticket-meta-label">座席</div><div class="ticket-meta-value">12A</div></div>
+                <div class="ticket-meta-cell"><div class="ticket-meta-label">指定</div><div class="ticket-meta-value plain" style="font-size:13px">窓側</div></div>
+              </div>
+              <div class="ticket-code-zone">
+                <div><div class="ticket-code-label">確認番号</div><div class="ticket-code-value">TK-445123</div></div>
+                <div class="ticket-barcode"><span class="ticket-bar"></span><span class="ticket-bar thin"></span><span class="ticket-bar thick"></span><span class="ticket-bar thin"></span><span class="ticket-bar"></span><span class="ticket-bar thick"></span><span class="ticket-bar thin"></span><span class="ticket-bar"></span><span class="ticket-bar thin"></span><span class="ticket-bar"></span><span class="ticket-bar thick"></span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 宿泊 -->
+          <div>
+            <div style="font-size:var(--fs-xs);color:var(--text-dim);margin-bottom:8px;font-weight:var(--fw-bold)">宿泊（施設名主役）</div>
+            <div class="ticket ticket--lodge">
+              <div class="ticket-hero">
+                <div class="ticket-hero-top"><span class="ticket-hero-category"><svg class="ic-svg sm"><use href="#i-lodge"/></svg>宿泊 · 2 泊</span><span class="ticket-hero-flag">準備中</span></div>
+                <div class="ticket-hero-single">
+                  <div class="ticket-hero-subject">ホテル 大阪ベイ</div>
+                  <div class="ticket-hero-subject-sub">スタンダードツイン / 禁煙</div>
+                </div>
+              </div>
+              <div class="ticket-perf"></div>
+              <div class="ticket-body">
+                <div class="ticket-meta-cell"><div class="ticket-meta-label">チェックイン</div><div class="ticket-meta-value">04-22 15:00</div></div>
+                <div class="ticket-meta-cell"><div class="ticket-meta-label">チェックアウト</div><div class="ticket-meta-value">04-24 11:00</div></div>
+                <div class="ticket-meta-cell"><div class="ticket-meta-label">住所</div><div class="ticket-meta-value plain" style="font-size:12px">大阪市港区海岸通1-5-15</div></div>
+              </div>
+              <div class="ticket-code-zone">
+                <div><div class="ticket-code-label">予約番号</div><div class="ticket-code-value">HB-394021</div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 観光 / チケット -->
+          <div>
+            <div style="font-size:var(--fs-xs);color:var(--text-dim);margin-bottom:8px;font-weight:var(--fw-bold)">観光 / イベント（座席 + QR 強調）</div>
+            <div class="ticket ticket--sight">
+              <div class="ticket-hero">
+                <div class="ticket-hero-top"><span class="ticket-hero-category"><svg class="ic-svg sm"><use href="#i-sight"/></svg>コンサート</span><span class="ticket-hero-flag">準備中</span></div>
+                <div class="ticket-hero-single">
+                  <div class="ticket-hero-subject">Mr.Children DOME TOUR</div>
+                  <div class="ticket-hero-subject-sub">東京ドーム · 04-20 開演 18:00 / 開場 16:30</div>
+                </div>
+              </div>
+              <div class="ticket-perf"></div>
+              <div class="ticket-body">
+                <div class="ticket-meta-cell"><div class="ticket-meta-label">ブロック</div><div class="ticket-meta-value">22</div></div>
+                <div class="ticket-meta-cell"><div class="ticket-meta-label">列</div><div class="ticket-meta-value">14</div></div>
+                <div class="ticket-meta-cell"><div class="ticket-meta-label">番号</div><div class="ticket-meta-value" style="font-size:18px;color:var(--accent-500)">087</div></div>
+              </div>
+              <div class="ticket-code-zone">
+                <div><div class="ticket-code-label">入場 QR</div><div class="ticket-code-value" style="font-size:13px">TC-440291</div></div>
+                <div class="ticket-qr"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- バス -->
+          <div>
+            <div style="font-size:var(--fs-xs);color:var(--text-dim);margin-bottom:8px;font-weight:var(--fw-bold)">バス（空港連絡）</div>
+            <div class="ticket ticket--bus">
+              <div class="ticket-hero">
+                <div class="ticket-hero-top"><span class="ticket-hero-category"><svg class="ic-svg sm"><use href="#i-bus"/></svg>関西空港交通バス</span><span class="ticket-hero-flag">準備中</span></div>
+                <div class="ticket-route">
+                  <div class="ticket-port"><div class="ticket-port-code">大阪駅</div><div class="ticket-port-time">07:30</div></div>
+                  <div class="ticket-arrow"><div class="ticket-arrow-line"></div></div>
+                  <div class="ticket-port ticket-port--right"><div class="ticket-port-code">KIX</div><div class="ticket-port-time">08:45</div></div>
+                </div>
+              </div>
+              <div class="ticket-perf"></div>
+              <div class="ticket-code-zone">
+                <div><div class="ticket-code-label">確認番号</div><div class="ticket-code-value">KB-553012</div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 病院 -->
+          <div>
+            <div style="font-size:var(--fs-xs);color:var(--text-dim);margin-bottom:8px;font-weight:var(--fw-bold)">病院（時刻 + 施設）</div>
+            <div class="ticket ticket--hospital">
+              <div class="ticket-hero">
+                <div class="ticket-hero-top"><span class="ticket-hero-category"><svg class="ic-svg sm"><use href="#i-hospital"/></svg>病院</span><span class="ticket-hero-flag">準備中</span></div>
+                <div class="ticket-hero-single">
+                  <div class="ticket-hero-subject">田中内科クリニック</div>
+                  <div class="ticket-hero-subject-sub">04-18(木) 10:30 · 内科</div>
+                </div>
+              </div>
+              <div class="ticket-perf"></div>
+              <div class="ticket-code-zone">
+                <div><div class="ticket-code-label">診察券番号</div><div class="ticket-code-value">58234</div></div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+        <p class="muted" style="font-size:var(--fs-xs);margin-top:14px">
+          <strong style="color:var(--text)">配色メモ:</strong> カテゴリごとに Hero の gradient を微差で変え（飛行機=navy / 列車=deep green / 宿泊=warm brown / 観光=deep violet / バス=blue-slate / 病院=neutral slate）、identity を強制せずトーンで識別。accent (orange-500) は矢印・QRガイド・入場番号など「今日目を引きたい所」にだけ使う。
+        </p>
+      </div>
+
     </div>
   </section>
 
