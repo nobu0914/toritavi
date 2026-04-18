@@ -32,7 +32,7 @@ import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { StepDetailDrawer, emptyStepDraft } from "@/components/StepDetailDrawer";
 import type { StepDraft } from "@/components/StepDetailDrawer";
 import classes from "./page.module.css";
-import { deleteJourney, getJourney, updateJourney } from "@/lib/store-client";
+import { deleteJourney, getJourney, getStepImages, updateJourney } from "@/lib/store-client";
 import {
   formatDateRange,
   formatDateJP,
@@ -101,6 +101,25 @@ export default function TripDetailClient({
   const [pendingStepDeleteIndex, setPendingStepDeleteIndex] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [stepImages, setStepImages] = useState<{ sourceImageUrl?: string; sourceImageUrls?: string[] }>({});
+
+  useEffect(() => {
+    if (!modalOpened || editingIndex === null || !journey) {
+      setStepImages({});
+      return;
+    }
+    const step = journey.steps[editingIndex];
+    if (!step) return;
+    if (step.sourceImageUrl || (step.sourceImageUrls && step.sourceImageUrls.length > 0)) {
+      setStepImages({ sourceImageUrl: step.sourceImageUrl, sourceImageUrls: step.sourceImageUrls });
+      return;
+    }
+    let cancelled = false;
+    getStepImages(step.id).then((imgs) => {
+      if (!cancelled) setStepImages(imgs);
+    });
+    return () => { cancelled = true; };
+  }, [modalOpened, editingIndex, journey]);
 
   useEffect(() => {
     const toast = sessionStorage.getItem("toritavi_toast");
@@ -484,8 +503,8 @@ export default function TripDetailClient({
         onSave={handleSaveStep}
         isEdit={editingIndex !== null}
         editingTitle={editingIndex !== null ? journey.steps[editingIndex]?.title : undefined}
-        sourceImageUrl={editingIndex !== null ? journey.steps[editingIndex]?.sourceImageUrl : undefined}
-        sourceImageUrls={editingIndex !== null ? journey.steps[editingIndex]?.sourceImageUrls : undefined}
+        sourceImageUrl={stepImages.sourceImageUrl}
+        sourceImageUrls={stepImages.sourceImageUrls}
         needsReview={editingIndex !== null ? journey.steps[editingIndex]?.needsReview : undefined}
         inferred={editingIndex !== null ? journey.steps[editingIndex]?.inferred : undefined}
       />

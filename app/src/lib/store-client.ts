@@ -50,6 +50,14 @@ export async function deleteJourney(id: string): Promise<void> {
   return core.deleteJourney(sb, id);
 }
 
+export async function getStepImages(
+  stepId: string,
+): Promise<{ sourceImageUrl?: string; sourceImageUrls?: string[] }> {
+  if (isGuestMode()) return {};
+  const sb = createClient();
+  return core.getStepImages(sb, stepId);
+}
+
 export function generateId(): string {
   return core.generateId();
 }
