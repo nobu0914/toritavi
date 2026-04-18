@@ -1198,26 +1198,58 @@
   }
   .ticket-scan-head {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 10px 22px;
+    padding: 12px 22px;
+    min-height: 44px;
     font-size: 11px; font-weight: 700; color: var(--text-dim);
     text-transform: uppercase; letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: background 0.12s;
   }
+  .ticket-scan-head:hover { background: var(--n-100); }
   .ticket-scan-head-left {
     display: flex; align-items: center; gap: 8px;
   }
-  .ticket-scan-chevron {
-    width: 22px; height: 22px; border-radius: 50%;
-    border: 1px solid var(--border); background: var(--surface);
-    color: var(--text-dim); display: flex; align-items: center; justify-content: center;
-    cursor: pointer; padding: 0;
+  .ticket-scan-head-right {
+    display: flex; align-items: center; gap: 6px;
+    color: var(--text-dim);
+    font-size: 11px; font-weight: 700;
+    text-transform: none; letter-spacing: 0;
   }
-  .ticket-scan-dl {
-    width: 26px; height: 26px; border-radius: 50%;
-    border: none; background: var(--info-50); color: var(--info-700);
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer; padding: 0;
+  .ticket-scan-head-right .ic-svg { transition: transform 0.2s; }
+  .ticket-scan-head--open .ticket-scan-head-right .ic-svg { transform: rotate(180deg); }
+
+  /* Floating download button anchored to image */
+  .ticket-scan-image-wrap { position: relative; }
+  .ticket-scan-dl-float {
+    position: absolute; top: 10px; right: 10px;
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 12px; border: none; border-radius: var(--r-pill);
+    background: rgba(15,27,45,0.82); color: #fff;
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    font-size: 12px; font-weight: 700; font-family: inherit;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    min-height: 36px;
   }
-  .ticket-scan-dl:hover { background: var(--info-500); color: #fff; }
+  .ticket-scan-dl-float:hover { background: var(--ink-800); }
+
+  /* Explicit action row (fallback for mail variant / no-image) */
+  .ticket-scan-action-row {
+    display: flex; justify-content: flex-end;
+    padding: 10px 0 2px;
+  }
+  .ticket-scan-action-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px; border-radius: var(--r-pill);
+    background: var(--ink-800); color: #fff; border: none;
+    font-size: 12px; font-weight: 700; font-family: inherit;
+    cursor: pointer;
+    min-height: 36px;
+  }
+  .ticket-scan-action-btn.ghost {
+    background: var(--surface); color: var(--text);
+    border: 1px solid var(--border);
+  }
 
   .ticket-scan-peek {
     display: flex; gap: 10px;
@@ -4986,8 +5018,12 @@ HND → ITM
       <div class="comp-card full">
         <div class="comp-label">13.9 スキャン元データ付きバリエーション</div>
         <p class="muted" style="font-size:var(--fs-sm);margin-bottom:14px">
-          Code ゾーンの下に <strong style="color:var(--text)">Scan Source</strong> ゾーンを追加。折りたたみ/展開を切り替え、ダウンロードボタンを常に露出する。原本が存在しない（手入力・メール本文のみ）場合は非表示 or 代替表示に。
+          Code ゾーンの下に <strong style="color:var(--text)">Scan Source</strong> ゾーンを追加。<strong style="color:var(--accent-700)">ヘッダー行全域＝開閉トグル</strong>、<strong style="color:var(--accent-700)">ダウンロードは展開後に画像上の浮動ボタン</strong>として分離（トグルから 80px 以上離隔）。原本が存在しない（手入力）場合はゾーン非表示、メール本文のみの場合は「本文をコピー」ボタンを下段に配置。
         </p>
+        <div style="background:var(--warn-50);border:1px solid rgba(245,176,65,0.25);border-radius:var(--r-md);padding:12px 14px;margin-bottom:16px;font-size:var(--fs-xs);line-height:1.7">
+          <strong style="color:var(--warn-700)">インタラクション原則:</strong>
+          (1) 折りたたみ時は DL 非表示 — ワンタップ "展開" のみ受け付ける / (2) 展開時は画像右上に <code class="mono">ticket-scan-dl-float</code> でピル形ボタン + "保存" ラベル / (3) メール本文は画像が無いので本文ボックス下に <code class="mono">ticket-scan-action-btn</code> / (4) ヘッダーと DL ボタンのタップ領域は <strong style="color:var(--text)">縦 80px 以上離す</strong>（iOS HIG 44pt の約 2 倍）ので指タップで誤爆しない。
+        </div>
 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
 
@@ -5009,12 +5045,9 @@ HND → ITM
                 <div class="ticket-meta-cell"><div class="ticket-meta-label">確認番号</div><div class="ticket-meta-value">W2TL8Q</div></div>
               </div>
               <div class="ticket-scan">
-                <div class="ticket-scan-head">
+                <div class="ticket-scan-head" role="button" tabindex="0" aria-expanded="false">
                   <div class="ticket-scan-head-left"><svg class="ic-svg sm"><use href="#i-upload"/></svg>スキャン元 · 3 ページ · 824 KB</div>
-                  <div style="display:flex;gap:6px;align-items:center">
-                    <button class="ticket-scan-dl" aria-label="ダウンロード"><svg class="ic-svg sm"><use href="#i-download"/></svg></button>
-                    <button class="ticket-scan-chevron" aria-label="展開"><svg class="ic-svg sm"><use href="#i-down"/></svg></button>
-                  </div>
+                  <div class="ticket-scan-head-right"><span>展開</span><svg class="ic-svg sm"><use href="#i-down"/></svg></div>
                 </div>
                 <div class="ticket-scan-peek">
                   <div class="ticket-scan-peek-img"><svg class="ic-svg"><use href="#i-mail"/></svg></div>
@@ -5025,7 +5058,7 @@ HND → ITM
                 </div>
               </div>
             </div>
-            <p class="muted" style="font-size:var(--fs-xs);margin-top:8px">Scan ヘッダーに件名・サイズ + ⬇ と ∨ を並列配置。サムネイルは小さく「覗ける」だけ。</p>
+            <p class="muted" style="font-size:var(--fs-xs);margin-top:8px">Scan ヘッダー全域が「展開」トグル（<code class="mono">role=button, tabindex=0</code>）。ダウンロードは展開後にだけ出現するため誤タップしない。</p>
           </div>
 
           <!-- B. Expanded single image -->
@@ -5046,19 +5079,19 @@ HND → ITM
                 <div class="ticket-meta-cell"><div class="ticket-meta-label">確認番号</div><div class="ticket-meta-value">W2TL8Q</div></div>
               </div>
               <div class="ticket-scan">
-                <div class="ticket-scan-head">
+                <div class="ticket-scan-head ticket-scan-head--open" role="button" tabindex="0" aria-expanded="true">
                   <div class="ticket-scan-head-left"><svg class="ic-svg sm"><use href="#i-camera"/></svg>撮影 · 1 枚</div>
-                  <div style="display:flex;gap:6px;align-items:center">
-                    <button class="ticket-scan-dl" aria-label="ダウンロード"><svg class="ic-svg sm"><use href="#i-download"/></svg></button>
-                    <button class="ticket-scan-chevron" aria-label="閉じる" style="transform:rotate(180deg)"><svg class="ic-svg sm"><use href="#i-down"/></svg></button>
-                  </div>
+                  <div class="ticket-scan-head-right"><span>閉じる</span><svg class="ic-svg sm"><use href="#i-down"/></svg></div>
                 </div>
                 <div class="ticket-scan-full">
-                  <div class="ticket-scan-image"><svg class="ic-svg" style="width:36px;height:36px"><use href="#i-image"/></svg></div>
+                  <div class="ticket-scan-image-wrap">
+                    <div class="ticket-scan-image"><svg class="ic-svg" style="width:36px;height:36px"><use href="#i-image"/></svg></div>
+                    <button class="ticket-scan-dl-float" aria-label="原本を保存"><svg class="ic-svg sm"><use href="#i-download"/></svg>保存</button>
+                  </div>
                 </div>
               </div>
             </div>
-            <p class="muted" style="font-size:var(--fs-xs);margin-top:8px">展開時は aspect-ratio 4:3 で全幅表示。タップで全画面ビューア起動（⑨別途）。</p>
+            <p class="muted" style="font-size:var(--fs-xs);margin-top:8px">展開時のみ、画像右上に浮動「保存」ボタン。ヘッダートグルから 80px 以上離れた位置に固定され、誤タップが起こらない。</p>
           </div>
 
           <!-- C. Expanded multi-page PDF -->
@@ -5079,15 +5112,15 @@ HND → ITM
                 <div class="ticket-meta-cell"><div class="ticket-meta-label">確認番号</div><div class="ticket-meta-value">W2TL8Q</div></div>
               </div>
               <div class="ticket-scan">
-                <div class="ticket-scan-head">
+                <div class="ticket-scan-head ticket-scan-head--open" role="button" tabindex="0" aria-expanded="true">
                   <div class="ticket-scan-head-left"><svg class="ic-svg sm"><use href="#i-upload"/></svg>アップロード · PDF · 3 ページ</div>
-                  <div style="display:flex;gap:6px;align-items:center">
-                    <button class="ticket-scan-dl" aria-label="ダウンロード"><svg class="ic-svg sm"><use href="#i-download"/></svg></button>
-                    <button class="ticket-scan-chevron" aria-label="閉じる" style="transform:rotate(180deg)"><svg class="ic-svg sm"><use href="#i-down"/></svg></button>
-                  </div>
+                  <div class="ticket-scan-head-right"><span>閉じる</span><svg class="ic-svg sm"><use href="#i-down"/></svg></div>
                 </div>
                 <div class="ticket-scan-full">
-                  <div class="ticket-scan-image tall"><svg class="ic-svg" style="width:36px;height:36px"><use href="#i-image"/></svg></div>
+                  <div class="ticket-scan-image-wrap">
+                    <div class="ticket-scan-image tall"><svg class="ic-svg" style="width:36px;height:36px"><use href="#i-image"/></svg></div>
+                    <button class="ticket-scan-dl-float" aria-label="原本を保存"><svg class="ic-svg sm"><use href="#i-download"/></svg>PDF 保存</button>
+                  </div>
                   <div class="ticket-scan-pages">
                     <div class="ticket-scan-page-thumb">1</div>
                     <div class="ticket-scan-page-thumb active">2</div>
@@ -5096,7 +5129,7 @@ HND → ITM
                 </div>
               </div>
             </div>
-            <p class="muted" style="font-size:var(--fs-xs);margin-top:8px">展開画像は aspect-ratio 3:4（縦長ドキュメント）、サムネイル帯でページ切替。選択中は info-500 アウトライン。</p>
+            <p class="muted" style="font-size:var(--fs-xs);margin-top:8px">展開画像は aspect-ratio 3:4（縦長ドキュメント）、サムネイル帯でページ切替。DL は画像上浮動で保存範囲を明示（「PDF 保存」= 全ページ一括）。</p>
           </div>
 
           <!-- D. Mail import (no binary source) -->
@@ -5117,20 +5150,20 @@ HND → ITM
                 <div class="ticket-meta-cell"><div class="ticket-meta-label">確認番号</div><div class="ticket-meta-value">W2TL8Q</div></div>
               </div>
               <div class="ticket-scan">
-                <div class="ticket-scan-head">
+                <div class="ticket-scan-head ticket-scan-head--open" role="button" tabindex="0" aria-expanded="true">
                   <div class="ticket-scan-head-left"><svg class="ic-svg sm"><use href="#i-mail"/></svg>メール本文</div>
-                  <div style="display:flex;gap:6px;align-items:center">
-                    <button class="ticket-scan-dl" aria-label="本文コピー"><svg class="ic-svg sm"><use href="#i-copy"/></svg></button>
-                    <button class="ticket-scan-chevron" aria-label="閉じる" style="transform:rotate(180deg)"><svg class="ic-svg sm"><use href="#i-down"/></svg></button>
-                  </div>
+                  <div class="ticket-scan-head-right"><span>閉じる</span><svg class="ic-svg sm"><use href="#i-down"/></svg></div>
                 </div>
                 <div class="ticket-scan-mail">
                   <div class="ticket-scan-mail-from">From: noreply@zipair.net · 2024-08-20 14:22</div>
                   <div class="ticket-scan-mail-box">ご予約いただきありがとうございます。<br>便名: ZG029 ZIPAIR TOKYO<br>出発: 2024-09-08 22:55 San Jose (SJC)<br>到着: 2024-09-09 06:30 Tokyo Narita (NRT)<br>確認番号: W2TL8Q<br>搭乗手続きは出発 90 分前までにお済ませください。</div>
+                  <div class="ticket-scan-action-row">
+                    <button class="ticket-scan-action-btn"><svg class="ic-svg sm"><use href="#i-copy"/></svg>本文をコピー</button>
+                  </div>
                 </div>
               </div>
             </div>
-            <p class="muted" style="font-size:var(--fs-xs);margin-top:8px">画像が存在しないため、⬇ の代わりに <code class="mono">copy</code> アイコン。本文抜粋をスクロール可能なテキストボックスで表示。</p>
+            <p class="muted" style="font-size:var(--fs-xs);margin-top:8px">画像がないので浮動ボタンではなく本文下に「本文をコピー」ラベル付きボタン。ヘッダートグルとの距離は 180px 以上確保。</p>
           </div>
 
           <!-- E. Drawer-embedded full variant (推奨実装形) -->
@@ -5167,15 +5200,15 @@ HND → ITM
                     <div class="ticket-qr"></div>
                   </div>
                   <div class="ticket-scan">
-                    <div class="ticket-scan-head">
+                    <div class="ticket-scan-head ticket-scan-head--open" role="button" tabindex="0" aria-expanded="true">
                       <div class="ticket-scan-head-left"><svg class="ic-svg sm"><use href="#i-upload"/></svg>スキャン元 · PDF · 3 ページ</div>
-                      <div style="display:flex;gap:6px;align-items:center">
-                        <button class="ticket-scan-dl" aria-label="ダウンロード"><svg class="ic-svg sm"><use href="#i-download"/></svg></button>
-                        <button class="ticket-scan-chevron" aria-label="閉じる" style="transform:rotate(180deg)"><svg class="ic-svg sm"><use href="#i-down"/></svg></button>
-                      </div>
+                      <div class="ticket-scan-head-right"><span>閉じる</span><svg class="ic-svg sm"><use href="#i-down"/></svg></div>
                     </div>
                     <div class="ticket-scan-full">
-                      <div class="ticket-scan-image tall"><svg class="ic-svg" style="width:36px;height:36px"><use href="#i-image"/></svg></div>
+                      <div class="ticket-scan-image-wrap">
+                        <div class="ticket-scan-image tall"><svg class="ic-svg" style="width:36px;height:36px"><use href="#i-image"/></svg></div>
+                        <button class="ticket-scan-dl-float" aria-label="原本を保存"><svg class="ic-svg sm"><use href="#i-download"/></svg>PDF 保存</button>
+                      </div>
                       <div class="ticket-scan-pages">
                         <div class="ticket-scan-page-thumb">1</div>
                         <div class="ticket-scan-page-thumb active">2</div>
