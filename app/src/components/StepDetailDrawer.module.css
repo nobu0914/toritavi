@@ -16,6 +16,12 @@
   padding: 0 8px;
 }
 
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
 .body {
   flex: 1;
   overflow-y: auto;
@@ -70,6 +76,42 @@
   overflow: hidden;
   margin-bottom: 16px;
 }
+
+.previewHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--n-50);
+  border-bottom: 1px solid var(--border);
+}
+
+.previewMeta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.previewDlBtn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: var(--info-50);
+  color: var(--info-700);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.previewDlBtn:hover { background: var(--info-500); color: #fff; }
 
 .previewImageCropped {
   width: 100%;
@@ -154,6 +196,51 @@
   border-bottom: none;
 }
 
+.fieldRowTappable {
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.fieldRowTappable:hover {
+  background: var(--n-50);
+}
+
+.fieldRowEditing {
+  background: var(--info-50);
+  border-left: 2px solid var(--info-500);
+  padding-left: 12px;
+}
+
+.quickEditRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.quickEditConfirm,
+.quickEditCancel {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  flex-shrink: 0;
+  font-family: inherit;
+}
+
+.quickEditConfirm {
+  background: var(--success-500);
+  color: #fff;
+}
+
+.quickEditCancel {
+  background: var(--n-100);
+  color: var(--text-dim);
+}
+
 .fieldLabel {
   font-size: 11px;
   font-weight: 600;
@@ -201,4 +288,31 @@
 .ctaButton:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.footerRow {
+  display: flex;
+  gap: 10px;
+}
+
+.cancelButton {
+  flex: 1;
+  height: 48px;
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.cancelButton:hover {
+  background: var(--n-50);
+  color: var(--text);
+}
+
+.footerRow .ctaButton {
+  flex: 1;
 }

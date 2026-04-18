@@ -92,13 +92,10 @@ export default function TripDetailClient({
     useDisclosure(false);
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] =
     useDisclosure(false);
-  const [stepDeleteModalOpened, { open: openStepDeleteModal, close: closeStepDeleteModal }] =
-    useDisclosure(false);
   const [journeyMenuOpened, setJourneyMenuOpened] = useState(false);
   const [draft, setDraft] = useState<StepDraft>(emptyStepDraft());
   const [editingStepId, setEditingStepId] = useState<string>("new");
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const [pendingStepDeleteIndex, setPendingStepDeleteIndex] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [stepImages, setStepImages] = useState<{ sourceImageUrl?: string; sourceImageUrls?: string[] }>({});
@@ -244,26 +241,33 @@ export default function TripDetailClient({
     closeJourneyModal();
   };
 
-  const removeStep = (index: number) => {
-    persist({ ...journey, steps: journey.steps.filter((_, stepIndex) => stepIndex !== index) });
-  };
+  /**
+   * ⑥ Undo delete with 5s grace window.
+   * Optimistically removes the step from UI and schedules a persist.
+   * If the user taps "元に戻す" within 5s the timer is cancelled.
+   */
+  const softDeleteStep = (index: number) => {
+    if (!journey) return;
+    const victim = journey.steps[index];
+    if (!victim) return;
+    const remaining = journey.steps.filter((_, i) => i !== index);
+    const optimisticJourney = { ...journey, steps: remaining };
+    setJourney(optimisticJourney);
 
-  const requestStepDelete = (index: number) => {
-    setPendingStepDeleteIndex(index);
-    window.setTimeout(() => {
-      openStepDeleteModal();
-    }, 0);
-  };
+    const toastId = `undo-step-${victim.id}`;
+    let committed = false;
+    const timer = window.setTimeout(async () => {
+      committed = true;
+      try {
+        await updateJourney(optimisticJourney.id, optimisticJourney);
+      } catch (e) {
+        console.error("[delete-step] commit failed:", e);
+      }
+    }, 5000);
 
-  const confirmStepDelete = () => {
-    if (pendingStepDeleteIndex === null) return;
-    removeStep(pendingStepDeleteIndex);
-    setPendingStepDeleteIndex(null);
-    closeStepDeleteModal();
     notifications.show({
-      message: "Step を削除しました",
-      icon: <IconInfoCircle size={18} />,
-      autoClose: 3000,
+      id: toastId,
+      autoClose: 5000,
       withBorder: false,
       style: { background: "var(--ink-700)", color: "white" },
       styles: {
@@ -272,6 +276,48 @@ export default function TripDetailClient({
         description: { color: "white" },
         icon: { color: "white", background: "transparent" },
       },
+      icon: <IconTrash size={18} />,
+      message: (
+        <Box style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <span>Step を削除しました</span>
+          <button
+            type="button"
+            onClick={() => {
+              if (committed) return;
+              window.clearTimeout(timer);
+              const restored = { ...journey };
+              setJourney(restored);
+              notifications.hide(toastId);
+            }}
+            style={{ background: "transparent", border: "none", color: "var(--accent-500)", fontWeight: 700, cursor: "pointer", padding: 0 }}
+          >
+            元に戻す
+          </button>
+        </Box>
+      ),
+    });
+  };
+
+  const duplicateStep = (index: number) => {
+    if (!journey) return;
+    const src = journey.steps[index];
+    if (!src) return;
+    const copy: Step = {
+      ...src,
+      id: crypto.randomUUID(),
+      title: `${src.title} (複製)`,
+      status: "未開始",
+      sourceImageUrl: undefined,
+      sourceImageUrls: undefined,
+    };
+    persist({ ...journey, steps: [...journey.steps, copy] });
+    notifications.show({
+      message: "Step を複製しました",
+      icon: <IconCheck size={18} />,
+      autoClose: 2500,
+      withBorder: false,
+      style: { background: "var(--success-500)", color: "white" },
+      styles: { icon: { color: "white", background: "transparent" } },
     });
   };
 
@@ -507,6 +553,22 @@ export default function TripDetailClient({
         sourceImageUrls={stepImages.sourceImageUrls}
         needsReview={editingIndex !== null ? journey.steps[editingIndex]?.needsReview : undefined}
         inferred={editingIndex !== null ? journey.steps[editingIndex]?.inferred : undefined}
+        onCancelEdit={() => {
+          if (editingIndex === null) return;
+          openEdit(editingIndex);
+        }}
+        onDelete={() => {
+          if (editingIndex === null) return;
+          const idx = editingIndex;
+          closeModal();
+          setTimeout(() => softDeleteStep(idx), 150);
+        }}
+        onDuplicate={() => {
+          if (editingIndex === null) return;
+          const idx = editingIndex;
+          closeModal();
+          setTimeout(() => duplicateStep(idx), 150);
+        }}
       />
 
       <Modal
@@ -613,41 +675,6 @@ export default function TripDetailClient({
             </button>
             <button className={classes.confirmDelete} onClick={handleDelete} disabled={deleting}>
               {deleting ? "削除中..." : "削除する"}
-            </button>
-          </Box>
-        </Box>
-      </Modal>
-
-      <Modal
-        opened={stepDeleteModalOpened}
-        onClose={() => {
-          setPendingStepDeleteIndex(null);
-          closeStepDeleteModal();
-        }}
-        centered
-        radius="md"
-        classNames={{ content: classes.confirmModal }}
-        withCloseButton={false}
-      >
-        <Box className={classes.confirmPanel}>
-          <Text className={classes.confirmTitle}>ステップを削除しますか？</Text>
-          <Text className={classes.confirmBody}>
-            {pendingStepDeleteIndex !== null
-              ? `「${journey.steps[pendingStepDeleteIndex]?.title ?? ""}」が削除されます。この操作は取り消せません。`
-              : "この操作は取り消せません。"}
-          </Text>
-          <Box className={classes.confirmFooter}>
-            <button
-              className={classes.confirmCancel}
-              onClick={() => {
-                setPendingStepDeleteIndex(null);
-                closeStepDeleteModal();
-              }}
-            >
-              キャンセル
-            </button>
-            <button className={classes.confirmDelete} onClick={confirmStepDelete}>
-              削除する
             </button>
           </Box>
         </Box>

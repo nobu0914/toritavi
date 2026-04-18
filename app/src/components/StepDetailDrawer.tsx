@@ -5,15 +5,23 @@ import {
   ActionIcon,
   Box,
   Drawer,
+  Menu,
   Select,
   Text,
   TextInput,
 } from "@mantine/core";
 import {
   IconAlertTriangle,
+  IconCalendarPlus,
   IconChevronDown,
   IconChevronLeft,
   IconChevronRight,
+  IconCopy,
+  IconDotsVertical,
+  IconDownload,
+  IconEdit,
+  IconShare,
+  IconTrash,
   IconX,
 } from "@tabler/icons-react";
 import classes from "./StepDetailDrawer.module.css";
@@ -61,15 +69,20 @@ type Props = {
   sourceImageUrls?: string[];
   needsReview?: boolean;
   inferred?: string[];
+  onCancelEdit?: () => void;
+  onDelete?: () => void;
+  onDuplicate?: () => void;
 };
 
 export function StepDetailDrawer({
   opened, onClose, draft, onChange, onSave, isEdit, editingTitle,
   sourceImageUrl, sourceImageUrls, needsReview, inferred,
+  onCancelEdit, onDelete, onDuplicate,
 }: Props) {
   const [mode, setMode] = useState<"view" | "edit">("view");
   const [previewExpanded, setPreviewExpanded] = useState(false);
   const [previewPage, setPreviewPage] = useState(0);
+  const [quickEdit, setQuickEdit] = useState<{ key: keyof StepDraft; value: string } | null>(null);
 
   const [prevOpened, setPrevOpened] = useState(false);
   if (opened !== prevOpened) {
@@ -78,8 +91,16 @@ export function StepDetailDrawer({
       setMode(isEdit ? "view" : "edit");
       setPreviewExpanded(false);
       setPreviewPage(0);
+      setQuickEdit(null);
     }
   }
+
+  const commitQuickEdit = () => {
+    if (!quickEdit) return;
+    update({ [quickEdit.key]: quickEdit.value } as Partial<StepDraft>);
+    setQuickEdit(null);
+    onSave();
+  };
 
   const update = (patch: Partial<StepDraft>) => onChange({ ...draft, ...patch });
 
@@ -93,6 +114,91 @@ export function StepDetailDrawer({
     : sourceImageUrl ? [sourceImageUrl] : [];
 
   const isIntl = isInternational(undefined); // TODO: pass timezone
+
+  const buildShareText = (): string => {
+    const lines: string[] = [];
+    lines.push(draft.title || "(無題)");
+    if (draft.date) lines.push(`${draft.date}${draft.time ? ` ${draft.time}` : ""}`);
+    if (draft.from || draft.to) lines.push(`${draft.from || "?"} → ${draft.to || "?"}`);
+    if (draft.endDate && draft.endDate !== draft.date) lines.push(`到着: ${draft.endDate}${draft.endTime ? ` ${draft.endTime}` : ""}`);
+    if (draft.confNumber) lines.push(`確認番号: ${draft.confNumber}`);
+    return lines.join("\n");
+  };
+
+  const handleShare = async () => {
+    const text = buildShareText();
+    const title = draft.title || "toritavi 予定";
+    type NavShare = { share: (d: { title?: string; text?: string }) => Promise<void> };
+    const nav = typeof navigator !== "undefined" ? (navigator as Navigator & Partial<NavShare>) : undefined;
+    if (nav?.share) {
+      try {
+        await nav.share({ title, text });
+        return;
+      } catch { /* user cancelled or not supported */ }
+    }
+    // Fallback: copy to clipboard
+    try {
+      await navigator.clipboard.writeText(text);
+      alert("予定の情報をクリップボードにコピーしました");
+    } catch {
+      alert(text);
+    }
+  };
+
+  const handleAddToCalendar = () => {
+    const dtStart = (draft.date || "").replace(/-/g, "") + (draft.time ? "T" + draft.time.replace(":", "") + "00" : "");
+    const dtEnd = ((draft.endDate || draft.date) || "").replace(/-/g, "") +
+      ((draft.endTime || draft.time) ? "T" + (draft.endTime || draft.time).replace(":", "") + "00" : "");
+    if (!dtStart) { alert("日付が未設定のためカレンダーに追加できません"); return; }
+    const summary = (draft.title || "予定").replace(/\n/g, " ");
+    const description = buildShareText().replace(/\n/g, "\\n");
+    const location = [draft.from, draft.to].filter(Boolean).join(" → ");
+    const ics = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//toritavi//JP",
+      "BEGIN:VEVENT",
+      `UID:${Date.now()}@toritavi.com`,
+      `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "")}`,
+      `DTSTART:${dtStart}`,
+      `DTEND:${dtEnd || dtStart}`,
+      `SUMMARY:${summary}`,
+      `DESCRIPTION:${description}`,
+      location ? `LOCATION:${location}` : "",
+      "END:VEVENT",
+      "END:VCALENDAR",
+    ].filter(Boolean).join("\r\n");
+    const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${draft.title || "toritavi"}.ics`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const downloadImage = async (url: string, index: number) => {
+    try {
+      const safeTitle = (draft.title || "toritavi").replace(/[/\\?%*:|"<>]/g, "_");
+      const ext = url.match(/\.(png|jpe?g|webp|gif)/i)?.[1] ?? "jpg";
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${safeTitle}${images.length > 1 ? `_${index + 1}` : ""}.${ext}`;
+      a.target = "_blank";
+      a.rel = "noopener";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch (e) {
+      console.error("[drawer] download failed:", e);
+    }
+  };
+
+  const handleDownloadAll = () => {
+    images.forEach((u, i) => {
+      setTimeout(() => downloadImage(u, i), i * 150);
+    });
+  };
 
   return (
     <Drawer
@@ -108,15 +214,55 @@ export function StepDetailDrawer({
     >
       {/* ヘッダー */}
       <Box className={classes.header}>
-        <ActionIcon variant="subtle" color="gray" radius="xl" onClick={onClose}>
+        <ActionIcon variant="subtle" color="gray" radius="xl" onClick={onClose} aria-label="閉じる">
           <IconChevronDown size={22} />
         </ActionIcon>
         <Text className={classes.headerTitle} lineClamp={1}>
           {isEdit ? editingTitle || draft.title || "予定" : "予定を追加"}
         </Text>
-        <ActionIcon variant="subtle" color="gray" radius="xl" onClick={onClose}>
-          <IconX size={18} />
-        </ActionIcon>
+        {isEdit && mode === "view" ? (
+          <Box className={classes.headerActions}>
+            <ActionIcon
+              variant="subtle"
+              color="gray"
+              radius="xl"
+              onClick={() => setMode("edit")}
+              aria-label="編集"
+            >
+              <IconEdit size={18} />
+            </ActionIcon>
+            <Menu position="bottom-end" shadow="md" width={220} withArrow>
+              <Menu.Target>
+                <ActionIcon variant="subtle" color="gray" radius="xl" aria-label="その他">
+                  <IconDotsVertical size={18} />
+                </ActionIcon>
+              </Menu.Target>
+              <Menu.Dropdown>
+                <Menu.Item leftSection={<IconEdit size={16} />} onClick={() => setMode("edit")}>編集する</Menu.Item>
+                <Menu.Item leftSection={<IconShare size={16} />} onClick={handleShare}>共有する</Menu.Item>
+                {onDuplicate && (
+                  <Menu.Item leftSection={<IconCopy size={16} />} onClick={onDuplicate}>複製する</Menu.Item>
+                )}
+                <Menu.Item leftSection={<IconCalendarPlus size={16} />} onClick={handleAddToCalendar}>カレンダーに追加</Menu.Item>
+                {images.length > 0 && (
+                  <Menu.Item leftSection={<IconDownload size={16} />} onClick={handleDownloadAll}>
+                    {images.length > 1 ? `原本を保存 (${images.length}件)` : "原本を保存"}
+                  </Menu.Item>
+                )}
+                {onDelete && (
+                  <>
+                    <Menu.Divider />
+                    <Menu.Item color="red" leftSection={<IconTrash size={16} />} onClick={onDelete}>削除する</Menu.Item>
+                  </>
+                )}
+              </Menu.Dropdown>
+            </Menu>
+          </Box>
+        ) : (
+          <ActionIcon variant="subtle" color="gray" radius="xl" onClick={onClose} aria-label="閉じる">
+            <IconX size={18} />
+          </ActionIcon>
+        )}
       </Box>
 
       {/* スクロール可能な本体 */}
@@ -173,6 +319,20 @@ export function StepDetailDrawer({
             {/* 3. 原本プレビュー（アコーディオン） */}
             {images.length > 0 && (
               <Box className={classes.previewSection}>
+                <Box className={classes.previewHeader}>
+                  <Box className={classes.previewMeta}>
+                    <IconDownload size={13} />
+                    <Text component="span">スキャン元{images.length > 1 ? ` · ${images.length} ページ` : ""}</Text>
+                  </Box>
+                  <button
+                    className={classes.previewDlBtn}
+                    onClick={(e) => { e.stopPropagation(); handleDownloadAll(); }}
+                    aria-label="原本をダウンロード"
+                    type="button"
+                  >
+                    <IconDownload size={15} />
+                  </button>
+                </Box>
                 {previewExpanded ? (
                   <>
                     <Box className={classes.previewSlider}>
@@ -219,12 +379,35 @@ export function StepDetailDrawer({
               </Box>
               {categoryFields.map((f) => {
                 const val = String(draft[f.draftKey] || "");
+                const isEditing = quickEdit?.key === f.draftKey;
                 return (
-                  <Box key={f.key} className={classes.fieldRow}>
+                  <Box
+                    key={f.key}
+                    className={`${classes.fieldRow} ${isEditing ? classes.fieldRowEditing : classes.fieldRowTappable}`}
+                    onClick={() => !isEditing && isEdit && setQuickEdit({ key: f.draftKey, value: val })}
+                  >
                     <Text className={classes.fieldLabel}>{f.label}</Text>
-                    <Text className={`${classes.fieldValue} ${!val ? classes.fieldEmpty : ""}`}>
-                      {val || "未読取"}
-                    </Text>
+                    {isEditing ? (
+                      <Box className={classes.quickEditRow} onClick={(e) => e.stopPropagation()}>
+                        <TextInput
+                          value={quickEdit.value}
+                          onChange={(e) => setQuickEdit({ key: f.draftKey, value: e.currentTarget.value })}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") commitQuickEdit();
+                            if (e.key === "Escape") setQuickEdit(null);
+                          }}
+                          autoFocus
+                          size="sm"
+                          style={{ flex: 1 }}
+                        />
+                        <button className={classes.quickEditConfirm} onClick={commitQuickEdit} aria-label="確定" type="button">✓</button>
+                        <button className={classes.quickEditCancel} onClick={() => setQuickEdit(null)} aria-label="キャンセル" type="button">✕</button>
+                      </Box>
+                    ) : (
+                      <Text className={`${classes.fieldValue} ${!val ? classes.fieldEmpty : ""}`}>
+                        {val || "未読取"}
+                      </Text>
+                    )}
                   </Box>
                 );
               })}
@@ -321,13 +504,29 @@ export function StepDetailDrawer({
             編集する
           </button>
         ) : (
-          <button
-            className={classes.ctaButton}
-            onClick={onSave}
-            disabled={!draft.title.trim()}
-          >
-            {isEdit ? "更新する" : "保存する"}
-          </button>
+          <Box className={classes.footerRow}>
+            <button
+              className={classes.cancelButton}
+              onClick={() => {
+                if (isEdit) {
+                  onCancelEdit?.();
+                  setMode("view");
+                } else {
+                  onClose();
+                }
+              }}
+              type="button"
+            >
+              キャンセル
+            </button>
+            <button
+              className={classes.ctaButton}
+              onClick={onSave}
+              disabled={!draft.title.trim()}
+            >
+              {isEdit ? "更新する" : "保存する"}
+            </button>
+          </Box>
         )}
       </Box>
     </Drawer>
