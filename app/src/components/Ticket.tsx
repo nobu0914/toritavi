@@ -103,6 +103,20 @@ function fileNameBase(title: string): string {
   return (title || "toritavi").replace(/[/\\?%*:|"<>]/g, "_");
 }
 
+/**
+ * Extract IATA/short code from values like:
+ *   "クライストチャーチ（CHC）" → { code: "CHC", name: "クライストチャーチ" }
+ *   "San Jose (SJC)"          → { code: "SJC", name: "San Jose" }
+ *   "NRT"                     → { code: "NRT" }
+ *   "東京駅"                   → { code: "東京駅" }
+ */
+function splitPort(value: string | undefined): { code: string; name?: string } {
+  if (!value) return { code: "—" };
+  const m = value.match(/^(.+?)\s*[（(]\s*([A-Za-z0-9]{2,5})\s*[）)]\s*$/);
+  if (m) return { code: m[2].toUpperCase(), name: m[1].trim() };
+  return { code: value.trim() };
+}
+
 export function Ticket({ data, status, needsReview, inferred, sourceImageUrl, sourceImageUrls, onCopyMailBody }: Props) {
   const [activePage, setActivePage] = useState(0);
 
@@ -186,21 +200,27 @@ export function Ticket({ data, status, needsReview, inferred, sourceImageUrl, so
           <span className={`ticket-hero-flag ${flag.cls}`.trim()}>{flag.label}</span>
         </div>
 
-        {isRoute ? (
-          <div className="ticket-route">
-            <div className="ticket-port">
-              <div className="ticket-port-code">{data.from || "—"}</div>
-              <div className={`ticket-port-time ${data.time ? "" : "empty"}`.trim()}>{data.time || "--:--"}</div>
-              {data.date && <div className="ticket-port-date">{data.date}</div>}
+        {isRoute ? (() => {
+          const fromPort = splitPort(data.from);
+          const toPort = splitPort(data.to);
+          return (
+            <div className="ticket-route">
+              <div className="ticket-port">
+                <div className="ticket-port-code">{fromPort.code}</div>
+                {fromPort.name && <div className="ticket-port-name">{fromPort.name}</div>}
+                <div className={`ticket-port-time ${data.time ? "" : "empty"}`.trim()}>{data.time || "--:--"}</div>
+                {data.date && <div className="ticket-port-date">{data.date}</div>}
+              </div>
+              <div className="ticket-arrow"><div className="ticket-arrow-line"></div></div>
+              <div className="ticket-port ticket-port--right">
+                <div className="ticket-port-code">{toPort.code}</div>
+                {toPort.name && <div className="ticket-port-name">{toPort.name}</div>}
+                <div className={`ticket-port-time ${data.endTime ? "" : "empty"}`.trim()}>{data.endTime || "--:--"}</div>
+                {(data.endDate || data.date) && <div className="ticket-port-date">{routeDateLabel()}</div>}
+              </div>
             </div>
-            <div className="ticket-arrow"><div className="ticket-arrow-line"></div></div>
-            <div className="ticket-port ticket-port--right">
-              <div className="ticket-port-code">{data.to || "—"}</div>
-              <div className={`ticket-port-time ${data.endTime ? "" : "empty"}`.trim()}>{data.endTime || "--:--"}</div>
-              {(data.endDate || data.date) && <div className="ticket-port-date">{routeDateLabel()}</div>}
-            </div>
-          </div>
-        ) : (
+          );
+        })() : (
           <div className="ticket-hero-single">
             <div className="ticket-hero-subject">{data.title || "—"}</div>
             <div className="ticket-hero-subject-sub">
