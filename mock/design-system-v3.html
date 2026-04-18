@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>toritavi Design System v3</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    /* Core palette: inspired by the reference UI, adapted for travel planning */
+    --navy-50: #f2f5fb;
+    --navy-100: #dfe6f2;
+    --navy-200: #c4d0e4;
+    --navy-300: #98aac8;
+    --navy-400: #6f85aa;
+    --navy-500: #4d668c;
+    --navy-600: #344b6d;
+    --navy-700: #223652;
+    --navy-800: #172741;
+    --navy-900: #0f1b2d;
+
+    --sky-50: #f4f7ff;
+    --sky-100: #e8eefc;
+    --sky-200: #d5e0f8;
+    --sky-300: #b6caf1;
+    --sky-400: #8fa9e9;
+    --sky-500: #6d8ce0;
+    --sky-600: #5372d4;
+    --sky-700: #425bb8;
+
+    --coral-50: #fff3ed;
+    --coral-100: #ffe1d2;
+    --coral-200: #ffc2a6;
+    --coral-300: #ff9a72;
+    --coral-400: #ff7547;
+    --coral-500: #f05f33;
+    --coral-600: #d44c23;
+
+    --sand-0: #ffffff;
+    --sand-50: #fbfbfd;
+    --sand-100: #f5f6f9;
+    --sand-200: #ebedf2;
+    --sand-300: #dde1e8;
+    --sand-400: #bac2cf;
+    --sand-500: #7f8a9a;
+    --sand-700: #445064;
+    --sand-900: #1b2432;
+
+    --success-bg: #ebf8f1;
+    --success-fg: #207a4c;
+    --warning-bg: #fff6e5;
+    --warning-fg: #b87208;
+    --danger-bg: #feecee;
+    --danger-fg: #c23c49;
+    --info-bg: #eef3ff;
+    --info-fg: #3f62c7;
+
+    --bg: linear-gradient(180deg, #edf1fb 0%, #f8f9fc 38%, #f5f6f9 100%);
+    --surface: rgba(255, 255, 255, 0.96);
+    --surface-strong: #ffffff;
+    --surface-dark: var(--navy-900);
+    --text: var(--navy-900);
+    --text-soft: #516074;
+    --text-faint: #8b96a6;
+    --border: rgba(23, 39, 65, 0.08);
+    --border-strong: rgba(23, 39, 65, 0.16);
+
+    --font-sans: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic UI", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    --fs-11: 11px;
+    --fs-12: 12px;
+    --fs-13: 13px;
+    --fs-14: 14px;
+    --fs-16: 16px;
+    --fs-18: 18px;
+    --fs-22: 22px;
+    --fs-28: 28px;
+    --fs-36: 36px;
+    --fw-regular: 400;
+    --fw-medium: 500;
+    --fw-semibold: 600;
+    --fw-bold: 700;
+    --fw-heavy: 800;
+
+    --space-4: 4px;
+    --space-8: 8px;
+    --space-12: 12px;
+    --space-16: 16px;
+    --space-20: 20px;
+    --space-24: 24px;
+    --space-32: 32px;
+    --space-40: 40px;
+
+    --radius-10: 10px;
+    --radius-14: 14px;
+    --radius-18: 18px;
+    --radius-24: 24px;
+    --radius-28: 28px;
+    --radius-pill: 999px;
+
+    --shadow-xs: 0 1px 2px rgba(15, 27, 45, 0.05);
+    --shadow-sm: 0 8px 20px rgba(31, 49, 83, 0.07);
+    --shadow-md: 0 14px 36px rgba(31, 49, 83, 0.10);
+    --shadow-lg: 0 24px 56px rgba(31, 49, 83, 0.16);
+    --shadow-nav: 0 -10px 28px rgba(15, 27, 45, 0.18);
+  }
+
+  body {
+    font-family: var(--font-sans);
+    color: var(--text);
+    background: #cfd7e8;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 56px 32px 120px;
+  }
+
+  .hero {
+    margin-bottom: 48px;
+  }
+
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-radius: var(--radius-pill);
+    background: rgba(255,255,255,0.72);
+    color: var(--navy-700);
+    font-size: var(--fs-12);
+    font-weight: var(--fw-bold);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    box-shadow: var(--shadow-xs);
+  }
+
+  .title {
+    margin-top: 18px;
+    font-size: var(--fs-36);
+    line-height: 1.08;
+    font-weight: var(--fw-heavy);
+    letter-spacing: -0.03em;
+  }
+
+  .subtitle {
+    margin-top: 14px;
+    max-width: 760px;
+    color: var(--text-soft);
+    font-size: var(--fs-16);
+    line-height: 1.75;
+  }
+
+  .section {
+    margin-bottom: 56px;
+  }
+
+  .sectionTitle {
+    font-size: var(--fs-22);
+    font-weight: var(--fw-heavy);
+    margin-bottom: 6px;
+  }
+
+  .sectionDesc {
+    color: var(--text-soft);
+    font-size: var(--fs-14);
+    line-height: 1.7;
+    margin-bottom: 18px;
+  }
+
+  .panel {
+    background: rgba(255,255,255,0.74);
+    backdrop-filter: blur(18px);
+    border: 1px solid rgba(255,255,255,0.6);
+    border-radius: 32px;
+    padding: 28px;
+    box-shadow: var(--shadow-md);
+  }
+
+  .grid2 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+  }
+
+  .grid3 {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+  }
+
+  .tokenCard,
+  .colorCard,
+  .specCard {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 20px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .cardTitle {
+    font-size: var(--fs-16);
+    font-weight: var(--fw-bold);
+    margin-bottom: 12px;
+  }
+
+  .item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(23,39,65,0.06);
+    font-size: var(--fs-14);
+  }
+
+  .item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  .mono {
+    margin-left: auto;
+    color: var(--text-faint);
+    font-family: var(--font-mono);
+    font-size: var(--fs-12);
+  }
+
+  .swatch {
+    width: 40px;
+    height: 40px;
+    border-radius: 14px;
+    border: 1px solid rgba(15,27,45,0.06);
+    flex-shrink: 0;
+  }
+
+  .scale {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+  }
+
+  .scaleChip {
+    height: 54px;
+    border-radius: 14px;
+    padding: 8px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: 10px;
+  }
+
+  .lightText { color: rgba(15, 27, 45, 0.72); }
+  .darkText { color: rgba(255, 255, 255, 0.92); }
+
+  .previewGrid {
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+
+  .phone {
+    background: var(--bg);
+    border-radius: 40px;
+    padding: 14px;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .phoneInner {
+    background: transparent;
+    min-height: 760px;
+    border-radius: 30px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .statusbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px 4px;
+    font-size: var(--fs-11);
+    color: var(--navy-600);
+    font-weight: var(--fw-bold);
+  }
+
+  .screen {
+    padding: 18px 18px 112px;
+  }
+
+  .search {
+    background: rgba(255,255,255,0.72);
+    border: 1px solid rgba(255,255,255,0.7);
+    border-radius: var(--radius-pill);
+    padding: 14px 16px;
+    color: var(--text-faint);
+    font-size: var(--fs-14);
+    box-shadow: var(--shadow-xs);
+  }
+
+  .heroCard {
+    margin-top: 16px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(255,255,255,0.82));
+    border: 1px solid rgba(255,255,255,0.86);
+    border-radius: 28px;
+    padding: 18px;
+    box-shadow: var(--shadow-md);
+  }
+
+  .heroTop {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 16px;
+  }
+
+  .heading {
+    font-size: 30px;
+    line-height: 1.02;
+    font-weight: var(--fw-heavy);
+    letter-spacing: -0.03em;
+  }
+
+  .ghostIcon {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.86);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow-xs);
+  }
+
+  .pillRow {
+    display: flex;
+    gap: 10px;
+    margin-top: 14px;
+  }
+
+  .pill {
+    padding: 9px 14px;
+    border-radius: var(--radius-pill);
+    font-size: var(--fs-12);
+    font-weight: var(--fw-semibold);
+    background: rgba(255,255,255,0.88);
+    color: var(--navy-700);
+    border: 1px solid rgba(15,27,45,0.06);
+  }
+
+  .pill.active {
+    background: var(--navy-900);
+    color: white;
+    border-color: transparent;
+  }
+
+  .journeyCard {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    margin-top: 14px;
+    background: rgba(255,255,255,0.95);
+    border-radius: 24px;
+    padding: 14px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .thumb {
+    width: 76px;
+    height: 76px;
+    border-radius: 22px;
+    background: linear-gradient(135deg, #dce6fb, #ffffff);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
+    flex-shrink: 0;
+  }
+
+  .journeyBody {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .journeyTitle {
+    font-size: var(--fs-16);
+    font-weight: var(--fw-bold);
+  }
+
+  .journeyMeta {
+    margin-top: 4px;
+    color: var(--text-soft);
+    font-size: var(--fs-12);
+  }
+
+  .journeyPrice {
+    margin-top: 8px;
+    color: var(--coral-500);
+    font-size: var(--fs-16);
+    font-weight: var(--fw-bold);
+  }
+
+  .stepper {
+    margin-top: 18px;
+    background: linear-gradient(180deg, var(--navy-900), #1b2e4d);
+    color: white;
+    border-radius: 30px 30px 0 0;
+    padding: 18px 18px 28px;
+    box-shadow: var(--shadow-nav);
+  }
+
+  .stepItem {
+    display: grid;
+    grid-template-columns: 52px 16px 1fr;
+    gap: 10px;
+    align-items: start;
+    padding: 12px 0;
+  }
+
+  .time {
+    font-size: var(--fs-12);
+    color: rgba(255,255,255,0.72);
+  }
+
+  .dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: white;
+    margin-top: 4px;
+    box-shadow: 0 0 0 4px rgba(255,255,255,0.12);
+  }
+
+  .stepContent {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 18px;
+    padding: 14px;
+  }
+
+  .stepTitle {
+    font-size: var(--fs-14);
+    font-weight: var(--fw-semibold);
+  }
+
+  .stepMeta {
+    margin-top: 4px;
+    font-size: var(--fs-12);
+    color: rgba(255,255,255,0.72);
+  }
+
+  .btnRow {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 52px;
+    padding: 0 20px;
+    border: none;
+    border-radius: var(--radius-pill);
+    font-size: var(--fs-14);
+    font-weight: var(--fw-bold);
+    letter-spacing: 0.01em;
+    cursor: default;
+  }
+
+  .btnPrimary {
+    background: var(--navy-900);
+    color: white;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .btnSecondary {
+    background: rgba(255,255,255,0.9);
+    color: var(--navy-900);
+    border: 1px solid var(--border);
+  }
+
+  .btnAccent {
+    background: var(--coral-500);
+    color: white;
+  }
+
+  .badgeRow {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 32px;
+    padding: 0 12px;
+    border-radius: var(--radius-pill);
+    font-size: var(--fs-12);
+    font-weight: var(--fw-bold);
+  }
+
+  .bInfo { background: var(--info-bg); color: var(--info-fg); }
+  .bSuccess { background: var(--success-bg); color: var(--success-fg); }
+  .bWarn { background: var(--warning-bg); color: var(--warning-fg); }
+  .bDanger { background: var(--danger-bg); color: var(--danger-fg); }
+
+  .specList {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .specList p {
+    color: var(--text-soft);
+    font-size: var(--fs-14);
+    line-height: 1.7;
+  }
+
+  .specList strong {
+    color: var(--text);
+  }
+
+  @media (max-width: 980px) {
+    .previewGrid,
+    .grid2,
+    .grid3 {
+      grid-template-columns: 1fr;
+    }
+
+    .page {
+      padding: 32px 18px 88px;
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+    <header class="hero">
+      <div class="eyebrow">Design System v3</div>
+      <h1 class="title">toritavi Calm Voyage</h1>
+      <p class="subtitle">
+        参考画像の「大きいラウンド」「白く柔らかい面」「深いネイビーの締め色」を、toritavi の旅程管理に合わせて再構成。
+        物販アプリの即売感は抑え、旅の安心感と進行管理の見やすさを前面に出す。
+      </p>
+    </header>
+
+    <section class="section">
+      <h2 class="sectionTitle">1. Design Principles</h2>
+      <p class="sectionDesc">見た目を似せるのではなく、空気感を toritavi のプロダクト価値に変換する。</p>
+      <div class="panel grid3">
+        <div class="specCard">
+          <div class="cardTitle">Soft Surfaces</div>
+          <div class="specList">
+            <p><strong>白面は真っ白ではなく半透明寄り。</strong> 背景グラデーションと重ねて軽く浮かせる。</p>
+            <p><strong>カードは 24px 前後の大きめ角丸。</strong> 旅程カード、検索、モーダルに統一感を作る。</p>
+          </div>
+        </div>
+        <div class="specCard">
+          <div class="cardTitle">Deep Navigation</div>
+          <div class="specList">
+            <p><strong>主要導線はネイビーで固定。</strong> ヘッダー、タブバー、主CTAに使い、迷いを減らす。</p>
+            <p><strong>濃色面は情報整理エリアに限定。</strong> タイムラインや固定ナビで特に効く。</p>
+          </div>
+        </div>
+        <div class="specCard">
+          <div class="cardTitle">Warm Progress</div>
+          <div class="specList">
+            <p><strong>コーラルは行動喚起と注目点だけに使う。</strong> 新規作成、残件、価格相当の強調を担当。</p>
+            <p><strong>状態色は淡い背景+濃い文字。</strong> 情報量が多い旅程でもうるさくならない。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2 class="sectionTitle">2. Color Tokens</h2>
+      <p class="sectionDesc">ネイビーを軸に、空気感を作るスカイ、注意を引くコーラル、読みやすいサンドニュートラルで構成。</p>
+      <div class="panel">
+        <div class="colorCard" style="margin-bottom:18px;">
+          <div class="cardTitle">Primary / Navigation</div>
+          <div class="scale">
+            <div class="scaleChip lightText" style="background:#f2f5fb;">50</div>
+            <div class="scaleChip lightText" style="background:#dfe6f2;">100</div>
+            <div class="scaleChip lightText" style="background:#c4d0e4;">200</div>
+            <div class="scaleChip darkText" style="background:#6f85aa;">400</div>
+            <div class="scaleChip darkText" style="background:#344b6d;">600</div>
+            <div class="scaleChip darkText" style="background:#172741;">800</div>
+            <div class="scaleChip darkText" style="background:#0f1b2d;">900</div>
+          </div>
+        </div>
+        <div class="grid2">
+          <div class="colorCard">
+            <div class="cardTitle">Secondary / Atmosphere</div>
+            <div class="scale">
+              <div class="scaleChip lightText" style="background:#f4f7ff;">50</div>
+              <div class="scaleChip lightText" style="background:#e8eefc;">100</div>
+              <div class="scaleChip lightText" style="background:#d5e0f8;">200</div>
+              <div class="scaleChip darkText" style="background:#8fa9e9;">400</div>
+              <div class="scaleChip darkText" style="background:#6d8ce0;">500</div>
+              <div class="scaleChip darkText" style="background:#5372d4;">600</div>
+              <div class="scaleChip darkText" style="background:#425bb8;">700</div>
+            </div>
+          </div>
+          <div class="colorCard">
+            <div class="cardTitle">Accent / Action</div>
+            <div class="scale">
+              <div class="scaleChip lightText" style="background:#fff3ed;">50</div>
+              <div class="scaleChip lightText" style="background:#ffe1d2;">100</div>
+              <div class="scaleChip lightText" style="background:#ffc2a6;">200</div>
+              <div class="scaleChip darkText" style="background:#ff9a72;">300</div>
+              <div class="scaleChip darkText" style="background:#ff7547;">400</div>
+              <div class="scaleChip darkText" style="background:#f05f33;">500</div>
+              <div class="scaleChip darkText" style="background:#d44c23;">600</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2 class="sectionTitle">3. System Tokens</h2>
+      <p class="sectionDesc">実装時は色名より役割名で使う。UIごとの色ぶれを減らすための基本セット。</p>
+      <div class="panel grid2">
+        <div class="tokenCard">
+          <div class="cardTitle">Alias Tokens</div>
+          <div class="item"><div class="swatch" style="background:linear-gradient(180deg,#edf1fb,#f8f9fc);"></div>app background <span class="mono">--bg</span></div>
+          <div class="item"><div class="swatch" style="background:#ffffff;"></div>surface / card <span class="mono">--surface</span></div>
+          <div class="item"><div class="swatch" style="background:#0f1b2d;"></div>primary action <span class="mono">--surface-dark</span></div>
+          <div class="item"><div class="swatch" style="background:#f05f33;"></div>attention / CTA <span class="mono">--coral-500</span></div>
+          <div class="item"><div class="swatch" style="background:#1b2432;"></div>text primary <span class="mono">--text</span></div>
+          <div class="item"><div class="swatch" style="background:#8b96a6;"></div>text tertiary <span class="mono">--text-faint</span></div>
+        </div>
+        <div class="tokenCard">
+          <div class="cardTitle">Sizing</div>
+          <div class="item">screen max width <span class="mono">430px</span></div>
+          <div class="item">card radius <span class="mono">24px</span></div>
+          <div class="item">input/button height <span class="mono">52px</span></div>
+          <div class="item">bottom nav radius <span class="mono">28px 28px 0 0</span></div>
+          <div class="item">section gap <span class="mono">24px</span></div>
+          <div class="item">content side padding <span class="mono">18px</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2 class="sectionTitle">4. Typography</h2>
+      <p class="sectionDesc">大見出しは詰めて太く、本文は素直に。情報密度が高い旅程でも読み疲れしない組み方にする。</p>
+      <div class="panel grid2">
+        <div class="tokenCard">
+          <div class="cardTitle">Type Scale</div>
+          <div class="item">Display / page hero <span class="mono">36 / 800</span></div>
+          <div class="item">Screen title <span class="mono">28 / 800</span></div>
+          <div class="item">Card title <span class="mono">16 / 700</span></div>
+          <div class="item">Body <span class="mono">14 / 400-500</span></div>
+          <div class="item">Meta / helper <span class="mono">12 / 500-600</span></div>
+          <div class="item">Micro label <span class="mono">11 / 700</span></div>
+        </div>
+        <div class="tokenCard">
+          <div class="cardTitle">Tone Rules</div>
+          <div class="item">日本語UIは詰めすぎず行間広め <span class="mono">1.55-1.7</span></div>
+          <div class="item">数字は強調色と相性よく太字 <span class="mono">fare / days / conf</span></div>
+          <div class="item">ラベルは全部大文字にしない <span class="mono">旅程の柔らかさ優先</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2 class="sectionTitle">5. Components</h2>
+      <p class="sectionDesc">参考画像のDNAを活かしつつ、toritavi の主要画面に必要な部品へ落とし込む。</p>
+      <div class="panel grid3">
+        <div class="specCard">
+          <div class="cardTitle">Buttons</div>
+          <div class="btnRow">
+            <div class="btn btnPrimary">メイン操作</div>
+            <div class="btn btnSecondary">サブ操作</div>
+            <div class="btn btnAccent">新規追加</div>
+          </div>
+        </div>
+        <div class="specCard">
+          <div class="cardTitle">Status Badges</div>
+          <div class="badgeRow">
+            <div class="badge bInfo">進行中</div>
+            <div class="badge bSuccess">完了</div>
+            <div class="badge bWarn">注意</div>
+            <div class="badge bDanger">遅延</div>
+          </div>
+        </div>
+        <div class="specCard">
+          <div class="cardTitle">Selection Pills</div>
+          <div class="pillRow">
+            <div class="pill active">Upcoming</div>
+            <div class="pill">Past</div>
+            <div class="pill">未整理</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2 class="sectionTitle">6. toritavi Screen Direction</h2>
+      <p class="sectionDesc">トップの一覧と詳細タイムラインを、このシステムで組んだときの方向性サンプル。</p>
+      <div class="panel previewGrid">
+        <div class="phone">
+          <div class="phoneInner">
+            <div class="statusbar"><span>9:41</span><span>LTE 100%</span></div>
+            <div class="screen">
+              <div class="heroTop">
+                <div>
+                  <div class="heading">Daily<br>Journey</div>
+                </div>
+                <div class="ghostIcon">⌕</div>
+              </div>
+              <div class="search">次の予定や予約番号を検索</div>
+              <div class="pillRow">
+                <div class="pill active">今後の旅程</div>
+                <div class="pill">過去の旅程</div>
+              </div>
+              <div class="journeyCard">
+                <div class="thumb"></div>
+                <div class="journeyBody">
+                  <div class="journeyTitle">東京出張</div>
+                  <div class="journeyMeta">4月22日 - 4月23日 ・ 3 plans</div>
+                  <div class="journeyPrice">あと 4 日</div>
+                </div>
+              </div>
+              <div class="journeyCard">
+                <div class="thumb"></div>
+                <div class="journeyBody">
+                  <div class="journeyTitle">京都週末旅</div>
+                  <div class="journeyMeta">5月3日 - 5月5日 ・ 5 plans</div>
+                  <div class="journeyPrice">下書きあり</div>
+                </div>
+              </div>
+              <div class="stepper">
+                <div class="stepItem">
+                  <div class="time">08:30</div>
+                  <div class="dot"></div>
+                  <div class="stepContent">
+                    <div class="stepTitle">のぞみ 12号</div>
+                    <div class="stepMeta">東京駅 → 名古屋駅 ・ Conf# EX1248</div>
+                  </div>
+                </div>
+                <div class="stepItem">
+                  <div class="time">11:00</div>
+                  <div class="dot"></div>
+                  <div class="stepContent">
+                    <div class="stepTitle">商談</div>
+                    <div class="stepMeta">栄オフィス ・ 1時間30分</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid2">
+          <div class="specCard">
+            <div class="cardTitle">Top Page</div>
+            <div class="specList">
+              <p><strong>画面冒頭は大きい2行タイトル。</strong> 参考画像の強いヒーロー感を一覧ページに移植する。</p>
+              <p><strong>セグメントは pill 形。</strong> 既存の Upcoming / Past をこの形に揃える。</p>
+              <p><strong>Journey card は白面 + 24px 角丸 + 軽い影。</strong> カバー画像がなくても成立する。</p>
+            </div>
+          </div>
+          <div class="specCard">
+            <div class="cardTitle">Journey Detail</div>
+            <div class="specList">
+              <p><strong>詳細は上半分を白面、下半分を濃色タイムライン。</strong> 参考画像の order detail の読みやすさを応用。</p>
+              <p><strong>時間列は淡色、内容は濃色内カード。</strong> 緊張感を出しつつ可読性を守る。</p>
+              <p><strong>固定CTAはネイビー pill。</strong> 編集、進行中化、チェックインなど重要操作を統一。</p>
+            </div>
+          </div>
+          <div class="specCard">
+            <div class="cardTitle">Forms / Auth</div>
+            <div class="specList">
+              <p><strong>入力欄は白背景より少し曇ったトーン。</strong> 柔らかい立体感を作る。</p>
+              <p><strong>ログイン・新規登録は余白を広めに。</strong> 参考画像の安心感を保つ。</p>
+            </div>
+          </div>
+          <div class="specCard">
+            <div class="cardTitle">Navigation</div>
+            <div class="specList">
+              <p><strong>TabBar は深いネイビーの固定パーツ。</strong> 現行方向と相性が良いので継続。</p>
+              <p><strong>active 表現は線よりフレーム。</strong> 参考画像の立体感を残せる。</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</body>
+</html>

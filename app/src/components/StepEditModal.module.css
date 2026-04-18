@@ -7,7 +7,7 @@
 
 .modalBody {
   padding: 0;
-  background: var(--mantine-color-gray-0);
+  background: var(--n-50);
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -15,7 +15,7 @@
 }
 
 .panel {
-  background: var(--mantine-color-gray-0);
+  background: var(--n-50);
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -28,14 +28,14 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid var(--mantine-color-gray-2);
+  border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
 
 .topTitle {
   font-size: 18px;
   font-weight: 700;
-  color: var(--mantine-color-gray-9);
+  color: var(--text);
 }
 
 .body {
@@ -46,8 +46,8 @@
 }
 
 .summaryCard {
-  background: var(--mantine-color-blue-0);
-  border: 1px solid var(--mantine-color-blue-2);
+  background: var(--info-50);
+  border: 1px solid #C6D8F0;
   border-radius: 8px;
   padding: 12px 14px;
   margin-bottom: 12px;
@@ -63,7 +63,7 @@
 .summaryLabel {
   font-size: 11px;
   font-weight: 600;
-  color: var(--mantine-color-blue-7);
+  color: var(--info-700);
   width: 50px;
   flex-shrink: 0;
 }
@@ -71,7 +71,7 @@
 .summaryValue {
   font-size: 13px;
   font-weight: 600;
-  color: var(--mantine-color-gray-9);
+  color: var(--text);
 }
 
 .reviewBanner {
@@ -80,16 +80,16 @@
   gap: 8px;
   padding: 8px 12px;
   border-radius: 8px;
-  background: var(--mantine-color-yellow-0);
-  border: 1px solid var(--mantine-color-yellow-5);
-  color: var(--mantine-color-yellow-8);
+  background: var(--warn-50);
+  border: 1px solid var(--warn-500);
+  color: var(--warn-700);
   margin-bottom: 12px;
 }
 
 .sectionLabel {
   font-size: 11px;
   font-weight: 700;
-  color: var(--mantine-color-gray-6);
+  color: var(--text-dim);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   padding: 0 0 8px;
@@ -97,14 +97,14 @@
 
 .formSection {
   background: white;
-  border: 1px solid var(--mantine-color-gray-2);
+  border: 1px solid var(--border);
   border-radius: 8px;
   overflow: hidden;
 }
 
 .formRow {
   padding: 12px 14px;
-  border-bottom: 1px solid var(--mantine-color-gray-1);
+  border-bottom: 1px solid var(--n-100);
 }
 
 .formRow:last-child {
@@ -114,31 +114,31 @@
 .formLabel {
   font-size: 12px;
   font-weight: 600;
-  color: var(--mantine-color-gray-6);
+  color: var(--text-dim);
   margin-bottom: 4px;
   display: block;
 }
 
 .fieldInput {
-  border: 1px solid var(--mantine-color-gray-3);
+  border: 1px solid var(--n-300);
   border-radius: 8px;
   background: white;
   padding: 10px 14px;
   font-size: 16px;
-  color: var(--mantine-color-gray-9);
+  color: var(--text);
   min-height: 44px;
 }
 
 .fieldInput:focus,
 .fieldInput:focus-within {
-  border-color: var(--mantine-color-blue-6);
+  border-color: var(--info-500);
 }
 
 .readOnlyValue {
   min-height: 24px;
   padding: 8px 0;
   font-size: 16px;
-  color: var(--mantine-color-gray-9);
+  color: var(--text);
   line-height: 1.4;
 }
 
@@ -151,15 +151,15 @@
 .footer {
   padding: 12px 16px;
   flex-shrink: 0;
-  background: var(--mantine-color-gray-0);
-  border-top: 1px solid var(--mantine-color-gray-2);
+  background: var(--n-50);
+  border-top: 1px solid var(--border);
 }
 
 .saveButton {
   width: 100%;
   height: 46px;
   border-radius: 8px;
-  background: var(--mantine-color-blue-7);
+  background: var(--info-700);
   color: white;
   border: none;
   font-size: 16px;
@@ -174,7 +174,7 @@
 }
 
 .sourceAccordion {
-  border: 1px solid var(--mantine-color-gray-2);
+  border: 1px solid var(--border);
   border-radius: 8px;
   overflow: hidden;
   margin-bottom: 12px;
@@ -209,9 +209,9 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  border: 1px solid var(--mantine-color-gray-3);
+  border: 1px solid var(--n-300);
   background: white;
-  color: var(--mantine-color-gray-7);
+  color: var(--n-700);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -232,7 +232,7 @@
   padding: 6px;
   font-size: 11px;
   font-weight: 600;
-  color: var(--mantine-color-gray-5);
-  background: var(--mantine-color-gray-0);
-  border-top: 1px solid var(--mantine-color-gray-1);
+  color: var(--text-dim);
+  background: var(--n-50);
+  border-top: 1px solid var(--n-100);
 }

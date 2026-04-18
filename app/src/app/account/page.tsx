@@ -63,7 +63,7 @@ export default function AccountPage() {
             background: "white",
             margin: 16,
             borderRadius: 8,
-            border: "1px solid var(--mantine-color-gray-2)",
+            border: "1px solid var(--border)",
             padding: 20,
             display: "flex",
             alignItems: "center",
@@ -75,7 +75,7 @@ export default function AccountPage() {
               width: 56,
               height: 56,
               borderRadius: "50%",
-              background: isGuest ? "var(--mantine-color-yellow-6)" : "var(--mantine-color-blue-7)",
+              background: isGuest ? "var(--warn-500)" : "var(--info-700)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -138,7 +138,7 @@ export default function AccountPage() {
             background: "white",
             margin: "0 16px 16px",
             borderRadius: 8,
-            border: "1px solid var(--mantine-color-gray-2)",
+            border: "1px solid var(--border)",
             overflow: "hidden",
           }}
         >
@@ -147,16 +147,16 @@ export default function AccountPage() {
               key={item}
               style={{
                 padding: 14,
-                borderBottom: "1px solid var(--mantine-color-gray-1)",
+                borderBottom: "1px solid var(--n-100)",
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
                 fontSize: 15,
-                color: "var(--mantine-color-gray-5)",
+                color: "var(--text-dim)",
               }}
             >
               {item}
-              <IconChevronRight size={18} color="var(--mantine-color-gray-3)" />
+              <IconChevronRight size={18} color="var(--n-300)" />
             </Box>
           ))}
         </Box>

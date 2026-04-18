@@ -18,7 +18,7 @@ export default function UnfiledPage() {
         >
           <Box
             style={{
-              color: "var(--mantine-color-gray-4)",
+              color: "var(--text-muted)",
               marginBottom: 12,
               display: "flex",
               justifyContent: "center",

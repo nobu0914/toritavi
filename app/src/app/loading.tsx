@@ -17,7 +17,7 @@ export default function Loading() {
               marginBottom: 8,
               borderRadius: 8,
               overflow: "hidden",
-              border: "1px solid var(--mantine-color-gray-2)",
+              border: "1px solid var(--border)",
             }}
           >
             <Skeleton height={72} radius={0} />

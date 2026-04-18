@@ -1,13 +1,17 @@
+/*
+ * TabBar — Design System v2 bottom nav 準拠
+ */
+
 .tabbar {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  background: #0F1B2D;
+  background: var(--ink-800);
   display: flex;
-  padding: 14px 10px calc(14px + env(safe-area-inset-bottom));
-  border-radius: 28px 28px 0 0;
-  box-shadow: 0 -8px 24px rgba(15, 27, 45, 0.18);
+  padding: 10px 10px calc(22px + env(safe-area-inset-bottom));
+  border-radius: var(--r-xl) var(--r-xl) 0 0;
+  box-shadow: var(--shadow-nav);
   z-index: 200;
   box-sizing: border-box;
 }
@@ -17,17 +21,17 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 6px 4px;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 16px 4px 8px;
   color: rgba(255, 255, 255, 0.55);
-  font-size: 10px;
-  font-weight: 600;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
   cursor: pointer;
   background: none;
   border: none;
-  border-radius: 14px;
   position: relative;
+  isolation: isolate;
   transition: color 0.15s ease;
 }
 
@@ -38,12 +42,13 @@
 .tab[data-active]::before {
   content: "";
   position: absolute;
-  top: 0;
+  top: 4px;
   left: 50%;
   transform: translateX(-50%);
-  width: 46px;
-  height: 34px;
+  width: 64px;
+  height: 62px;
   border: 1.5px solid rgba(255, 255, 255, 0.85);
-  border-radius: 10px;
+  border-radius: var(--r-md);
   pointer-events: none;
+  z-index: -1;
 }

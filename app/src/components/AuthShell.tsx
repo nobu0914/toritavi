@@ -1,7 +1,12 @@
 "use client";
 
-import { Box, Text } from "@mantine/core";
 import type { ReactNode } from "react";
+
+/*
+ * AuthShell — Design System v2 / Section 7 準拠
+ * ロゴ + タグライン + 白カードで認証系画面を包む。
+ * 直接的なMantineコンポーネント依存を外し、DSトークンで組む。
+ */
 
 export function AuthShell({
   title,
@@ -13,44 +18,76 @@ export function AuthShell({
   children: ReactNode;
 }) {
   return (
-    <Box
+    <div
       style={{
         minHeight: "100vh",
         display: "flex",
         flexDirection: "column",
+        alignItems: "center",
         padding: "48px 20px 32px",
-        background: "var(--mantine-color-gray-0)",
+        background: "var(--bg)",
       }}
     >
-      <Box style={{ textAlign: "center", marginBottom: 24 }}>
-        <Text fw={800} size="28px" c="blue.7" style={{ letterSpacing: "-0.5px" }}>
+      <div style={{ textAlign: "center", marginBottom: 24 }}>
+        <div
+          style={{
+            fontSize: 28,
+            fontWeight: "var(--fw-heavy)" as never,
+            color: "var(--info-700)",
+            letterSpacing: "-0.5px",
+            lineHeight: 1.1,
+          }}
+        >
           toritavi
-        </Text>
-        <Text size="xs" c="dimmed" mt={2}>
+        </div>
+        <div
+          style={{
+            fontSize: "var(--fs-xs)",
+            color: "var(--text-dim)",
+            marginTop: 2,
+          }}
+        >
           行動を、前に進める
-        </Text>
-      </Box>
+        </div>
+      </div>
 
-      <Box
+      <div
         style={{
-          background: "white",
-          borderRadius: 12,
-          padding: "28px 20px 24px",
-          border: "1px solid var(--mantine-color-gray-2)",
-          boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+          background: "var(--surface)",
+          border: "1px solid var(--border)",
+          borderRadius: "var(--r-md)",
+          padding: "28px 22px 24px",
+          width: "100%",
+          maxWidth: 360,
+          boxShadow: "var(--shadow-xs)",
         }}
       >
-        <Text fw={700} size="20px">
+        <div
+          style={{
+            fontSize: "var(--fs-xl)",
+            fontWeight: 800,
+            color: "var(--text)",
+            letterSpacing: "-0.3px",
+          }}
+        >
           {title}
-        </Text>
+        </div>
         {subtitle && (
-          <Text size="sm" c="dimmed" mt={4} mb={20} lh={1.6}>
+          <div
+            style={{
+              fontSize: "var(--fs-sm)",
+              color: "var(--text-dim)",
+              marginTop: 4,
+              marginBottom: 20,
+              lineHeight: 1.6,
+            }}
+          >
             {subtitle}
-          </Text>
+          </div>
         )}
-        {!subtitle && <Box mt={20} />}
+        {!subtitle && <div style={{ marginTop: 20 }} />}
         {children}
-      </Box>
-    </Box>
+      </div>
+    </div>
   );
 }

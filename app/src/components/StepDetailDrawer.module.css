@@ -3,14 +3,14 @@
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  border-bottom: 1px solid var(--mantine-color-gray-2);
+  border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
 
 .headerTitle {
   font-size: 16px;
   font-weight: 700;
-  color: var(--mantine-color-gray-9);
+  color: var(--text);
   flex: 1;
   text-align: center;
   padding: 0 8px;
@@ -24,8 +24,8 @@
 }
 
 .summary {
-  background: var(--mantine-color-blue-0);
-  border: 1px solid var(--mantine-color-blue-2);
+  background: var(--info-50);
+  border: 1px solid #C6D8F0;
   border-radius: 10px;
   padding: 14px 16px;
   margin-bottom: 12px;
@@ -41,7 +41,7 @@
 .summaryLabel {
   font-size: 11px;
   font-weight: 600;
-  color: var(--mantine-color-blue-7);
+  color: var(--info-700);
   width: 50px;
   flex-shrink: 0;
 }
@@ -49,7 +49,7 @@
 .summaryValue {
   font-size: 14px;
   font-weight: 600;
-  color: var(--mantine-color-gray-9);
+  color: var(--text);
 }
 
 .reviewBanner {
@@ -58,14 +58,14 @@
   gap: 8px;
   padding: 10px 14px;
   border-radius: 8px;
-  background: var(--mantine-color-yellow-0);
-  border: 1px solid var(--mantine-color-yellow-5);
-  color: var(--mantine-color-yellow-8);
+  background: var(--warn-50);
+  border: 1px solid var(--warn-500);
+  color: var(--warn-700);
   margin-bottom: 12px;
 }
 
 .previewSection {
-  border: 1px solid var(--mantine-color-gray-2);
+  border: 1px solid var(--border);
   border-radius: 8px;
   overflow: hidden;
   margin-bottom: 16px;
@@ -99,9 +99,9 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  border: 1px solid var(--mantine-color-gray-3);
+  border: 1px solid var(--n-300);
   background: white;
-  color: var(--mantine-color-gray-7);
+  color: var(--n-700);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -122,16 +122,16 @@
   padding: 8px;
   font-size: 12px;
   font-weight: 600;
-  color: var(--mantine-color-gray-5);
+  color: var(--text-dim);
   cursor: pointer;
-  background: var(--mantine-color-gray-0);
-  border-top: 1px solid var(--mantine-color-gray-1);
+  background: var(--n-50);
+  border-top: 1px solid var(--n-100);
 }
 
 .sectionLabel {
   font-size: 11px;
   font-weight: 700;
-  color: var(--mantine-color-gray-5);
+  color: var(--text-dim);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   padding: 0 0 6px;
@@ -139,7 +139,7 @@
 
 .fieldSection {
   background: white;
-  border: 1px solid var(--mantine-color-gray-2);
+  border: 1px solid var(--border);
   border-radius: 8px;
   overflow: hidden;
   margin-bottom: 16px;
@@ -147,7 +147,7 @@
 
 .fieldRow {
   padding: 10px 14px;
-  border-bottom: 1px solid var(--mantine-color-gray-1);
+  border-bottom: 1px solid var(--n-100);
 }
 
 .fieldRow:last-child {
@@ -157,18 +157,18 @@
 .fieldLabel {
   font-size: 11px;
   font-weight: 600;
-  color: var(--mantine-color-gray-5);
+  color: var(--text-dim);
   margin-bottom: 2px;
 }
 
 .fieldValue {
   font-size: 14px;
-  color: var(--mantine-color-gray-9);
+  color: var(--text);
   font-weight: 500;
 }
 
 .fieldEmpty {
-  color: var(--mantine-color-red-4);
+  color: #F4C7C0;
   font-style: italic;
 }
 
@@ -180,7 +180,7 @@
 
 .footer {
   padding: 12px 16px;
-  border-top: 1px solid var(--mantine-color-gray-2);
+  border-top: 1px solid var(--border);
   flex-shrink: 0;
   background: white;
 }
@@ -189,7 +189,7 @@
   width: 100%;
   height: 48px;
   border-radius: 10px;
-  background: var(--mantine-color-blue-7);
+  background: var(--info-700);
   color: white;
   border: none;
   font-size: 16px;

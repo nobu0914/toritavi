@@ -58,6 +58,34 @@ function getCategoryDef(key: StepCategory): CategoryDef {
   return categoryDefs.find((c) => c.key === key) ?? categoryDefs[categoryDefs.length - 1];
 }
 
+/* Mantine color name → DS token (bg / fg) */
+function categoryColorBg(color: string): string {
+  const map: Record<string, string> = {
+    blue: "var(--info-50)",
+    teal: "var(--success-50)",
+    violet: "var(--test-bg)",
+    indigo: "var(--info-50)",
+    orange: "var(--accent-50)",
+    green: "var(--success-50)",
+    red: "var(--danger-50)",
+    gray: "var(--n-100)",
+  };
+  return map[color] ?? "var(--n-100)";
+}
+function categoryColorFg(color: string): string {
+  const map: Record<string, string> = {
+    blue: "var(--info-700)",
+    teal: "var(--success-700)",
+    violet: "var(--test-fg)",
+    indigo: "var(--info-700)",
+    orange: "var(--accent-700)",
+    green: "var(--success-700)",
+    red: "var(--danger-700)",
+    gray: "var(--n-700)",
+  };
+  return map[color] ?? "var(--n-700)";
+}
+
 /* ====== カテゴリ自動判定 ====== */
 
 function detectCategory(text: string): StepCategory {
@@ -868,7 +896,7 @@ export default function ScanPage() {
               onDragLeave={onDragLeave}
               onDrop={onDrop}
             >
-              <IconDragDrop size={24} stroke={1.5} color="var(--mantine-color-gray-5)" />
+              <IconDragDrop size={24} stroke={1.5} color="var(--text-dim)" />
               <Text size="xs" c="dimmed">ここにファイルをドロップ</Text>
             </Box>
 
@@ -991,8 +1019,8 @@ export default function ScanPage() {
               <Box
                 className={classes.categoryBadge}
                 style={{
-                  background: `var(--mantine-color-${catDef.color}-0)`,
-                  color: `var(--mantine-color-${catDef.color}-7)`,
+                  background: categoryColorBg(catDef.color),
+                  color: categoryColorFg(catDef.color),
                   cursor: "pointer",
                 }}
                 onClick={() => setShowCategoryPicker((v) => !v)}
@@ -1156,7 +1184,7 @@ export default function ScanPage() {
         {/* エラー */}
         {status === "error" && (
           <Box className={classes.captureArea}>
-            <IconAlertCircle size={48} color="var(--mantine-color-red-6)" />
+            <IconAlertCircle size={48} color="var(--danger-500)" />
             <Text fw={700} size="lg" mt="md" c="red.6">
               読み取りに失敗しました
             </Text>
@@ -1165,7 +1193,7 @@ export default function ScanPage() {
             </Text>
             {errorDetail && (
               <details style={{ marginTop: 12, width: "100%" }}>
-                <summary style={{ fontSize: 12, color: "var(--mantine-color-gray-6)", cursor: "pointer", textAlign: "center" }}>
+                <summary style={{ fontSize: 12, color: "var(--text-dim)", cursor: "pointer", textAlign: "center" }}>
                   詳細を表示
                 </summary>
                 <Text size="xs" c="dimmed" mt={8} style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>

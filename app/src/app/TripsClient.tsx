@@ -6,6 +6,7 @@ import {
   IconAlertCircle,
   IconArrowRight,
   IconBell,
+  IconBox,
   IconCheck,
   IconChevronRight,
   IconInfoCircle,
@@ -53,7 +54,7 @@ export default function TripsClient({ journeys: initialJourneys }: { journeys: J
         icon: <IconCheck size={18} />,
         autoClose: 3000,
         withBorder: false,
-        style: { background: "var(--mantine-color-teal-6)", color: "white" },
+        style: { background: "var(--success-500)", color: "white" },
         styles: { icon: { color: "white", background: "transparent" } },
       });
       return;
@@ -65,7 +66,7 @@ export default function TripsClient({ journeys: initialJourneys }: { journeys: J
         icon: <IconInfoCircle size={18} />,
         autoClose: 3000,
         withBorder: false,
-        style: { background: "var(--mantine-color-gray-8)", color: "white" },
+        style: { background: "var(--ink-700)", color: "white" },
         styles: {
           root: { color: "white" },
           body: { color: "white" },
@@ -82,7 +83,7 @@ export default function TripsClient({ journeys: initialJourneys }: { journeys: J
         icon: <IconInfoCircle size={18} />,
         autoClose: 3000,
         withBorder: false,
-        style: { background: "var(--mantine-color-gray-8)", color: "white" },
+        style: { background: "var(--ink-700)", color: "white" },
         styles: {
           root: { color: "white" },
           body: { color: "white" },
@@ -155,10 +156,7 @@ export default function TripsClient({ journeys: initialJourneys }: { journeys: J
       <Box className={classes.screen} pb={110}>
         <Box className={classes.hero}>
           <Box className={classes.heroTop}>
-            <Box>
-              <Text className={classes.heroLabel}>Journey Workspace</Text>
-              <Text className={classes.heroTitle}>次にやることが迷わない旅程UI</Text>
-            </Box>
+            <Text className={classes.heroLabel}>ジャーニー ワークスペース</Text>
             <Box className={classes.heroBell}>
               <IconBell size={18} />
             </Box>
@@ -167,7 +165,7 @@ export default function TripsClient({ journeys: initialJourneys }: { journeys: J
           <Box className={classes.heroStats}>
             <Box className={classes.statCard}>
               <Text className={classes.statValue}>{upcomingJourneys.length}</Text>
-              <Text className={classes.statLabel}>Upcoming</Text>
+              <Text className={classes.statLabel}>進行中</Text>
             </Box>
             <Box className={classes.statCard}>
               <Text className={classes.statValue}>{attentionCards.length}</Text>
@@ -175,21 +173,21 @@ export default function TripsClient({ journeys: initialJourneys }: { journeys: J
             </Box>
             <Box className={classes.statCard}>
               <Text className={classes.statValue}>{queueItems.length}</Text>
-              <Text className={classes.statLabel}>未整理書類</Text>
+              <Text className={classes.statLabel}>未整理</Text>
             </Box>
           </Box>
 
           {focusJourney && (
             <Link href={`/trips/${focusJourney.id}`} className={classes.heroFocus} style={{ textDecoration: "none", color: "inherit" }}>
               <Box className={classes.focusIcon}>
-                <IconTrain size={18} />
+                <IconTrain size={22} />
               </Box>
               <Box className={classes.focusBody}>
                 <Text className={classes.focusLabel}>いま開くべき Journey</Text>
                 <Text className={classes.focusTitle}>{focusJourney.title}</Text>
                 <Text className={classes.focusDetail}>
                   {focusStep
-                    ? `${focusStep.time || "--:--"} に ${focusStep.title}`
+                    ? `${focusStep.time || "--:--"} · ${focusStep.title}`
                     : "次にやることを追加してください。"}
                 </Text>
               </Box>
@@ -201,7 +199,7 @@ export default function TripsClient({ journeys: initialJourneys }: { journeys: J
         {attentionCards.length > 0 && (
           <Box className={classes.section}>
             <Box className={classes.sectionHead}>
-              <Text className={classes.sectionLabel}>Need Attention</Text>
+              <Text className={classes.sectionLabel}>要確認</Text>
               <Link href="/unfiled" className={classes.sectionLink} style={{ textDecoration: "none" }}>
                 すべて見る
               </Link>
@@ -225,11 +223,14 @@ export default function TripsClient({ journeys: initialJourneys }: { journeys: J
 
         <Box className={classes.section}>
           <Box className={classes.sectionHead}>
-            <Text className={classes.sectionLabel}>Journeys</Text>
+            <Text className={classes.sectionLabel}>ジャーニー</Text>
           </Box>
           <Box className={classes.stack}>
             {sortedJourneys.length === 0 && (
               <Box className={classes.emptyCard}>
+                <Box className={classes.emptyIcon}>
+                  <IconBox size={34} stroke={1.5} />
+                </Box>
                 <Text className={classes.emptyTitle}>まだ Journey がありません</Text>
                 <Text className={classes.emptyDescription}>
                   右下の「+」から最初の Journey を作成しましょう
@@ -284,7 +285,7 @@ export default function TripsClient({ journeys: initialJourneys }: { journeys: J
         {queueItems.length > 0 && (
           <Box className={classes.section}>
             <Box className={classes.sectionHead}>
-              <Text className={classes.sectionLabel}>Capture Queue</Text>
+              <Text className={classes.sectionLabel}>取り込み待ち</Text>
               <Link href="/unfiled" className={classes.sectionLink} style={{ textDecoration: "none" }}>
                 未整理を見る
               </Link>

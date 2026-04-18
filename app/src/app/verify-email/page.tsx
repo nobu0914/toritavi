@@ -49,7 +49,7 @@ function VerifyEmailContent() {
     >
       <Stack gap="md">
         <Stack gap={4} align="center" py="md">
-          <IconMailCheck size={48} color="var(--mantine-color-blue-6)" />
+          <IconMailCheck size={48} color="var(--info-500)" />
           {email && (
             <Text size="sm" fw={600} mt={8}>
               {email}

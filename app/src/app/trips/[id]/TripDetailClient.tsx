@@ -113,7 +113,7 @@ export default function TripDetailClient({
         icon: <IconCheck size={18} />,
         autoClose: 3000,
         withBorder: false,
-        style: { background: "var(--mantine-color-teal-6)", color: "white" },
+        style: { background: "var(--success-500)", color: "white" },
         styles: {
           description: { color: "white" },
           icon: { color: "white", background: "transparent" },
@@ -246,7 +246,7 @@ export default function TripDetailClient({
       icon: <IconInfoCircle size={18} />,
       autoClose: 3000,
       withBorder: false,
-      style: { background: "var(--mantine-color-gray-8)", color: "white" },
+      style: { background: "var(--ink-700)", color: "white" },
       styles: {
         root: { color: "white" },
         body: { color: "white" },
@@ -317,7 +317,7 @@ export default function TripDetailClient({
 
         <Box className={classes.timeline}>
           {sortedSteps.length === 0 && (
-            <Box py="xl" ta="center" bg="white" style={{ borderRadius: 8, border: "1px solid var(--mantine-color-gray-2)" }}>
+            <Box py="xl" ta="center" bg="var(--surface)" style={{ borderRadius: "var(--r-lg)", border: "1px solid var(--border)" }}>
               <Text fw={800}>ステップを追加してください</Text>
               <Text size="sm" c="dimmed" mt={6}>
                 移動、宿泊、予定を追加するとこの Journey が動き始めます。
@@ -357,18 +357,7 @@ export default function TripDetailClient({
                   <Box style={{ flex: 1 }} />
                   <Box
                     className={classes.timelineBadge}
-                    style={{
-                      background: isDone
-                        ? "var(--mantine-color-teal-0)"
-                        : isActive || isNext
-                          ? "var(--mantine-color-blue-0)"
-                          : "var(--mantine-color-gray-1)",
-                      color: isDone
-                        ? "var(--mantine-color-teal-8)"
-                        : isActive || isNext
-                          ? "var(--mantine-color-blue-7)"
-                          : "var(--mantine-color-gray-7)",
-                    }}
+                    data-state={isDone ? "done" : isActive || isNext ? "active" : "idle"}
                   >
                     {isNext && !isDone ? "次" : step.status}
                   </Box>

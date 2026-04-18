@@ -1,8 +1,12 @@
 "use client";
 
-import { ActionIcon, Box, Text } from "@mantine/core";
 import { IconChevronLeft } from "@tabler/icons-react";
 import { LoadingOverlay, useNavigateWithLoading } from "@/components/LoadingOverlay";
+
+/*
+ * AppHeader — Design System v2 Section 6 "App Header (Dark)" 準拠
+ * background: var(--ink-800), 白文字、戻るボタン + タイトル + 右アクション
+ */
 
 type Props = {
   title: string;
@@ -18,10 +22,10 @@ export function AppHeader({ title, back, backHref, action }: Props) {
   return (
     <>
       {navigating && <LoadingOverlay message="読み込み中..." />}
-      <Box
+      <div
         style={{
-          background: "var(--mantine-color-blue-7)",
-          color: "white",
+          background: "var(--ink-800)",
+          color: "#fff",
           padding: "14px 16px",
           position: "sticky",
           top: 0,
@@ -29,48 +33,55 @@ export function AppHeader({ title, back, backHref, action }: Props) {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
+          gap: 10,
         }}
       >
-        <Box style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
           {back && (
-            <ActionIcon
-              variant="transparent"
-              color="white"
-              size="sm"
-              style={{ padding: 4 }}
-              onClick={handleBack}
-            >
-              <IconChevronLeft size={20} />
-            </ActionIcon>
-          )}
-          {back ? (
-            <Box
-              component="button"
+            <button
               type="button"
               onClick={handleBack}
+              aria-label="戻る"
               style={{
                 background: "transparent",
                 border: "none",
                 padding: 0,
                 margin: 0,
-                color: "white",
+                color: "#fff",
                 cursor: "pointer",
+                width: 36,
+                height: 36,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
               }}
             >
-              <Text fw={700} size="18px" c="white" lh={1.2}>
-                {title}
-              </Text>
-            </Box>
-          ) : (
-            <Text fw={700} size="18px" c="white" lh={1.2}>
-              {title}
-            </Text>
+              <IconChevronLeft size={22} />
+            </button>
           )}
-        </Box>
+          <div
+            onClick={back ? handleBack : undefined}
+            style={{
+              fontSize: "var(--fs-lg)",
+              fontWeight: 700,
+              color: "#fff",
+              lineHeight: 1.2,
+              cursor: back ? "pointer" : "default",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            {title}
+          </div>
+        </div>
         {action && (
-          <Box style={{ color: "rgba(255,255,255,0.8)" }}>{action}</Box>
+          <div style={{ color: "rgba(255,255,255,0.85)", flexShrink: 0 }}>
+            {action}
+          </div>
         )}
-      </Box>
+      </div>
     </>
   );
 }

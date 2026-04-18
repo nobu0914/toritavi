@@ -116,8 +116,8 @@ export function PullToRefresh({ children }: { children: React.ReactNode }) {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            background: "var(--mantine-color-gray-0)",
-            borderBottom: "1px solid var(--mantine-color-gray-2)",
+            background: "var(--n-50)",
+            borderBottom: "1px solid var(--border)",
             zIndex: 250,
             pointerEvents: "none",
           }}
@@ -130,8 +130,8 @@ export function PullToRefresh({ children }: { children: React.ReactNode }) {
                   transition: "transform 0.2s",
                   transform: triggered ? "rotate(180deg)" : "rotate(0deg)",
                   color: triggered
-                    ? "var(--mantine-color-blue-7)"
-                    : "var(--mantine-color-gray-5)",
+                    ? "var(--info-700)"
+                    : "var(--text-dim)",
                 }}
               />
               <Text

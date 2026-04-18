@@ -71,7 +71,7 @@ export default function ResetPasswordPage() {
         subtitle="新しいパスワードでログインしてください。"
       >
         <Stack gap="md" align="center" py="md">
-          <IconCircleCheck size={48} color="var(--mantine-color-teal-6)" />
+          <IconCircleCheck size={48} color="var(--success-500)" />
           <Button component={Link} href="/login" fullWidth>
             ログイン画面へ
           </Button>
@@ -121,7 +121,7 @@ export default function ResetPasswordPage() {
       </form>
 
       <Text size="sm" c="dimmed" ta="center" mt="md">
-        <Link href="/login" style={{ color: "var(--mantine-color-blue-7)" }}>
+        <Link href="/login" style={{ color: "var(--info-700)" }}>
           ログイン画面に戻る
         </Link>
       </Text>

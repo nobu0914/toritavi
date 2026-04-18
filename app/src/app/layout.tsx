@@ -6,6 +6,8 @@ import { GuestBanner } from "@/components/GuestBanner";
 import { theme } from "./theme";
 import "@mantine/core/styles.css";
 import "@mantine/notifications/styles.css";
+import "./design-tokens.css";
+import "./globals.css";
 
 export const metadata: Metadata = {
   title: "toritavi",

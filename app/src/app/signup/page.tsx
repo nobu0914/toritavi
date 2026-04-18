@@ -110,7 +110,7 @@ export default function SignupPage() {
 
       <Text size="sm" c="dimmed" ta="center" mt="md">
         既にアカウントをお持ちの方は{" "}
-        <Link href="/login" style={{ color: "var(--mantine-color-blue-7)", fontWeight: 600 }}>
+        <Link href="/login" style={{ color: "var(--info-700)", fontWeight: 600 }}>
           ログイン
         </Link>
       </Text>

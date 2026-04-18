@@ -248,7 +248,7 @@ export default function NewTripPage() {
         icon: <IconInfoCircle size={18} />,
         autoClose: 3000,
         withBorder: false,
-        style: { background: "var(--mantine-color-gray-8)", color: "white" },
+        style: { background: "var(--ink-700)", color: "white" },
         styles: {
           root: { color: "white" },
           body: { color: "white" },
@@ -346,7 +346,7 @@ export default function NewTripPage() {
                     <Box className={classes.stepNum}>{i + 1}</Box>
                     <Text className={classes.stepLabel}>{item.step?.category ?? ""}</Text>
                     {!item.registered && (
-                      <Text style={{ fontSize: 9, color: "var(--mantine-color-gray-4)", fontWeight: 600, marginLeft: "auto" }}>
+                      <Text style={{ fontSize: 9, color: "var(--text-muted)", fontWeight: 600, marginLeft: "auto" }}>
                         新規個別カード
                       </Text>
                     )}
@@ -558,7 +558,7 @@ export default function NewTripPage() {
               justifyContent: "center",
             }}
           >
-            <IconCamera size={34} color="var(--mantine-color-blue-7)" />
+            <IconCamera size={34} color="var(--info-700)" />
           </Box>
           <Text size="lg" fw={800}>
             書類を撮影
@@ -573,8 +573,8 @@ export default function NewTripPage() {
             p="xl"
             style={{
               borderRadius: 8,
-              background: "var(--mantine-color-gray-0)",
-              border: "1px solid var(--mantine-color-gray-2)",
+              background: "var(--n-50)",
+              border: "1px solid var(--border)",
             }}
           >
             <Box
@@ -582,11 +582,11 @@ export default function NewTripPage() {
                 width: "100%",
                 height: 160,
                 borderRadius: 6,
-                background: "var(--mantine-color-gray-1)",
+                background: "var(--n-100)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: "var(--mantine-color-gray-4)",
+                color: "var(--text-muted)",
               }}
             >
               <IconCamera size={40} />

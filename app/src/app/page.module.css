@@ -1,93 +1,98 @@
+/*
+ * TOP — Design System v2 Section 6 (Workspace Hero) 準拠
+ * 参考: mock/design-system-v2.html の Preview E. Journey Workspace
+ */
+
 .screen {
-  background:
-    radial-gradient(circle at top right, rgba(208, 235, 255, 0.9), transparent 28%),
-    linear-gradient(180deg, #f8fbff 0%, #f8f9fa 22%, #f8f9fa 100%);
+  background: var(--bg);
+  padding: 12px 14px 0;
 }
 
+/* === Workspace Hero (white surface card) === */
 .hero {
-  padding: 16px;
-  background: linear-gradient(160deg, var(--mantine-color-blue-7), var(--mantine-color-blue-9));
-  color: white;
+  background: var(--surface);
+  border-radius: var(--r-lg);
+  padding: 18px 20px;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 14px;
+  color: var(--text);
 }
 
 .heroTop {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
 .heroLabel {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.6px;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  color: var(--text-dim);
   text-transform: uppercase;
-  opacity: 0.72;
-}
-
-.heroTitle {
-  margin-top: 8px;
-  font-size: 24px;
-  line-height: 1.25;
-  font-weight: 700;
-  max-width: 280px;
+  letter-spacing: 0.8px;
 }
 
 .heroBell {
   width: 36px;
   height: 36px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--ink-800);
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: var(--shadow-xs);
 }
 
 .heroStats {
-  margin-top: 16px;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  gap: 10px;
+  margin-bottom: 14px;
 }
 
 .statCard {
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 8px;
-  padding: 12px;
+  background: var(--n-50);
+  border-radius: var(--r-md);
+  padding: 14px 10px;
+  text-align: center;
 }
 
 .statValue {
-  font-size: 22px;
-  line-height: 1;
-  font-weight: 700;
+  font-size: var(--fs-2xl);
+  line-height: 1.1;
+  font-weight: var(--fw-heavy);
+  color: var(--ink-800);
 }
 
 .statLabel {
-  margin-top: 6px;
-  font-size: 11px;
-  opacity: 0.8;
+  margin-top: 4px;
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+  font-weight: var(--fw-bold);
 }
 
+/* === Focus Card (next action) === */
 .heroFocus {
-  margin-top: 16px;
-  background: white;
-  color: var(--mantine-color-gray-9);
-  border-radius: 8px;
-  padding: 12px;
-  display: flex;
-  gap: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 14px;
+  display: grid;
+  grid-template-columns: 44px 1fr 20px;
+  gap: 12px;
   align-items: center;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.05) 0 10px 15px -5px;
 }
 
 .focusIcon {
-  width: 38px;
-  height: 38px;
-  border-radius: 8px;
-  background: var(--mantine-color-blue-0);
-  color: var(--mantine-color-blue-7);
+  width: 44px;
+  height: 44px;
+  border-radius: var(--r-md);
+  background: var(--tint-train);
+  color: var(--ink-700);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -95,35 +100,37 @@
 }
 
 .focusBody {
-  flex: 1;
   min-width: 0;
 }
 
 .focusLabel {
-  font-size: 10px;
-  color: var(--mantine-color-gray-5);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+  font-weight: var(--fw-bold);
 }
 
 .focusTitle {
-  font-size: 14px;
-  font-weight: 700;
+  font-size: var(--fs-md);
+  font-weight: var(--fw-bold);
+  color: var(--text);
   margin-top: 2px;
 }
 
 .focusDetail {
-  font-size: 12px;
-  color: var(--mantine-color-gray-6);
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
   margin-top: 2px;
 }
 
 .focusChevron {
-  color: var(--mantine-color-gray-4);
+  color: var(--text-dim);
+  width: 18px;
+  height: 18px;
 }
 
+/* === Sections === */
 .section {
-  padding: 18px 16px 0;
+  margin-top: 18px;
 }
 
 .sectionHead {
@@ -132,174 +139,186 @@
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 10px;
+  padding: 0 2px;
 }
 
 .sectionLabel {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--mantine-color-gray-6);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  color: var(--text-dim);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.6px;
 }
 
 .sectionLink {
   background: none;
   border: none;
-  font-size: 12px;
-  color: var(--mantine-color-blue-7);
-  font-weight: 600;
+  font-size: var(--fs-sm);
+  color: var(--info-700);
+  font-weight: var(--fw-bold);
   padding: 0;
   cursor: pointer;
+  text-decoration: none;
 }
 
 .stack {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-}
-
-.alertCard {
-  background: white;
-  border: 1px solid var(--mantine-color-gray-2);
-  border-radius: 8px;
-  padding: 12px;
-  display: flex;
-  align-items: center;
   gap: 10px;
 }
 
+/* === Need Attention Card === */
+.alertCard {
+  background: var(--surface);
+  border: 1px solid var(--danger-50);
+  border-radius: var(--r-md);
+  padding: 12px 14px;
+  display: grid;
+  grid-template-columns: 20px 1fr 16px;
+  gap: 12px;
+  align-items: center;
+}
+
 .alertIcon {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  background: var(--mantine-color-orange-0);
-  color: var(--mantine-color-orange-8);
+  width: 20px;
+  height: 20px;
+  color: var(--danger-500);
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
 }
 
 .alertBody {
-  flex: 1;
+  min-width: 0;
 }
 
 .alertTitle {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  color: var(--text);
 }
 
 .alertDetail {
-  font-size: 12px;
-  color: var(--mantine-color-gray-6);
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
   margin-top: 2px;
 }
 
 .alertArrow {
-  color: var(--mantine-color-gray-4);
+  color: var(--text-dim);
 }
 
+/* === Journey Card (cover variants) === */
 .journeyCard {
-  background: white;
-  border: 1px solid var(--mantine-color-gray-2);
-  border-radius: 8px;
+  background: var(--surface);
+  border-radius: var(--r-lg);
   overflow: hidden;
+  box-shadow: var(--shadow-sm);
   cursor: pointer;
+  display: block;
+  text-decoration: none;
+  color: inherit;
 }
 
 .journeyCover {
-  padding: 14px 16px;
+  padding: 18px 18px 16px;
   color: white;
 }
 
 .journeyCover[data-variant="primary"] {
-  background: var(--mantine-color-blue-7);
+  background: var(--hero-gradient-primary);
 }
 
 .journeyCover[data-variant="dark"] {
-  background: var(--mantine-color-blue-9);
+  background: linear-gradient(135deg, var(--ink-700) 0%, var(--ink-900) 100%);
 }
 
 .journeyCover[data-variant="muted"] {
-  background: var(--mantine-color-gray-7);
+  background: linear-gradient(135deg, var(--n-100) 0%, var(--n-200) 100%);
+  color: var(--ink-800);
 }
 
 .journeyEyebrow {
-  font-size: 11px;
-  opacity: 0.78;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  opacity: 0.8;
+  letter-spacing: 0.5px;
 }
 
 .journeyTitle {
-  margin-top: 4px;
-  font-size: 18px;
-  font-weight: 700;
+  margin-top: 6px;
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-heavy);
+  letter-spacing: -0.2px;
 }
 
 .journeyDetail {
-  margin-top: 4px;
-  font-size: 12px;
-  opacity: 0.82;
+  margin-top: 6px;
+  font-size: var(--fs-xs);
+  opacity: 0.8;
 }
 
 .journeyBody {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 12px 14px;
+  gap: 10px;
+  padding: 12px 16px 14px;
 }
 
 .journeyMetaLabel {
-  font-size: 11px;
-  color: var(--mantine-color-gray-5);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+  font-weight: var(--fw-bold);
 }
 
 .journeyMeta {
-  margin-top: 3px;
-  font-size: 13px;
-  color: var(--mantine-color-gray-7);
+  margin-top: 2px;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  color: var(--text);
 }
 
 .reviewBadge {
-  padding: 2px 8px;
-  border-radius: 4px;
+  padding: 3px 10px;
+  border-radius: var(--r-sm);
   font-size: 10px;
-  font-weight: 700;
-  background: var(--mantine-color-yellow-0);
-  color: var(--mantine-color-yellow-8);
-  border: 1px solid var(--mantine-color-yellow-5);
+  font-weight: var(--fw-bold);
+  background: var(--warn-50);
+  color: var(--warn-700);
   white-space: nowrap;
 }
 
 .journeyBadge {
-  padding: 3px 10px;
-  border-radius: 32px;
-  font-size: 11px;
-  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: var(--r-pill);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
 }
 
 .journeyBadge[data-state="準備中"] {
-  background: var(--mantine-color-blue-0);
-  color: var(--mantine-color-blue-7);
+  background: var(--info-50);
+  color: var(--info-700);
 }
 
 .journeyBadge[data-state="進行中"] {
-  background: #e3fafc;
-  color: #0c8599;
+  background: var(--success-50);
+  color: var(--success-700);
 }
 
 .journeyBadge[data-state="完了"] {
-  background: var(--mantine-color-teal-0);
-  color: var(--mantine-color-teal-8);
+  background: var(--n-100);
+  color: var(--n-700);
 }
 
+/* === Capture Queue === */
 .queueCard {
-  background: white;
-  border: 1px solid var(--mantine-color-gray-2);
-  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
   overflow: hidden;
 }
 
@@ -311,15 +330,15 @@
 }
 
 .queueRow[data-border] {
-  border-bottom: 1px solid var(--mantine-color-gray-1);
+  border-bottom: 1px solid var(--n-100);
 }
 
 .queueIcon {
   width: 34px;
   height: 34px;
-  border-radius: 8px;
-  background: var(--mantine-color-gray-0);
-  color: var(--mantine-color-gray-7);
+  border-radius: var(--r-sm);
+  background: var(--n-100);
+  color: var(--ink-700);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -328,40 +347,55 @@
 
 .queueBody {
   flex: 1;
+  min-width: 0;
 }
 
 .queueTitle {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  color: var(--text);
 }
 
 .queueDetail {
-  font-size: 12px;
-  color: var(--mantine-color-gray-6);
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
   margin-top: 2px;
 }
 
 .queueArrow {
-  color: var(--mantine-color-gray-4);
+  color: var(--text-dim);
 }
 
+/* === Empty state === */
 .emptyCard {
-  background: white;
-  border: 1px solid var(--mantine-color-gray-2);
-  border-radius: 8px;
-  padding: 32px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 48px 24px;
   text-align: center;
 }
 
+.emptyIcon {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--n-100);
+  color: var(--n-300);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
 .emptyTitle {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--mantine-color-gray-7);
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
+  color: var(--text);
 }
 
 .emptyDescription {
-  margin-top: 6px;
-  font-size: 14px;
-  color: var(--mantine-color-gray-6);
-  line-height: 1.6;
+  margin-top: 8px;
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+  line-height: 1.7;
 }

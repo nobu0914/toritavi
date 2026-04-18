@@ -1,46 +1,65 @@
+/*
+ * Journey Detail — Design System v2 Section 10 準拠
+ * ダークヒーロー + タイムライン + アクションバー + モーダル
+ */
+
+/* === Dark Hero (DS Section 10) === */
 .hero {
-  background: linear-gradient(180deg, var(--mantine-color-blue-7), var(--mantine-color-blue-8));
+  background: var(--hero-gradient);
   color: white;
-  padding: 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.16);
+  padding: 18px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.heroEyebrow {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  opacity: 0.78;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
 }
 
 .heroTitle {
-  font-size: 20px;
-  font-weight: 700;
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-heavy);
+  letter-spacing: -0.3px;
+  margin-top: 6px;
 }
 
 .heroDate {
-  font-size: 13px;
+  font-size: var(--fs-xs);
   opacity: 0.8;
-  margin-top: 4px;
+  margin-top: 6px;
 }
 
 .heroSummary {
   display: flex;
-  gap: 12px;
+  gap: 14px;
   margin-top: 10px;
-  font-size: 12px;
+  font-size: var(--fs-xs);
   opacity: 0.8;
 }
 
+/* === Day divider === */
 .dayHeader {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--mantine-color-gray-9);
-  padding: 16px 16px 8px;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  color: var(--text-dim);
+  padding: 18px 16px 10px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
 }
 
 .dayLine {
   flex: 1;
-  height: 2px;
-  background: var(--mantine-color-blue-7);
-  border-radius: 1px;
+  height: 1px;
+  background: var(--border);
 }
 
+/* === Timeline === */
 .timeline {
   padding: 0 16px;
 }
@@ -50,7 +69,6 @@
   padding-left: 20px;
 }
 
-/* 縦線: アイテム全体の左を通る */
 .timelineItem::before {
   content: "";
   position: absolute;
@@ -58,7 +76,7 @@
   top: 0;
   bottom: 0;
   width: 2px;
-  background: var(--mantine-color-gray-3);
+  background: var(--n-200);
 }
 
 .timelineItem:first-child::before {
@@ -71,14 +89,13 @@
 }
 
 .timelineItemDone::before {
-  background: var(--mantine-color-teal-6);
+  background: var(--state-done-accent);
 }
 
 .timelineItemActive::before {
-  background: var(--mantine-color-blue-7);
+  background: var(--state-active-accent);
 }
 
-/* 時間行: ● 時間 ... ステータス */
 .timelineTimeRow {
   display: flex;
   align-items: center;
@@ -87,80 +104,61 @@
 }
 
 .timelineTimeText {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--mantine-color-gray-7);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  color: var(--text-dim);
+  font-family: var(--font-mono);
 }
 
 .timelineDot {
-  width: 12px;
-  height: 12px;
-  border-radius: 999px;
-  border: 2px solid var(--mantine-color-gray-4);
-  background: white;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--state-idle-accent);
+  background: var(--surface);
   flex-shrink: 0;
   position: relative;
   z-index: 1;
-  margin-left: -16px;
+  margin-left: -17px;
 }
 
 .timelineDotDone {
-  background: var(--mantine-color-teal-6);
-  border-color: var(--mantine-color-teal-6);
+  background: var(--state-done-accent);
+  border-color: var(--state-done-accent);
 }
 
 .timelineDotActive {
-  background: var(--mantine-color-blue-7);
-  border-color: var(--mantine-color-blue-7);
-  box-shadow: 0 0 0 4px rgba(28, 126, 214, 0.15);
+  background: var(--state-active-accent);
+  border-color: var(--state-active-accent);
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.18);
 }
 
-/* カード */
+.timelineDotReview {
+  border-color: var(--state-review-accent) !important;
+  background: var(--state-review-bg) !important;
+}
+
+/* === Timeline card === */
 .timelineCard {
-  background: white;
-  border: 1px solid var(--mantine-color-gray-2);
-  border-radius: 8px;
-  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 12px 14px;
   margin: 6px 0 0 0;
   cursor: pointer;
   display: flex;
   gap: 10px;
+  box-shadow: var(--shadow-xs);
 }
 
 .timelineCardActive {
-  border-color: var(--mantine-color-blue-7);
+  border-color: var(--state-active-accent);
   border-width: 2px;
+  box-shadow: var(--shadow-sm);
 }
 
 .timelineCardReview {
-  border-left: 3px solid var(--mantine-color-yellow-5);
-}
-
-.actionBar {
-  display: flex;
-  gap: 6px;
-  padding: 8px 0;
-  justify-content: center;
-}
-
-.actionBtn {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 5px 10px;
-  border-radius: 16px;
-  border: 1px solid var(--mantine-color-gray-3);
-  background: white;
-  color: var(--mantine-color-gray-6);
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  font-family: inherit;
-  white-space: nowrap;
-}
-
-.actionBtn:active {
-  background: var(--mantine-color-gray-0);
+  border-left: 3px solid var(--state-review-accent);
 }
 
 .timelineCardBody {
@@ -169,110 +167,168 @@
 }
 
 .timelineRoute {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--mantine-color-gray-9);
+  font-size: var(--fs-md);
+  font-weight: var(--fw-bold);
+  color: var(--text);
 }
 
 .timelineArrival {
-  font-size: 12px;
-  color: var(--mantine-color-gray-6);
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
   margin-top: 2px;
 }
 
 .timelineFlightNo {
-  font-size: 11px;
-  color: var(--mantine-color-gray-5);
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
   margin-top: 2px;
 }
 
 .timelineReviewInline {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--mantine-color-yellow-8);
-  margin-top: 4px;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  color: var(--state-review-fg);
+  margin-top: 6px;
 }
 
 .reviewMark {
   padding: 3px 8px;
   margin-left: 4px;
   border-radius: 4px;
-  background: var(--mantine-color-yellow-0);
-  border: 1px solid var(--mantine-color-yellow-5);
-  color: var(--mantine-color-yellow-8);
+  background: var(--state-review-bg);
+  color: var(--state-review-fg);
   display: inline-block;
-}
-
-.timelineDotReview {
-  border-color: var(--mantine-color-yellow-5) !important;
-  background: var(--mantine-color-yellow-1) !important;
+  font-size: 10px;
+  font-weight: var(--fw-bold);
 }
 
 .timelineBadge {
-  font-size: 10px;
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 20px;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  padding: 4px 10px;
+  border-radius: var(--r-pill);
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Status badges map to state tokens */
+.timelineBadge[data-state="done"] {
+  background: var(--state-done-bg);
+  color: var(--state-done-fg);
+}
+.timelineBadge[data-state="active"] {
+  background: var(--state-active-bg);
+  color: var(--state-active-fg);
+}
+.timelineBadge[data-state="idle"] {
+  background: var(--state-idle-bg);
+  color: var(--state-idle-fg);
+}
+.timelineBadge[data-state="review"] {
+  background: var(--state-review-bg);
+  color: var(--state-review-fg);
+}
+
+/* === Inter-step Action Bar (DS Section 10) === */
+.actionBar {
+  display: flex;
+  gap: 6px;
+  padding: 8px 0;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.actionBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--n-300);
+  background: var(--surface);
+  color: var(--text-dim);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.actionBtn:hover,
+.actionBtn:active {
+  background: var(--n-50);
+  border-color: var(--ink-800);
+  color: var(--ink-800);
 }
 
 .freeRow {
   padding: 6px 0 6px 10px;
-  font-size: 12px;
-  color: var(--mantine-color-gray-5);
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
   font-style: italic;
 }
 
 .freeRowActive {
-  color: var(--mantine-color-blue-7);
+  color: var(--state-active-fg);
   font-style: normal;
-  font-weight: 600;
+  font-weight: var(--fw-bold);
 }
 
+/* === Notes card === */
 .notesCard {
-  background: white;
+  background: var(--surface);
   margin: 16px 16px 0;
-  border-radius: 8px;
-  border: 1px solid var(--mantine-color-gray-2);
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
   overflow: hidden;
+  box-shadow: var(--shadow-xs);
 }
 
 .notesHeader {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--mantine-color-gray-6);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  color: var(--text-dim);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.6px;
   padding: 12px 14px 8px;
 }
 
 .notesBody {
   padding: 0 14px 14px;
-  font-size: 14px;
-  color: var(--mantine-color-gray-7);
-  line-height: 1.6;
+  font-size: var(--fs-sm);
+  color: var(--text);
+  line-height: 1.7;
 }
 
+/* === Danger zone === */
 .dangerZone {
-  margin: 20px 16px 0;
+  margin: 24px 16px 0;
 }
 
 .deleteScheduleButton {
   width: 100%;
-  padding: 11px 12px;
-  border-radius: 8px;
-  border: 1px solid rgba(250, 82, 82, 0.2);
-  background: rgba(255, 245, 245, 0.96);
-  color: var(--mantine-color-red-6);
-  font-size: 14px;
-  font-weight: 700;
+  padding: 12px;
+  border-radius: var(--r-md);
+  border: 1px solid rgba(231, 76, 60, 0.2);
+  background: var(--danger-50);
+  color: var(--danger-700);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
   cursor: pointer;
   font-family: inherit;
 }
 
+.deleteScheduleButton:hover {
+  background: rgba(231, 76, 60, 0.15);
+}
+
+/* === Edit modal === */
 .editModal :global(.mantine-Modal-content) {
-  border-radius: 12px;
+  border-radius: var(--r-xl);
   overflow: hidden;
+  box-shadow: var(--dialog-shadow);
 }
 
 .editModal :global(.mantine-Modal-header) {
@@ -281,51 +337,52 @@
 
 .editModal :global(.mantine-Modal-body) {
   padding: 0;
-  background: var(--mantine-color-gray-0);
+  background: var(--bg);
 }
 
 .modalPanel {
-  background: var(--mantine-color-gray-0);
+  background: var(--bg);
 }
 
 .modalTop {
-  background: white;
-  padding: 14px 16px;
+  background: var(--surface);
+  padding: 14px 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid var(--mantine-color-gray-2);
+  border-bottom: 1px solid var(--border);
 }
 
 .modalTitle {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--mantine-color-gray-9);
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
+  color: var(--text);
 }
 
 .modalBody {
-  padding: 16px;
+  padding: 18px 20px;
 }
 
 .modalSectionLabel {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--mantine-color-gray-6);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  color: var(--text-dim);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  padding: 0 0 8px;
+  letter-spacing: 0.6px;
+  padding: 0 0 10px;
 }
 
 .formSection {
-  background: white;
-  border: 1px solid var(--mantine-color-gray-2);
-  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
   overflow: hidden;
+  box-shadow: var(--shadow-xs);
 }
 
 .formRow {
   padding: 12px 14px;
-  border-bottom: 1px solid var(--mantine-color-gray-1);
+  border-bottom: 1px solid var(--n-100);
 }
 
 .formRow:last-child {
@@ -333,19 +390,22 @@
 }
 
 .formLabel {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--mantine-color-gray-6);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  color: var(--text-dim);
   margin-bottom: 4px;
   display: block;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .plainInput :global(input) {
   border: none;
   background: transparent;
-  padding: 8px 0;
-  font-size: 16px;
-  color: var(--mantine-color-gray-9);
+  padding: 6px 0;
+  font-size: var(--fs-md);
+  color: var(--text);
+  font-weight: var(--fw-medium);
 }
 
 .plainInput :global(input:focus) {
@@ -355,20 +415,32 @@
 .dateGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: 0;
+}
+
+.dateGrid > .formRow:first-child {
+  border-right: 1px solid var(--n-100);
+  border-bottom: none;
 }
 
 .saveButton {
   margin-top: 20px;
   width: 100%;
-  height: 46px;
-  border-radius: 8px;
-  background: var(--mantine-color-blue-7);
+  height: var(--btn-h-md);
+  border-radius: var(--r-pill);
+  background: var(--ink-800);
+  font-weight: var(--fw-bold);
 }
 
+.saveButton:hover {
+  background: var(--ink-700);
+}
+
+/* === Confirm / Destructive modal === */
 .confirmModal :global(.mantine-Modal-content) {
-  border-radius: 12px;
+  border-radius: var(--dialog-radius);
   overflow: hidden;
+  box-shadow: var(--dialog-shadow);
 }
 
 .confirmModal :global(.mantine-Modal-header) {
@@ -380,47 +452,70 @@
 }
 
 .confirmPanel {
-  background: white;
+  background: var(--surface);
+  text-align: center;
+  padding-top: 24px;
+}
+
+.confirmIcon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--danger-50);
+  color: var(--danger-500);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
 }
 
 .confirmTitle {
-  padding: 16px 16px 0;
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--mantine-color-gray-9);
+  padding: 0 20px 4px;
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
+  color: var(--text);
 }
 
 .confirmBody {
-  padding: 12px 16px 16px;
-  font-size: 14px;
-  line-height: 1.6;
-  color: var(--mantine-color-gray-6);
+  padding: 8px 20px 16px;
+  font-size: var(--fs-sm);
+  line-height: 1.65;
+  color: var(--text-dim);
 }
 
 .confirmFooter {
   padding: 8px 16px 16px;
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
   gap: 8px;
 }
 
 .confirmCancel,
 .confirmDelete {
-  height: 36px;
-  padding: 0 14px;
-  border-radius: 8px;
+  height: var(--btn-h-sm);
+  padding: 0 18px;
+  border-radius: var(--r-pill);
   border: none;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
   cursor: pointer;
+  font-family: inherit;
 }
 
 .confirmCancel {
-  background: transparent;
-  color: var(--mantine-color-gray-7);
+  background: var(--n-100);
+  color: var(--ink-800);
+}
+
+.confirmCancel:hover {
+  background: var(--n-200);
 }
 
 .confirmDelete {
-  background: var(--mantine-color-red-6);
+  background: var(--danger-500);
   color: white;
+}
+
+.confirmDelete:hover {
+  background: var(--danger-700);
 }

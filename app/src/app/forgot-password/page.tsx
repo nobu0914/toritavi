@@ -45,7 +45,7 @@ export default function ForgotPasswordPage() {
         subtitle="パスワード再設定リンクを送信しました。メールをご確認ください。"
       >
         <Stack gap="md" align="center" py="md">
-          <IconMailCheck size={48} color="var(--mantine-color-blue-6)" />
+          <IconMailCheck size={48} color="var(--info-500)" />
           <Text size="sm" fw={600}>{email}</Text>
           <Text size="xs" c="dimmed" ta="center" lh={1.6}>
             メールが届かない場合は迷惑メールフォルダもご確認ください。
@@ -86,7 +86,7 @@ export default function ForgotPasswordPage() {
       </form>
 
       <Text size="sm" c="dimmed" ta="center" mt="md">
-        <Link href="/login" style={{ color: "var(--mantine-color-blue-7)" }}>
+        <Link href="/login" style={{ color: "var(--info-700)" }}>
           ログイン画面に戻る
         </Link>
       </Text>

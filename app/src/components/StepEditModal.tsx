@@ -102,7 +102,7 @@ export function StepEditModal({
         },
         body: {
           padding: 0,
-          background: "var(--mantine-color-gray-0)",
+          background: "var(--n-50)",
           display: "flex",
           flexDirection: "column",
           flex: 1,
@@ -281,7 +281,7 @@ export function StepEditModal({
                     />
                   ) : (
                     <Text className={classes.readOnlyValue}>
-                      {val || <span style={{ color: "var(--mantine-color-gray-4)", fontStyle: "italic" }}>未読取</span>}
+                      {val || <span style={{ color: "var(--text-muted)", fontStyle: "italic" }}>未読取</span>}
                     </Text>
                   )}
                 </Box>

@@ -78,12 +78,12 @@ export default function LoginPage() {
       </form>
 
       <Stack gap={4} mt="md" align="center">
-        <Link href="/forgot-password" style={{ fontSize: 13, color: "var(--mantine-color-blue-7)" }}>
+        <Link href="/forgot-password" style={{ fontSize: 13, color: "var(--info-700)" }}>
           パスワードをお忘れですか？
         </Link>
         <Text size="sm" c="dimmed" mt={4}>
           アカウントをお持ちでない方は{" "}
-          <Link href="/signup" style={{ color: "var(--mantine-color-blue-7)", fontWeight: 600 }}>
+          <Link href="/signup" style={{ color: "var(--info-700)", fontWeight: 600 }}>
             新規登録
           </Link>
         </Text>

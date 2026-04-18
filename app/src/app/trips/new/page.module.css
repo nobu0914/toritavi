@@ -8,7 +8,7 @@
 .sectionLabel {
   font-size: 11px;
   font-weight: 700;
-  color: var(--mantine-color-gray-6);
+  color: var(--text-dim);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   padding: 16px 16px 8px;
@@ -18,13 +18,13 @@
   background: white;
   margin: 12px 16px;
   border-radius: 8px;
-  border: 1px solid var(--mantine-color-gray-2);
+  border: 1px solid var(--border);
   overflow: hidden;
 }
 
 .formRow {
   padding: 12px 14px;
-  border-bottom: 1px solid var(--mantine-color-gray-1);
+  border-bottom: 1px solid var(--n-100);
 }
 
 .formRow:last-child {
@@ -34,7 +34,7 @@
 .formLabel {
   font-size: 12px;
   font-weight: 600;
-  color: var(--mantine-color-gray-6);
+  color: var(--text-dim);
   margin-bottom: 4px;
   display: block;
 }
@@ -45,13 +45,13 @@
   padding: 8px 0;
   border: none;
   font-size: 16px;
-  color: var(--mantine-color-gray-9);
+  color: var(--text);
   background: transparent;
 }
 
 .titleInput :global(input::placeholder),
 .memoInput :global(input::placeholder) {
-  color: var(--mantine-color-gray-4);
+  color: var(--text-muted);
 }
 
 .stepList {
@@ -85,7 +85,7 @@
 
 .stepCard {
   background: white;
-  border: 1px solid var(--mantine-color-gray-2);
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 12px;
   position: relative;
@@ -93,7 +93,7 @@
 }
 
 .stepDone {
-  border-color: var(--mantine-color-teal-6);
+  border-color: var(--success-500);
 }
 
 .stepHead {
@@ -113,7 +113,7 @@
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: var(--mantine-color-blue-7);
+  background: var(--info-700);
   color: white;
   font-size: 11px;
   font-weight: 700;
@@ -123,19 +123,19 @@
 }
 
 .stepDone .stepNum {
-  background: var(--mantine-color-teal-6);
+  background: var(--success-500);
 }
 
 .stepLabel {
   font-size: 11px;
   font-weight: 600;
-  color: var(--mantine-color-gray-5);
+  color: var(--text-dim);
 }
 
 .stepRemove {
   background: none;
   border: none;
-  color: var(--mantine-color-gray-4);
+  color: var(--text-muted);
   cursor: pointer;
   padding: 4px;
   display: flex;
@@ -150,7 +150,7 @@
   align-items: flex-start;
   gap: 8px;
   padding: 6px 0;
-  border-bottom: 1px solid var(--mantine-color-gray-1);
+  border-bottom: 1px solid var(--n-100);
 }
 
 .stepInfoRow:last-child {
@@ -158,7 +158,7 @@
 }
 
 .stepInfoIcon {
-  color: var(--mantine-color-gray-5);
+  color: var(--text-dim);
   flex-shrink: 0;
   margin-top: 1px;
 }
@@ -169,17 +169,17 @@
 
 .stepInfoLabel {
   font-size: 11px;
-  color: var(--mantine-color-gray-5);
+  color: var(--text-dim);
 }
 
 .stepInfoValue {
   font-size: 13px;
   font-weight: 600;
-  color: var(--mantine-color-gray-8);
+  color: var(--ink-700);
 }
 
 .stepConf {
-  color: var(--mantine-color-blue-7);
+  color: var(--info-700);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
@@ -193,9 +193,9 @@
   width: 56px;
   height: 56px;
   border-radius: 6px;
-  background: var(--mantine-color-gray-1);
-  border: 1px solid var(--mantine-color-gray-2);
-  color: var(--mantine-color-gray-5);
+  background: var(--n-100);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
   padding: 5px;
   display: flex;
   flex-direction: column;
@@ -206,7 +206,7 @@
   display: flex;
   align-items: center;
   gap: 3px;
-  color: var(--mantine-color-gray-6);
+  color: var(--text-dim);
 }
 
 .stepThumbMeta {
@@ -219,7 +219,7 @@
   flex: 1;
   border-radius: 4px;
   background: white;
-  border: 1px solid var(--mantine-color-gray-2);
+  border: 1px solid var(--border);
   padding: 5px 4px;
   display: flex;
   flex-direction: column;
@@ -230,7 +230,7 @@
 .stepThumbLineLong {
   height: 3px;
   border-radius: 999px;
-  background: var(--mantine-color-gray-3);
+  background: var(--n-300);
 }
 
 .stepThumbLineShort {
@@ -246,7 +246,7 @@
   align-self: flex-start;
   font-size: 7px;
   font-weight: 800;
-  color: var(--mantine-color-red-6);
+  color: var(--danger-500);
   background: rgba(250, 82, 82, 0.1);
   border-radius: 999px;
   padding: 1px 4px;
@@ -258,8 +258,8 @@
   align-items: center;
   gap: 4px;
   font-size: 11px;
-  color: var(--mantine-color-teal-8);
-  background: var(--mantine-color-teal-0);
+  color: var(--success-700);
+  background: var(--success-50);
   padding: 3px 8px;
   border-radius: 4px;
   font-weight: 600;
@@ -281,7 +281,7 @@
   top: 0;
   bottom: 0;
   width: 2px;
-  background: var(--mantine-color-gray-3);
+  background: var(--n-300);
   transform: translateX(-50%);
   z-index: 0;
 }
@@ -291,8 +291,8 @@
   height: 24px;
   border-radius: 50%;
   background: white;
-  border: 2px solid var(--mantine-color-gray-3);
-  color: var(--mantine-color-gray-5);
+  border: 2px solid var(--n-300);
+  color: var(--text-dim);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -301,8 +301,8 @@
 }
 
 .connectorButton:active {
-  border-color: var(--mantine-color-blue-7);
-  color: var(--mantine-color-blue-7);
+  border-color: var(--info-700);
+  color: var(--info-700);
 }
 
 .stepActions {
@@ -318,20 +318,20 @@
   align-items: center;
   gap: 4px;
   padding: 10px 4px;
-  background: var(--mantine-color-gray-0);
-  border: 1px solid var(--mantine-color-gray-2);
+  background: var(--n-50);
+  border: 1px solid var(--border);
   border-radius: 6px;
   cursor: pointer;
-  color: var(--mantine-color-gray-7);
+  color: var(--n-700);
   font-size: 10px;
   font-weight: 600;
   font-family: inherit;
 }
 
 .stepAct:active {
-  background: var(--mantine-color-blue-0);
-  border-color: var(--mantine-color-blue-7);
-  color: var(--mantine-color-blue-7);
+  background: var(--info-50);
+  border-color: var(--info-700);
+  color: var(--info-700);
 }
 
 .fabWrap {
@@ -344,7 +344,7 @@
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  background: var(--mantine-color-blue-7);
+  background: var(--info-700);
   color: white;
   border: none;
   cursor: pointer;
@@ -366,7 +366,7 @@
   padding: 12px;
   border-radius: 8px;
   border: none;
-  background: var(--mantine-color-blue-7);
+  background: var(--info-700);
   color: white;
   font-size: 15px;
   font-weight: 600;
@@ -383,9 +383,9 @@
   width: 100%;
   padding: 8px;
   border-radius: 8px;
-  border: 1px solid var(--mantine-color-gray-3);
+  border: 1px solid var(--n-300);
   background: white;
-  color: var(--mantine-color-gray-5);
+  color: var(--text-dim);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -402,7 +402,7 @@
   border-radius: 8px;
   border: 1px solid rgba(250, 82, 82, 0.2);
   background: rgba(255, 245, 245, 0.96);
-  color: var(--mantine-color-red-6);
+  color: var(--danger-500);
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
@@ -430,14 +430,14 @@
   padding: 16px 16px 0;
   font-size: 18px;
   font-weight: 700;
-  color: var(--mantine-color-gray-9);
+  color: var(--text);
 }
 
 .confirmBody {
   padding: 12px 16px 16px;
   font-size: 14px;
   line-height: 1.6;
-  color: var(--mantine-color-gray-6);
+  color: var(--text-dim);
 }
 
 .confirmFooter {
@@ -460,10 +460,10 @@
 
 .confirmCancel {
   background: transparent;
-  color: var(--mantine-color-gray-7);
+  color: var(--n-700);
 }
 
 .confirmDelete {
-  background: var(--mantine-color-red-6);
+  background: var(--danger-500);
   color: white;
 }

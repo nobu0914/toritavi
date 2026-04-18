@@ -1,23 +1,31 @@
+/*
+ * Scan & OCR — Design System v2 Section 8 準拠
+ */
+
+/* === Test Mode Banner === */
 .testModeBanner {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 8px;
-  border-radius: 8px;
-  border: 1px dashed var(--mantine-color-gray-4);
-  color: var(--mantine-color-gray-5);
+  padding: 8px 12px;
+  border-radius: var(--r-sm);
+  border: 1px dashed var(--n-300);
+  color: var(--text-dim);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
   cursor: pointer;
   margin-bottom: 8px;
 }
 
 .testModeActive {
-  border-color: var(--mantine-color-violet-5);
-  background: var(--mantine-color-violet-0);
-  color: var(--mantine-color-violet-7);
+  border-color: var(--test-accent);
+  background: var(--test-bg);
+  color: var(--test-fg);
   border-style: solid;
 }
 
+/* === Capture Area === */
 .captureArea {
   display: flex;
   flex-direction: column;
@@ -30,64 +38,19 @@
   width: 96px;
   height: 96px;
   border-radius: 50%;
-  background: var(--mantine-color-blue-0);
-  color: var(--mantine-color-blue-7);
+  background: var(--info-50);
+  color: var(--info-700);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.buttons {
-  display: flex;
-  gap: 10px;
-  margin-top: 24px;
-  width: 100%;
+.iconWrapError {
+  background: var(--danger-50);
+  color: var(--danger-500);
 }
 
-.captureButton {
-  flex: 1;
-  padding: 14px;
-  border-radius: 8px;
-  border: none;
-  background: var(--mantine-color-blue-7);
-  color: white;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  font-family: inherit;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-
-.captureButton:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
-
-.uploadButton {
-  flex: 1;
-  padding: 14px;
-  border-radius: 8px;
-  border: 1px solid var(--mantine-color-gray-3);
-  background: white;
-  color: var(--mantine-color-gray-7);
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  font-family: inherit;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-}
-
-.uploadButton:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
-
+/* === Input Grid (3 flat cards) === */
 .inputGrid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -101,18 +64,21 @@
   align-items: center;
   gap: 8px;
   padding: 20px 8px;
-  border-radius: 10px;
-  border: 1px solid var(--mantine-color-gray-2);
-  background: white;
-  color: var(--mantine-color-blue-7);
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--info-700);
   cursor: pointer;
   font-family: inherit;
+  transition: background 0.15s;
 }
 
-.inputCard:active {
-  background: var(--mantine-color-blue-0);
+.inputCard:active,
+.inputCard:hover {
+  background: var(--info-50);
 }
 
+/* === Drop Zone === */
 .dropZone {
   display: flex;
   align-items: center;
@@ -120,42 +86,105 @@
   gap: 8px;
   margin-top: 12px;
   padding: 16px;
-  border: 2px dashed var(--mantine-color-gray-3);
-  border-radius: 10px;
-  background: var(--mantine-color-gray-0);
-  transition: border-color 0.2s, background 0.2s;
+  border: 2px dashed var(--n-300);
+  border-radius: var(--r-md);
+  background: var(--n-50);
+  color: var(--text-dim);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  transition: border-color 0.2s, background 0.2s, color 0.2s;
 }
 
 .dropZoneActive {
-  border-color: var(--mantine-color-blue-5);
-  background: var(--mantine-color-blue-0);
+  border-color: var(--info-500);
+  border-style: solid;
+  background: var(--info-50);
+  color: var(--info-700);
 }
 
 .textInputArea {
   margin-top: 16px;
 }
 
+/* === Buttons (legacy path kept for compatibility) === */
+.buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 24px;
+  width: 100%;
+}
+
+.captureButton {
+  flex: 1;
+  padding: 14px;
+  border-radius: var(--r-pill);
+  border: none;
+  background: var(--ink-800);
+  color: white;
+  font-size: var(--fs-md);
+  font-weight: var(--fw-bold);
+  cursor: pointer;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.captureButton:hover {
+  background: var(--ink-700);
+}
+
+.captureButton:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.uploadButton {
+  flex: 1;
+  padding: 14px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  cursor: pointer;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.uploadButton:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* === Processing Overlay === */
 .processingArea {
   position: relative;
-  border-radius: 12px;
+  border-radius: var(--r-md);
   overflow: hidden;
 }
 
 .preview {
   width: 100%;
-  border-radius: 12px;
+  border-radius: var(--r-md);
   display: block;
 }
 
 .processingOverlay {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(10, 19, 34, 0.65);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  border-radius: 12px;
+  border-radius: var(--r-md);
+  color: white;
 }
 
 .progressBar {
@@ -174,141 +203,11 @@
   transition: width 0.3s ease;
 }
 
-.resultImage {
-  width: 100%;
-  border-radius: 12px;
-  display: block;
-  margin-bottom: 16px;
-  border: 1px solid var(--mantine-color-gray-2);
-}
-
-.categoryHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-}
-
-.categoryBadge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 12px;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.categoryPicker {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 10px;
-  background: white;
-  border: 1px solid var(--mantine-color-gray-2);
-  border-radius: 8px;
-  margin-bottom: 12px;
-}
-
-.categoryOption {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  background: var(--mantine-color-gray-0);
-  color: var(--mantine-color-gray-6);
-}
-
-.categoryOption:active {
-  opacity: 0.7;
-}
-
-.categoryOptionActive {
-  background: var(--mantine-color-blue-0);
-  color: var(--mantine-color-blue-7);
-}
-
-.reviewBanner {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  border-radius: 8px;
-  background: var(--mantine-color-yellow-0);
-  border: 1px solid var(--mantine-color-yellow-5);
-  color: var(--mantine-color-yellow-8);
-  margin-bottom: 12px;
-}
-
-.formLabelRow {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 2px;
-}
-
-.inferredBadge {
-  font-size: 9px;
-  font-weight: 700;
-  padding: 1px 6px;
-  border-radius: 4px;
-  background: var(--mantine-color-orange-0);
-  color: var(--mantine-color-orange-7);
-}
-
-.formInputInferred {
-  border-color: var(--mantine-color-orange-3) !important;
-}
-
-.formInputEmpty {
-  border-style: dashed !important;
-  border-color: var(--mantine-color-red-3) !important;
-}
-
-.formCard {
-  background: white;
-  border: 1px solid var(--mantine-color-gray-2);
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.formRow {
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--mantine-color-gray-1);
-}
-
-.formRow:last-child {
-  border-bottom: none;
-}
-
-.formLabel {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--mantine-color-gray-5);
-  margin-bottom: 2px;
-}
-
-.formInput {
-  border: 1px solid var(--mantine-color-gray-3);
-  border-radius: 6px;
-  background: var(--mantine-color-gray-0);
-  padding: 8px 10px;
-  font-size: 15px;
-  color: var(--mantine-color-gray-9);
-  font-weight: 600;
-}
-
-.formInput:focus {
-  border-color: var(--mantine-color-blue-6);
-  background: white;
-}
-
+/* === Multi-page Carousel === */
 .previewCard {
-  background: white;
-  border: 1px solid var(--mantine-color-gray-2);
-  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
   padding: 10px;
   overflow: hidden;
   margin-bottom: 12px;
@@ -323,7 +222,7 @@
 .previewThumb {
   flex: 1;
   min-width: 0;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   display: block;
   width: 100%;
 }
@@ -333,9 +232,9 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  border: 1px solid var(--mantine-color-gray-3);
-  background: white;
-  color: var(--mantine-color-gray-7);
+  border: 1px solid var(--n-300);
+  background: var(--surface);
+  color: var(--ink-700);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -348,28 +247,175 @@
   cursor: not-allowed;
 }
 
+.resultImage {
+  width: 100%;
+  border-radius: var(--r-md);
+  display: block;
+  margin-bottom: 16px;
+  border: 1px solid var(--border);
+}
+
+/* === Category Badge + Picker === */
+.categoryHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.categoryBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: var(--r-pill);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+}
+
+.categoryPicker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  margin-bottom: 12px;
+}
+
+.categoryOption {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--r-pill);
+  cursor: pointer;
+  background: var(--n-50);
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+}
+
+.categoryOption:active {
+  opacity: 0.7;
+}
+
+.categoryOptionActive {
+  background: var(--ink-800);
+  color: #fff;
+}
+
+/* === Review (要確認) Banner === */
+.reviewBanner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: var(--r-md);
+  background: var(--warn-50);
+  color: var(--warn-700);
+  border: 1px solid rgba(245, 176, 65, 0.25);
+  margin-bottom: 12px;
+  font-size: var(--fs-sm);
+  line-height: 1.55;
+  font-weight: var(--fw-bold);
+}
+
+/* === Form (OCR result editor) === */
+.formCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+
+.formRow {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--n-100);
+}
+
+.formRow:last-child {
+  border-bottom: none;
+}
+
+.formLabelRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.formLabel {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.inferredBadge {
+  font-size: 9px;
+  font-weight: var(--fw-bold);
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--infer-bg);
+  color: var(--infer-fg);
+}
+
+.formInput {
+  border: 1.5px solid var(--n-300);
+  border-radius: var(--r-sm);
+  background: var(--n-50);
+  padding: 8px 10px;
+  font-size: var(--fs-md);
+  color: var(--text);
+  font-weight: var(--fw-medium);
+}
+
+.formInput:focus {
+  border-color: var(--ink-800);
+  background: var(--surface);
+}
+
+.formInputInferred {
+  border-color: var(--infer-border) !important;
+}
+
+.formInputEmpty {
+  border-style: dashed !important;
+  border-color: #F4C7C0 !important;
+  background: var(--surface) !important;
+}
+
+/* === OCR full-text (accordion) === */
 .ocrDetails {
   margin-top: 16px;
 }
 
 .ocrSummary {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--mantine-color-gray-5);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  color: var(--text-dim);
   cursor: pointer;
-  padding: 4px 0;
+  padding: 6px 0;
 }
 
 .ocrTextBox {
-  background: white;
-  border: 1px solid var(--mantine-color-gray-2);
-  border-radius: 8px;
+  background: var(--n-50);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
   padding: 12px;
   margin-top: 8px;
-  max-height: 140px;
+  max-height: 160px;
   overflow-y: auto;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  line-height: 1.7;
+  white-space: pre-wrap;
 }
 
+/* === Result action buttons === */
 .resultButtons {
   display: flex;
   flex-direction: column;
@@ -379,13 +425,13 @@
 
 .createButton {
   width: 100%;
-  padding: 14px;
-  border-radius: 8px;
+  height: var(--btn-h-md);
+  border-radius: var(--r-pill);
   border: none;
-  background: var(--mantine-color-blue-7);
+  background: var(--ink-800);
   color: white;
-  font-size: 15px;
-  font-weight: 600;
+  font-size: var(--fs-md);
+  font-weight: var(--fw-bold);
   cursor: pointer;
   font-family: inherit;
   display: flex;
@@ -394,15 +440,25 @@
   gap: 8px;
 }
 
+.createButton:hover {
+  background: var(--ink-700);
+}
+
 .retryButton {
   width: 100%;
-  padding: 10px;
-  border-radius: 8px;
-  border: 1px solid var(--mantine-color-gray-3);
-  background: white;
-  color: var(--mantine-color-gray-5);
-  font-size: 13px;
-  font-weight: 600;
+  height: var(--btn-h-sm);
+  border-radius: var(--r-pill);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
   cursor: pointer;
   font-family: inherit;
+}
+
+.retryButton:hover {
+  background: var(--n-50);
+  border-color: var(--ink-800);
+  color: var(--ink-800);
 }

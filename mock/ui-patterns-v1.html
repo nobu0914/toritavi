@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>toritavi UI Patterns v1</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --navy-50: #f2f5fb;
+    --navy-100: #dfe6f2;
+    --navy-300: #98aac8;
+    --navy-500: #4d668c;
+    --navy-700: #223652;
+    --navy-800: #172741;
+    --navy-900: #0f1b2d;
+
+    --sky-50: #f4f7ff;
+    --sky-100: #e8eefc;
+    --sky-300: #b6caf1;
+    --sky-600: #5372d4;
+
+    --coral-50: #fff3ed;
+    --coral-100: #ffe1d2;
+    --coral-500: #f05f33;
+    --coral-600: #d44c23;
+
+    --mint-50: #ecfaf3;
+    --mint-600: #279f67;
+    --amber-50: #fff7e8;
+    --amber-600: #b9780d;
+    --rose-50: #fdecef;
+    --rose-600: #c74150;
+
+    --sand-0: #ffffff;
+    --sand-50: #fbfbfd;
+    --sand-100: #f5f6f9;
+    --sand-200: #e9edf3;
+    --sand-400: #b7c0ce;
+    --sand-500: #7f8a9a;
+    --sand-700: #465365;
+    --sand-900: #1b2432;
+
+    --bg: linear-gradient(180deg, #dde5f4 0%, #edf1f8 42%, #f6f7fb 100%);
+    --surface: rgba(255, 255, 255, 0.92);
+    --surface-strong: #ffffff;
+    --surface-dark: #0f1b2d;
+    --text: #0f1b2d;
+    --text-soft: #506074;
+    --text-faint: #8a95a4;
+    --border: rgba(15, 27, 45, 0.08);
+    --shadow-xs: 0 1px 2px rgba(15, 27, 45, 0.05);
+    --shadow-sm: 0 10px 24px rgba(24, 40, 69, 0.08);
+    --shadow-md: 0 18px 42px rgba(24, 40, 69, 0.12);
+    --shadow-lg: 0 28px 64px rgba(24, 40, 69, 0.18);
+
+    --font-sans: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic UI", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    --fs-11: 11px;
+    --fs-12: 12px;
+    --fs-13: 13px;
+    --fs-14: 14px;
+    --fs-16: 16px;
+    --fs-18: 18px;
+    --fs-22: 22px;
+    --fs-28: 28px;
+    --fw-regular: 400;
+    --fw-medium: 500;
+    --fw-semibold: 600;
+    --fw-bold: 700;
+    --fw-heavy: 800;
+
+    --r-12: 12px;
+    --r-16: 16px;
+    --r-20: 20px;
+    --r-24: 24px;
+    --r-28: 28px;
+    --r-pill: 999px;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background: #d5dced;
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 56px 28px 120px;
+  }
+
+  .hero {
+    margin-bottom: 40px;
+  }
+
+  .eyebrow {
+    display: inline-block;
+    padding: 8px 14px;
+    border-radius: var(--r-pill);
+    background: rgba(255,255,255,0.72);
+    box-shadow: var(--shadow-xs);
+    font-size: var(--fs-12);
+    font-weight: var(--fw-bold);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--navy-700);
+  }
+
+  .title {
+    margin-top: 18px;
+    font-size: 42px;
+    line-height: 1.04;
+    font-weight: var(--fw-heavy);
+    letter-spacing: -0.04em;
+  }
+
+  .subtitle {
+    margin-top: 12px;
+    max-width: 840px;
+    color: var(--text-soft);
+    font-size: var(--fs-16);
+    line-height: 1.75;
+  }
+
+  .section {
+    margin-bottom: 48px;
+  }
+
+  .sectionTitle {
+    font-size: var(--fs-22);
+    font-weight: var(--fw-heavy);
+    margin-bottom: 8px;
+  }
+
+  .sectionDesc {
+    color: var(--text-soft);
+    font-size: var(--fs-14);
+    line-height: 1.7;
+    margin-bottom: 18px;
+  }
+
+  .panel {
+    background: rgba(255,255,255,0.68);
+    backdrop-filter: blur(18px);
+    border: 1px solid rgba(255,255,255,0.55);
+    border-radius: 32px;
+    padding: 24px;
+    box-shadow: var(--shadow-md);
+  }
+
+  .grid2 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+  }
+
+  .grid3 {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-24);
+    padding: 20px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .cardTitle {
+    font-size: var(--fs-16);
+    font-weight: var(--fw-bold);
+    margin-bottom: 8px;
+  }
+
+  .cardMeta {
+    color: var(--text-soft);
+    font-size: var(--fs-13);
+    line-height: 1.7;
+  }
+
+  .deviceGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(320px, 1fr));
+    gap: 18px;
+  }
+
+  .phone {
+    background: linear-gradient(180deg, rgba(255,255,255,0.48), rgba(255,255,255,0.2));
+    border-radius: 40px;
+    padding: 14px;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .screen {
+    background: var(--bg);
+    min-height: 780px;
+    border-radius: 30px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .statusbar {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 16px 4px;
+    font-size: var(--fs-11);
+    color: var(--navy-700);
+    font-weight: var(--fw-bold);
+  }
+
+  .screenBody {
+    padding: 18px 18px 96px;
+  }
+
+  .topBar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+
+  .iconBtn {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,0.86);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow-xs);
+    color: var(--navy-900);
+    font-size: var(--fs-16);
+  }
+
+  .screenTitle {
+    font-size: var(--fs-28);
+    line-height: 1.05;
+    font-weight: var(--fw-heavy);
+    letter-spacing: -0.04em;
+  }
+
+  .search {
+    margin-top: 14px;
+    background: rgba(255,255,255,0.84);
+    border: 1px solid rgba(255,255,255,0.72);
+    border-radius: var(--r-pill);
+    padding: 14px 16px;
+    font-size: var(--fs-14);
+    color: var(--text-faint);
+    box-shadow: var(--shadow-xs);
+  }
+
+  .stack {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .journeyCard {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    background: rgba(255,255,255,0.96);
+    border-radius: var(--r-24);
+    padding: 14px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .thumb {
+    width: 72px;
+    height: 72px;
+    border-radius: 22px;
+    flex-shrink: 0;
+    background: linear-gradient(135deg, #d7e3ff, #ffffff 65%);
+  }
+
+  .thumb.alt {
+    background: linear-gradient(135deg, #ffe1d2, #ffffff 65%);
+  }
+
+  .journeyBody {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .journeyTitle {
+    font-size: var(--fs-16);
+    font-weight: var(--fw-bold);
+  }
+
+  .journeySub {
+    margin-top: 4px;
+    color: var(--text-soft);
+    font-size: var(--fs-12);
+  }
+
+  .journeyEm {
+    margin-top: 8px;
+    color: var(--coral-500);
+    font-size: var(--fs-14);
+    font-weight: var(--fw-bold);
+  }
+
+  .chipRow {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .chip {
+    padding: 9px 14px;
+    border-radius: var(--r-pill);
+    background: rgba(255,255,255,0.88);
+    border: 1px solid rgba(15,27,45,0.05);
+    font-size: var(--fs-12);
+    font-weight: var(--fw-semibold);
+    color: var(--navy-700);
+  }
+
+  .chip.active {
+    background: var(--surface-dark);
+    color: white;
+    border-color: transparent;
+  }
+
+  .telopStage {
+    position: relative;
+    min-height: 260px;
+    border-radius: 28px;
+    overflow: hidden;
+    background:
+      linear-gradient(180deg, rgba(9,15,29,0.10), rgba(9,15,29,0.58)),
+      linear-gradient(135deg, #98aac8, #dfe6f2 35%, #ffffff 70%);
+    box-shadow: var(--shadow-md);
+  }
+
+  .telopMap {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.18) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.18) 1px, transparent 1px);
+    background-size: 48px 48px;
+    opacity: 0.5;
+  }
+
+  .telopRoute {
+    position: absolute;
+    inset: 0;
+  }
+
+  .telopRoute svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .telopBar {
+    position: absolute;
+    left: 14px;
+    right: 14px;
+    bottom: 14px;
+    padding: 12px 14px;
+    border-radius: 20px;
+    background: rgba(15, 27, 45, 0.78);
+    color: white;
+    backdrop-filter: blur(14px);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .telopLabel {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    padding: 0 10px;
+    border-radius: var(--r-pill);
+    background: rgba(240, 95, 51, 0.18);
+    color: #ffd5c7;
+    font-size: var(--fs-11);
+    font-weight: var(--fw-bold);
+    letter-spacing: 0.05em;
+  }
+
+  .telopTitle {
+    margin-top: 10px;
+    font-size: var(--fs-18);
+    line-height: 1.35;
+    font-weight: var(--fw-bold);
+  }
+
+  .telopSub {
+    margin-top: 6px;
+    font-size: var(--fs-12);
+    line-height: 1.6;
+    color: rgba(255,255,255,0.72);
+  }
+
+  .miniBar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: 18px;
+    font-size: var(--fs-12);
+    font-weight: var(--fw-semibold);
+    background: rgba(255,255,255,0.9);
+    border: 1px solid var(--border);
+    color: var(--navy-700);
+  }
+
+  .miniBar.info { background: rgba(232,238,252,0.92); }
+  .miniBar.success { background: rgba(236,250,243,0.95); }
+  .miniBar.warn { background: rgba(255,247,232,0.95); }
+
+  .ocrCard {
+    background: rgba(255,255,255,0.96);
+    border-radius: var(--r-24);
+    padding: 16px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .ocrTop {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .ocrTitle {
+    font-size: var(--fs-16);
+    font-weight: var(--fw-bold);
+  }
+
+  .ocrHint {
+    margin-top: 4px;
+    color: var(--text-soft);
+    font-size: var(--fs-12);
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 0 10px;
+    border-radius: var(--r-pill);
+    font-size: var(--fs-11);
+    font-weight: var(--fw-bold);
+  }
+
+  .badge.info { background: var(--sky-100); color: var(--sky-600); }
+  .badge.success { background: var(--mint-50); color: var(--mint-600); }
+  .badge.warn { background: var(--amber-50); color: var(--amber-600); }
+  .badge.danger { background: var(--rose-50); color: var(--rose-600); }
+
+  .ocrFields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .field {
+    background: var(--sand-50);
+    border: 1px solid var(--sand-200);
+    border-radius: 16px;
+    padding: 12px;
+  }
+
+  .field.full {
+    grid-column: 1 / -1;
+  }
+
+  .fieldLabel {
+    font-size: var(--fs-11);
+    font-weight: var(--fw-bold);
+    color: var(--text-faint);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .fieldValue {
+    margin-top: 6px;
+    font-size: var(--fs-14);
+    font-weight: var(--fw-semibold);
+    line-height: 1.45;
+    color: var(--text);
+  }
+
+  .timeline {
+    margin-top: 14px;
+    background: linear-gradient(180deg, var(--navy-900), #1a2b48);
+    border-radius: 28px;
+    padding: 16px 16px 18px;
+    color: white;
+    box-shadow: var(--shadow-md);
+  }
+
+  .timelineItem {
+    display: grid;
+    grid-template-columns: 56px 18px 1fr;
+    gap: 10px;
+    padding: 12px 0;
+    align-items: start;
+  }
+
+  .timelineTime {
+    font-size: var(--fs-12);
+    color: rgba(255,255,255,0.72);
+  }
+
+  .timelineDot {
+    position: relative;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: white;
+    margin-top: 4px;
+  }
+
+  .timelineDot::after {
+    content: "";
+    position: absolute;
+    top: 12px;
+    left: 5px;
+    width: 2px;
+    height: 40px;
+    background: rgba(255,255,255,0.24);
+  }
+
+  .timelineItem:last-child .timelineDot::after {
+    display: none;
+  }
+
+  .timelineCard {
+    background: rgba(255,255,255,0.10);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 18px;
+    padding: 13px 14px;
+  }
+
+  .timelineTitle {
+    font-size: var(--fs-14);
+    font-weight: var(--fw-semibold);
+  }
+
+  .timelineSub {
+    margin-top: 4px;
+    font-size: var(--fs-12);
+    line-height: 1.6;
+    color: rgba(255,255,255,0.72);
+  }
+
+  .bottomSheet {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255,255,255,0.96);
+    border-top-left-radius: 30px;
+    border-top-right-radius: 30px;
+    padding: 10px 18px 24px;
+    box-shadow: 0 -12px 32px rgba(15, 27, 45, 0.12);
+  }
+
+  .handle {
+    width: 46px;
+    height: 5px;
+    border-radius: 999px;
+    background: #d5dbe6;
+    margin: 0 auto 16px;
+  }
+
+  .list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .listItem {
+    display: flex;
+    gap: 12px;
+    align-items: start;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(15,27,45,0.06);
+  }
+
+  .listItem:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  .listIcon {
+    width: 38px;
+    height: 38px;
+    border-radius: 14px;
+    background: var(--sky-50);
+    color: var(--sky-600);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: var(--fs-16);
+    font-weight: var(--fw-bold);
+  }
+
+  .listTitle {
+    font-size: var(--fs-14);
+    font-weight: var(--fw-semibold);
+  }
+
+  .listSub {
+    margin-top: 4px;
+    color: var(--text-soft);
+    font-size: var(--fs-12);
+    line-height: 1.55;
+  }
+
+  .tokenList {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .token {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(15,27,45,0.06);
+    font-size: var(--fs-14);
+  }
+
+  .token:last-child {
+    border-bottom: none;
+  }
+
+  .swatch {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+    border: 1px solid rgba(15,27,45,0.06);
+    flex-shrink: 0;
+  }
+
+  .mono {
+    margin-left: auto;
+    color: var(--text-faint);
+    font-family: var(--font-mono);
+    font-size: var(--fs-12);
+  }
+
+  @media (max-width: 980px) {
+    .deviceGrid,
+    .grid2,
+    .grid3 {
+      grid-template-columns: 1fr;
+    }
+
+    .page {
+      padding: 32px 18px 88px;
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+    <header class="hero">
+      <div class="eyebrow">UI Patterns v1</div>
+      <h1 class="title">toritavi Patterns<br>with Telop UI</h1>
+      <p class="subtitle">
+        既存の design-system-v3 を土台に、他サービスで見慣れた UI パターンを toritavi 用に翻訳した見本集。
+        動画テロップ、地図上ガイド、OCR結果、進行案内、ボトムシートなど、実装時に迷いやすい部品をひとつにまとめる。
+      </p>
+    </header>
+
+    <section class="section">
+      <h2 class="sectionTitle">Pattern Principles</h2>
+      <p class="sectionDesc">参考元は動画アプリのテロップ、地図アプリのガイド帯、決済アプリのボトムシート、配達UIの進捗表示。toritavi では情報整理を優先して再構成する。</p>
+      <div class="panel grid3">
+        <div class="card">
+          <div class="cardTitle">1. Overlay First</div>
+          <div class="cardMeta">写真や地図の上に情報をのせるときは、全画面を塞がず下部帯で要点だけを伝える。テロップは1メッセージ1目的。</div>
+        </div>
+        <div class="card">
+          <div class="cardTitle">2. Assistive Motion</div>
+          <div class="cardMeta">派手な演出より「次に何をすべきか」がすぐ分かることを優先。進行中、注意、確認待ちの切替を色と位置で一貫させる。</div>
+        </div>
+        <div class="card">
+          <div class="cardTitle">3. Dense but Calm</div>
+          <div class="cardMeta">旅程は情報量が多いので、濃色セクションと白面セクションを切り替えて圧を逃がす。説明文は短く、数値は太く。</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2 class="sectionTitle">Screen Patterns</h2>
+      <p class="sectionDesc">トップ、スキャン/OCR、詳細の3系統にすぐ転用できる画面パターン。</p>
+      <div class="panel deviceGrid">
+        <div class="phone">
+          <div class="screen">
+            <div class="statusbar"><span>9:41</span><span>LTE 100%</span></div>
+            <div class="screenBody">
+              <div class="topBar">
+                <div class="screenTitle">Daily<br>Journey</div>
+                <div class="iconBtn">⌕</div>
+              </div>
+              <div class="search">東京出張 / 予約番号 / 駅名を検索</div>
+              <div class="chipRow" style="margin-top:14px;">
+                <div class="chip active">今後の旅程</div>
+                <div class="chip">過去の旅程</div>
+                <div class="chip">下書き</div>
+              </div>
+              <div class="stack" style="margin-top:14px;">
+                <div class="journeyCard">
+                  <div class="thumb"></div>
+                  <div class="journeyBody">
+                    <div class="journeyTitle">東京出張</div>
+                    <div class="journeySub">4月22日 - 4月23日 ・ 3 plans</div>
+                    <div class="journeyEm">あと 4 日</div>
+                  </div>
+                </div>
+                <div class="journeyCard">
+                  <div class="thumb alt"></div>
+                  <div class="journeyBody">
+                    <div class="journeyTitle">京都週末旅</div>
+                    <div class="journeySub">5月3日 - 5月5日 ・ 宿泊確認待ち</div>
+                    <div class="journeyEm">下書きあり</div>
+                  </div>
+                </div>
+              </div>
+              <div class="miniBar info" style="margin-top:14px;">案内: 次の出発が近い旅程を上に固定表示</div>
+              <div class="timeline">
+                <div class="timelineItem">
+                  <div class="timelineTime">08:30</div>
+                  <div class="timelineDot"></div>
+                  <div class="timelineCard">
+                    <div class="timelineTitle">のぞみ 12号</div>
+                    <div class="timelineSub">東京駅 → 名古屋駅 ・ Conf# EX1248</div>
+                  </div>
+                </div>
+                <div class="timelineItem">
+                  <div class="timelineTime">11:00</div>
+                  <div class="timelineDot"></div>
+                  <div class="timelineCard">
+                    <div class="timelineTitle">商談</div>
+                    <div class="timelineSub">栄オフィス ・ 1時間30分</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="phone">
+          <div class="screen">
+            <div class="statusbar"><span>9:41</span><span>LTE 100%</span></div>
+            <div class="screenBody">
+              <div class="topBar">
+                <div class="iconBtn">‹</div>
+                <div class="iconBtn">⋯</div>
+              </div>
+              <div class="telopStage">
+                <div class="telopMap"></div>
+                <div class="telopRoute">
+                  <svg viewBox="0 0 360 260" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M34 182C74 171 88 118 128 112C159 107 171 132 198 132C232 132 248 85 286 80C309 77 322 90 336 95" stroke="#0f1b2d" stroke-width="6" stroke-linecap="round" stroke-dasharray="10 12"/>
+                    <circle cx="34" cy="182" r="10" fill="#f05f33"/>
+                    <circle cx="336" cy="95" r="10" fill="#ffffff"/>
+                  </svg>
+                </div>
+                <div class="telopBar">
+                  <div class="telopLabel">Live Guide</div>
+                  <div class="telopTitle">名古屋駅に到着したら、桜通口を出てタクシー乗り場へ。</div>
+                  <div class="telopSub">次の行動を短い文章で示す。地図全体ではなく「今やること」に集中させる。</div>
+                </div>
+              </div>
+              <div class="stack" style="margin-top:14px;">
+                <div class="miniBar success">確認済み: ホテルのチェックイン時間は 15:00 から</div>
+                <div class="miniBar warn">注意: 乗換時間が 8 分と短い</div>
+              </div>
+              <div class="bottomSheet">
+                <div class="handle"></div>
+                <div class="list">
+                  <div class="listItem">
+                    <div class="listIcon">01</div>
+                    <div>
+                      <div class="listTitle">駅構内を出る</div>
+                      <div class="listSub">中央改札ではなく桜通口を利用。出口名をテロップと同じ表現に揃える。</div>
+                    </div>
+                  </div>
+                  <div class="listItem">
+                    <div class="listIcon">02</div>
+                    <div>
+                      <div class="listTitle">次のアクションを保持</div>
+                      <div class="listSub">地図の下に補足手順を並べる。迷子を防ぐため詳細はここに逃がす。</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="phone">
+          <div class="screen">
+            <div class="statusbar"><span>9:41</span><span>LTE 100%</span></div>
+            <div class="screenBody">
+              <div class="topBar">
+                <div class="screenTitle">Scan<br>Result</div>
+                <div class="badge info">OCR 92%</div>
+              </div>
+              <div class="ocrCard">
+                <div class="ocrTop">
+                  <div>
+                    <div class="ocrTitle">新幹線の予約を検出</div>
+                    <div class="ocrHint">自動抽出した情報を確認してからステップに追加</div>
+                  </div>
+                  <div class="badge success">提案OK</div>
+                </div>
+                <div class="ocrFields">
+                  <div class="field">
+                    <div class="fieldLabel">Category</div>
+                    <div class="fieldValue">列車</div>
+                  </div>
+                  <div class="field">
+                    <div class="fieldLabel">Time</div>
+                    <div class="fieldValue">08:30</div>
+                  </div>
+                  <div class="field full">
+                    <div class="fieldLabel">Title</div>
+                    <div class="fieldValue">のぞみ 12号 東京 → 名古屋</div>
+                  </div>
+                  <div class="field">
+                    <div class="fieldLabel">Conf Number</div>
+                    <div class="fieldValue">EX1248</div>
+                  </div>
+                  <div class="field">
+                    <div class="fieldLabel">Confidence</div>
+                    <div class="fieldValue">高い一致</div>
+                  </div>
+                </div>
+              </div>
+              <div class="stack" style="margin-top:14px;">
+                <div class="miniBar info">補足: 元画像上のハイライトと抽出項目を行き来できると理解しやすい</div>
+                <div class="miniBar warn">警告: 時刻と日付のどちらかが欠ける場合は下書き扱いにする</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="phone">
+          <div class="screen">
+            <div class="statusbar"><span>9:41</span><span>LTE 100%</span></div>
+            <div class="screenBody">
+              <div class="topBar">
+                <div class="iconBtn">‹</div>
+                <div class="badge warn">乗換注意</div>
+              </div>
+              <div class="telopStage" style="min-height:220px;background:linear-gradient(180deg, rgba(9,15,29,0.12), rgba(9,15,29,0.64)), linear-gradient(135deg, #ffe1d2, #fff7ef 40%, #ffffff 75%);">
+                <div class="telopBar" style="bottom:18px;">
+                  <div class="telopLabel" style="background:rgba(255,213,199,0.2); color:#ffe8dd;">Transfer Alert</div>
+                  <div class="telopTitle">ホーム移動に時間がかかるため、1本早い経路の確認をおすすめします。</div>
+                  <div class="telopSub">強い注意はネイビー帯の中でコーラルをアクセントに使う。危険色を全面には出しすぎない。</div>
+                </div>
+              </div>
+              <div class="stack" style="margin-top:14px;">
+                <div class="journeyCard">
+                  <div class="thumb"></div>
+                  <div class="journeyBody">
+                    <div class="journeyTitle">代替ルートを表示</div>
+                    <div class="journeySub">11:02 発なら乗換余裕 18 分</div>
+                    <div class="journeyEm">おすすめ</div>
+                  </div>
+                </div>
+                <div class="journeyCard">
+                  <div class="thumb alt"></div>
+                  <div class="journeyBody">
+                    <div class="journeyTitle">現行ルートを維持</div>
+                    <div class="journeySub">ホーム移動に遅れが出る可能性あり</div>
+                    <div class="journeyEm">要確認</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2 class="sectionTitle">Reusable Pattern Modules</h2>
+      <p class="sectionDesc">個別画面にコピペしやすい単位で見た、部品パターンの定義。</p>
+      <div class="panel grid3">
+        <div class="card">
+          <div class="cardTitle">A. Telop Bar</div>
+          <div class="cardMeta">動画や地図の下に重ねる短文案内。長文説明は禁止。1つの帯には「行動指示」「現在地」「注意」のどれか1つだけを載せる。</div>
+          <div class="tokenList" style="margin-top:14px;">
+            <div class="token"><div class="swatch" style="background:#0f1b2d;"></div>base <span class="mono">rgba(15,27,45,.78)</span></div>
+            <div class="token"><div class="swatch" style="background:#f05f33;"></div>accent label <span class="mono">Live / Alert</span></div>
+            <div class="token"><div class="swatch" style="background:#ffffff;"></div>text <span class="mono">18 / 700</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="cardTitle">B. Inline Guide Bar</div>
+          <div class="cardMeta">検索下やカードの間に入れる一行メッセージ。補助的な通知に限定し、常設アラート化しない。色は意味で固定。</div>
+          <div class="stack" style="margin-top:14px;">
+            <div class="miniBar info">案内: 乗車ホームは出発 10 分前に再確認</div>
+            <div class="miniBar success">完了: ホテルの予約番号を保存済み</div>
+            <div class="miniBar warn">注意: OCR の日付が曖昧です</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="cardTitle">C. OCR Summary Card</div>
+          <div class="cardMeta">AI結果は会話文でなく構造化カードで返す。信用度、抽出項目、次のアクションを分けて出すと誤読しづらい。</div>
+          <div class="tokenList" style="margin-top:14px;">
+            <div class="token"><div class="swatch" style="background:#e8eefc;"></div>confidence chip <span class="mono">info</span></div>
+            <div class="token"><div class="swatch" style="background:#fbfbfd;"></div>field cell <span class="mono">2 col grid</span></div>
+            <div class="token"><div class="swatch" style="background:#ecfaf3;"></div>validated state <span class="mono">success</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2 class="sectionTitle">Where To Use</h2>
+      <p class="sectionDesc">toritavi の各画面でどう使い分けるかの指針。</p>
+      <div class="panel grid2">
+        <div class="card">
+          <div class="cardTitle">Recommended</div>
+          <div class="stack">
+            <div class="listItem">
+              <div class="listIcon">/</div>
+              <div>
+                <div class="listTitle">トップ</div>
+                <div class="listSub">Inline Guide Bar と大きめ journey card を採用。テロップは使わず、一覧の把握を優先。</div>
+              </div>
+            </div>
+            <div class="listItem">
+              <div class="listIcon">OCR</div>
+              <div>
+                <div class="listTitle">スキャン結果</div>
+                <div class="listSub">OCR Summary Card を基本にし、必要なら元画像に短いテロップを重ねる。</div>
+              </div>
+            </div>
+            <div class="listItem">
+              <div class="listIcon">MAP</div>
+              <div>
+                <div class="listTitle">地図案内</div>
+                <div class="listSub">Telop Bar + Bottom Sheet の組み合わせ。進行中の行動と補足手順を分離する。</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="cardTitle">Avoid</div>
+          <div class="stack">
+            <div class="listItem">
+              <div class="listIcon">!!</div>
+              <div>
+                <div class="listTitle">テロップの多用</div>
+                <div class="listSub">一覧やフォームでテロップを連発すると情報が重くなる。オーバーレイは地図・写真・動画上だけに絞る。</div>
+              </div>
+            </div>
+            <div class="listItem">
+              <div class="listIcon">TXT</div>
+              <div>
+                <div class="listTitle">説明文の長文化</div>
+                <div class="listSub">1つのパーツに複数目的を持たせない。判断・説明・確認は別レイヤーへ分ける。</div>
+              </div>
+            </div>
+            <div class="listItem">
+              <div class="listIcon">CLR</div>
+              <div>
+                <div class="listTitle">警告色の全面使用</div>
+                <div class="listSub">赤やオレンジを背景全面に使うと疲れる。注意喚起はラベルや強調文字に限定する。</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</body>
+</html>

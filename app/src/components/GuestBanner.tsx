@@ -24,8 +24,8 @@ export function GuestBanner() {
         position: "sticky",
         top: 0,
         zIndex: 101,
-        background: "var(--mantine-color-yellow-0)",
-        borderBottom: "1px solid var(--mantine-color-yellow-3)",
+        background: "var(--warn-50)",
+        borderBottom: "1px solid var(--warn-500)",
         padding: "8px 12px",
         display: "flex",
         alignItems: "center",
@@ -34,7 +34,7 @@ export function GuestBanner() {
       }}
     >
       <Box style={{ display: "flex", alignItems: "center", gap: 6 }}>
-        <IconFlask size={14} color="var(--mantine-color-yellow-9)" />
+        <IconFlask size={14} color="var(--warn-700)" />
         <Text size="11px" fw={600} c="yellow.9">
           ゲストモード（データは端末内のみ保存）
         </Text>
@@ -44,7 +44,7 @@ export function GuestBanner() {
         style={{
           fontSize: 11,
           fontWeight: 700,
-          color: "var(--mantine-color-blue-7)",
+          color: "var(--info-700)",
           textDecoration: "underline",
         }}
       >
