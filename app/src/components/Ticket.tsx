@@ -6,7 +6,6 @@ import {
   IconBus,
   IconCamera,
   IconCar,
-  IconChevronDown,
   IconCircle,
   IconCopy,
   IconDownload,
@@ -105,7 +104,6 @@ function fileNameBase(title: string): string {
 }
 
 export function Ticket({ data, status, needsReview, inferred, sourceImageUrl, sourceImageUrls, onCopyMailBody }: Props) {
-  const [scanOpen, setScanOpen] = useState(false);
   const [activePage, setActivePage] = useState(0);
 
   const images = sourceImageUrls && sourceImageUrls.length > 0
@@ -285,15 +283,10 @@ export function Ticket({ data, status, needsReview, inferred, sourceImageUrl, so
         </div>
       )}
 
-      {/* Scan Source */}
+      {/* Scan Source — always expanded */}
       {showScan && (
         <div className="ticket-scan">
-          <button
-            type="button"
-            className={`ticket-scan-head ${scanOpen ? "ticket-scan-head--open" : ""}`.trim()}
-            onClick={() => setScanOpen((v) => !v)}
-            aria-expanded={scanOpen}
-          >
+          <div className="ticket-scan-head" style={{ cursor: "default" }}>
             <span className="ticket-scan-head-left">
               {isMail
                 ? (<><IconMail size={14} />メール本文</>)
@@ -302,67 +295,44 @@ export function Ticket({ data, status, needsReview, inferred, sourceImageUrl, so
                   : (<><IconUpload size={14} />スキャン元 · {images.length > 1 ? `${images.length} ページ` : "1 ページ"}</>)
               }
             </span>
-            <span className="ticket-scan-head-right">
-              <span>{scanOpen ? "閉じる" : "展開"}</span>
-              <IconChevronDown size={14} />
-            </span>
-          </button>
+          </div>
 
-          {!scanOpen && images.length > 0 && (
-            <div className="ticket-scan-peek">
-              <div className="ticket-scan-peek-img">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={images[0]} alt="スキャン元プレビュー" />
+          {isMail && data.memo ? (
+            <div className="ticket-scan-full">
+              <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8, padding: "12px 14px", fontSize: 12, lineHeight: 1.7, maxHeight: 200, overflowY: "auto", whiteSpace: "pre-wrap" }}>
+                {data.memo}
               </div>
-              <div className="ticket-scan-peek-meta">
-                <div className="ticket-scan-peek-title">
-                  {data.source === "撮影" ? "撮影画像" : "スキャン元"}
-                </div>
-                <div className="ticket-scan-peek-sub">
-                  {images.length > 1 ? `${images.length} ページ` : "1 ページ"}
-                </div>
+              <div style={{ display: "flex", justifyContent: "flex-end", paddingTop: 10 }}>
+                <button type="button" className="ticket-scan-action-btn" onClick={onCopyMailBody}>
+                  <IconCopy size={14} />本文をコピー
+                </button>
               </div>
             </div>
-          )}
-
-          {scanOpen && (
-            isMail && data.memo ? (
-              <div className="ticket-scan-full">
-                <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8, padding: "12px 14px", fontSize: 12, lineHeight: 1.7, maxHeight: 200, overflowY: "auto", whiteSpace: "pre-wrap" }}>
-                  {data.memo}
+          ) : images.length > 0 ? (
+            <div className="ticket-scan-full">
+              <div className="ticket-scan-image-wrap">
+                <div className={`ticket-scan-image ${images.length > 1 ? "tall" : ""}`.trim()}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={images[activePage]} alt={`ページ ${activePage + 1}`} />
                 </div>
-                <div style={{ display: "flex", justifyContent: "flex-end", paddingTop: 10 }}>
-                  <button type="button" className="ticket-scan-action-btn" onClick={onCopyMailBody}>
-                    <IconCopy size={14} />本文をコピー
-                  </button>
-                </div>
+                <button type="button" className="ticket-scan-dl-float" onClick={handleDownloadAll} aria-label="原本を保存">
+                  <IconDownload size={14} />{images.length > 1 ? "一括保存" : "保存"}
+                </button>
               </div>
-            ) : images.length > 0 ? (
-              <div className="ticket-scan-full">
-                <div className="ticket-scan-image-wrap">
-                  <div className={`ticket-scan-image ${images.length > 1 ? "tall" : ""}`.trim()}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={images[activePage]} alt={`ページ ${activePage + 1}`} />
-                  </div>
-                  <button type="button" className="ticket-scan-dl-float" onClick={handleDownloadAll} aria-label="原本を保存">
-                    <IconDownload size={14} />{images.length > 1 ? "一括保存" : "保存"}
-                  </button>
+              {images.length > 1 && (
+                <div className="ticket-scan-pages">
+                  {images.map((_, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      className={`ticket-scan-page-thumb ${i === activePage ? "active" : ""}`.trim()}
+                      onClick={() => setActivePage(i)}
+                    >{i + 1}</button>
+                  ))}
                 </div>
-                {images.length > 1 && (
-                  <div className="ticket-scan-pages">
-                    {images.map((_, i) => (
-                      <button
-                        key={i}
-                        type="button"
-                        className={`ticket-scan-page-thumb ${i === activePage ? "active" : ""}`.trim()}
-                        onClick={() => setActivePage(i)}
-                      >{i + 1}</button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ) : null
-          )}
+              )}
+            </div>
+          ) : null}
         </div>
       )}
     </div>
