@@ -5,7 +5,8 @@ import { LoadingOverlay, useNavigateWithLoading } from "@/components/LoadingOver
 
 /*
  * AppHeader — Design System v2 Section 6 "App Header (Dark)" 準拠
- * background: var(--ink-800), 白文字、戻るボタン + タイトル + 右アクション
+ * background: var(--ink-800), 白文字, 戻るボタン + タイトル + 右アクション
+ * body max-width (430px) を越えて、広い画面でも横幅を viewport 全域に展開する。
  */
 
 type Props = {
@@ -26,10 +27,14 @@ export function AppHeader({ title, back, backHref, action }: Props) {
         style={{
           background: "var(--ink-800)",
           color: "#fff",
-          padding: "14px 16px",
           position: "sticky",
           top: 0,
           zIndex: 100,
+          // Full-bleed: body(max-width:430px) の外側までダークナビを拡張
+          width: "100vw",
+          marginLeft: "calc(50% - 50vw)",
+          marginRight: "calc(50% - 50vw)",
+          padding: "14px max(16px, calc((100vw - 430px) / 2 + 16px))",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
