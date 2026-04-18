@@ -308,6 +308,23 @@ export function Ticket({ data, status, needsReview, inferred, sourceImageUrl, so
             </span>
           </button>
 
+          {!scanOpen && images.length > 0 && (
+            <div className="ticket-scan-peek">
+              <div className="ticket-scan-peek-img">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={images[0]} alt="スキャン元プレビュー" />
+              </div>
+              <div className="ticket-scan-peek-meta">
+                <div className="ticket-scan-peek-title">
+                  {data.source === "撮影" ? "撮影画像" : "スキャン元"}
+                </div>
+                <div className="ticket-scan-peek-sub">
+                  {images.length > 1 ? `${images.length} ページ` : "1 ページ"}
+                </div>
+              </div>
+            </div>
+          )}
+
           {scanOpen && (
             isMail && data.memo ? (
               <div className="ticket-scan-full">
