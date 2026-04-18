@@ -974,6 +974,7 @@
   <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a4 4 0 0 0 5.66 0l3-3a4 4 0 1 0-5.66-5.66l-1 1"/><path d="M14 11a4 4 0 0 0-5.66 0l-3 3a4 4 0 1 0 5.66 5.66l1-1"/></symbol>
   <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v12"/><polyline points="7 11 12 16 17 11"/><path d="M4 17v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></symbol>
   <symbol id="i-more-v" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.2" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/><circle cx="12" cy="19" r="1.2" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="1.5"/><path d="M21 17l-5-5-4 4-3-3-6 6"/></symbol>
 
   <!-- Step categories -->
   <symbol id="i-train" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="14" rx="3"/><line x1="5" y1="11" x2="19" y2="11"/><circle cx="8.5" cy="14.5" r="1" fill="currentColor" stroke="none"/><circle cx="15.5" cy="14.5" r="1" fill="currentColor" stroke="none"/><line x1="8" y1="17" x2="6" y2="21"/><line x1="16" y1="17" x2="18" y2="21"/></symbol>
@@ -3275,7 +3276,130 @@ HND → ITM
           <p class="muted" style="font-size:var(--fs-xs);margin-top:10px">DB delete は 5 秒遅延させ、その間 Undo で復元可能。時間切れ後に実 delete 実行。確認ダイアログを省略する代わりにこのトーストで取り消し機会を提供。</p>
         </div>
 
-        <!-- ⑦ 完全画面イメージ -->
+        <!-- ⑦ UL/スキャン元データのダウンロード UI -->
+        <div class="comp-card full">
+          <div class="comp-label">⑦ UL（アップロード原本）ダウンロード UI</div>
+          <p class="muted" style="font-size:var(--fs-sm);margin-bottom:14px">
+            <strong style="color:var(--text)">目的:</strong> 取り込み元がアップロード/撮影の場合、原本（PDF / 画像）を後から取り出せるようにする。メール本文の場合は対象外。
+          </p>
+
+          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px">
+
+            <!-- 7-A: 単一画像 -->
+            <div>
+              <div style="font-size:var(--fs-xs);color:var(--text-dim);margin-bottom:8px;font-weight:var(--fw-bold)">A. 単一画像（JPEG / PNG）</div>
+              <div style="border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden;max-width:360px">
+                <div style="padding:10px 14px;display:flex;align-items:center;justify-content:space-between;background:var(--n-50);border-bottom:1px solid var(--border)">
+                  <div style="display:flex;align-items:center;gap:8px;font-size:var(--fs-xs);color:var(--text-dim);font-weight:var(--fw-bold)">
+                    <svg class="ic-svg sm"><use href="#i-upload"/></svg>
+                    <span>スキャン元</span>
+                    <span class="mono" style="background:var(--n-100);padding:1px 6px;border-radius:4px">1.2 MB</span>
+                  </div>
+                  <button class="btn-icon sm" aria-label="ダウンロード" style="color:var(--info-700);background:var(--info-50)"><svg class="ic-svg"><use href="#i-download"/></svg></button>
+                </div>
+                <div style="background:linear-gradient(135deg,var(--n-200),var(--n-300));height:120px;display:flex;align-items:center;justify-content:center"><svg class="ic-svg" style="width:36px;height:36px;color:var(--n-500)"><use href="#i-mail"/></svg></div>
+              </div>
+              <p class="muted" style="font-size:var(--fs-xs);margin-top:8px">ヘッダー右の ⬇ で原本保存。ファイル名は <code class="mono">toritavi-{step-title}-{date}.jpg</code></p>
+            </div>
+
+            <!-- 7-B: PDF 複数ページ -->
+            <div>
+              <div style="font-size:var(--fs-xs);color:var(--text-dim);margin-bottom:8px;font-weight:var(--fw-bold)">B. PDF（複数ページ）</div>
+              <div style="border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden;max-width:360px">
+                <div style="padding:10px 14px;display:flex;align-items:center;justify-content:space-between;background:var(--n-50);border-bottom:1px solid var(--border)">
+                  <div style="display:flex;align-items:center;gap:8px;font-size:var(--fs-xs);color:var(--text-dim);font-weight:var(--fw-bold)">
+                    <svg class="ic-svg sm"><use href="#i-upload"/></svg>
+                    <span>スキャン元 · 3 ページ</span>
+                    <span class="mono" style="background:var(--n-100);padding:1px 6px;border-radius:4px">824 KB</span>
+                  </div>
+                  <button class="btn-icon sm" aria-label="ダウンロード" style="color:var(--info-700);background:var(--info-50)"><svg class="ic-svg"><use href="#i-download"/></svg></button>
+                </div>
+                <div style="display:flex;gap:4px;padding:8px;background:var(--n-50)">
+                  <div style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);height:76px;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--text-dim);font-weight:var(--fw-bold)">1</div>
+                  <div style="flex:1;background:var(--surface);border:1.5px solid var(--info-500);border-radius:var(--r-sm);height:76px;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--info-700);font-weight:var(--fw-bold)">2</div>
+                  <div style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);height:76px;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--text-dim);font-weight:var(--fw-bold)">3</div>
+                </div>
+              </div>
+              <p class="muted" style="font-size:var(--fs-xs);margin-top:8px">PDF 全体を一括保存。個別ページ DL はページサムネイル長押しでメニュー。</p>
+            </div>
+
+            <!-- 7-C: 複数画像 (2+ images) -->
+            <div>
+              <div style="font-size:var(--fs-xs);color:var(--text-dim);margin-bottom:8px;font-weight:var(--fw-bold)">C. 複数画像（撮影 2 枚以上）</div>
+              <div style="border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden;max-width:360px">
+                <div style="padding:10px 14px;display:flex;align-items:center;justify-content:space-between;background:var(--n-50);border-bottom:1px solid var(--border)">
+                  <div style="display:flex;align-items:center;gap:8px;font-size:var(--fs-xs);color:var(--text-dim);font-weight:var(--fw-bold)">
+                    <svg class="ic-svg sm"><use href="#i-camera"/></svg>
+                    <span>撮影 · 2 枚</span>
+                  </div>
+                  <div style="display:flex;gap:4px">
+                    <button style="background:var(--n-50);border:1px solid var(--border);color:var(--text);padding:4px 10px;border-radius:var(--r-pill);font-size:var(--fs-xs);font-weight:var(--fw-bold);cursor:pointer;display:flex;align-items:center;gap:4px"><svg class="ic-svg sm"><use href="#i-download"/></svg>一括</button>
+                  </div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:8px;background:var(--n-50)">
+                  <div style="position:relative;background:linear-gradient(135deg,var(--n-200),var(--n-300));border-radius:var(--r-sm);height:100px;display:flex;align-items:center;justify-content:center"><svg class="ic-svg" style="width:28px;height:28px;color:var(--n-500)"><use href="#i-camera"/></svg><button class="btn-icon sm" aria-label="ダウンロード" style="position:absolute;right:6px;bottom:6px;background:rgba(255,255,255,0.95);color:var(--ink-800);box-shadow:var(--shadow-xs)"><svg class="ic-svg"><use href="#i-download"/></svg></button></div>
+                  <div style="position:relative;background:linear-gradient(135deg,var(--n-200),var(--n-300));border-radius:var(--r-sm);height:100px;display:flex;align-items:center;justify-content:center"><svg class="ic-svg" style="width:28px;height:28px;color:var(--n-500)"><use href="#i-camera"/></svg><button class="btn-icon sm" aria-label="ダウンロード" style="position:absolute;right:6px;bottom:6px;background:rgba(255,255,255,0.95);color:var(--ink-800);box-shadow:var(--shadow-xs)"><svg class="ic-svg"><use href="#i-download"/></svg></button></div>
+                </div>
+              </div>
+              <p class="muted" style="font-size:var(--fs-xs);margin-top:8px">「一括」で ZIP 保存、各画像右下の ⬇ で個別保存。</p>
+            </div>
+
+            <!-- 7-D: ダウンロード進捗 / 結果 -->
+            <div>
+              <div style="font-size:var(--fs-xs);color:var(--text-dim);margin-bottom:8px;font-weight:var(--fw-bold)">D. ダウンロード進捗 → 成功</div>
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <div style="background:var(--info-50);border:1px solid rgba(37,99,205,0.18);border-radius:var(--r-md);padding:12px 14px;display:flex;align-items:center;gap:10px">
+                  <svg class="ic-svg" style="color:var(--info-700)"><use href="#i-download"/></svg>
+                  <div style="flex:1;font-size:var(--fs-sm);color:var(--info-700);font-weight:var(--fw-bold)">保存中... 62%</div>
+                  <div style="width:80px;height:4px;background:rgba(37,99,205,0.2);border-radius:2px;overflow:hidden"><div style="width:62%;height:100%;background:var(--info-700)"></div></div>
+                </div>
+                <div style="background:var(--success-50);border:1px solid rgba(27,150,116,0.2);border-radius:var(--r-md);padding:12px 14px;display:flex;align-items:center;gap:10px">
+                  <svg class="ic-svg" style="color:var(--success-500)"><use href="#i-check-circle"/></svg>
+                  <div style="flex:1;font-size:var(--fs-sm);color:var(--success-500);font-weight:var(--fw-bold)">保存しました</div>
+                  <span class="mono" style="font-size:var(--fs-xs);color:var(--text-dim)">Downloads/</span>
+                </div>
+              </div>
+              <p class="muted" style="font-size:var(--fs-xs);margin-top:8px">モバイルは Service Worker + Blob URL で保存。失敗時は赤トーストに切替。</p>
+            </div>
+
+          </div>
+
+          <!-- メタ情報表示 + DL 詳細サブシート -->
+          <div style="margin-top:18px;border-top:1px dashed var(--border);padding-top:18px">
+            <div style="font-size:var(--fs-sm);font-weight:var(--fw-bold);margin-bottom:10px">⑦-E. 原本メタ情報サブシート（⬇長押しで展開）</div>
+            <div style="max-width:380px">
+              <div class="sheet" style="box-shadow:var(--shadow-md)">
+                <div class="sheet-handle"><div class="sheet-handle-bar"></div></div>
+                <div class="sheet-header">
+                  <button class="btn-icon sm" aria-label="閉じる"><svg class="ic-svg"><use href="#i-close"/></svg></button>
+                  <div class="sheet-title" style="font-size:var(--fs-md)">スキャン元データ</div>
+                  <div style="width:32px"></div>
+                </div>
+                <div class="sheet-body" style="padding:14px 20px 20px;max-height:unset">
+                  <div style="background:var(--n-50);border-radius:var(--r-md);padding:14px;margin-bottom:14px">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-size:var(--fs-xs);color:var(--text-dim);font-weight:var(--fw-bold);text-transform:uppercase;letter-spacing:0.5px">ファイル名</span></div>
+                    <div class="mono" style="font-size:var(--fs-sm);word-break:break-all">delta_boarding_hhql3y.pdf</div>
+                  </div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+                    <div style="background:var(--n-50);border-radius:var(--r-md);padding:10px"><div style="font-size:10px;color:var(--text-dim);font-weight:var(--fw-bold);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px">取り込み日時</div><div style="font-size:var(--fs-sm);font-weight:var(--fw-medium)" class="mono">2026-04-18 21:45</div></div>
+                    <div style="background:var(--n-50);border-radius:var(--r-md);padding:10px"><div style="font-size:10px;color:var(--text-dim);font-weight:var(--fw-bold);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px">ファイルサイズ</div><div style="font-size:var(--fs-sm);font-weight:var(--fw-medium)" class="mono">824 KB</div></div>
+                    <div style="background:var(--n-50);border-radius:var(--r-md);padding:10px"><div style="font-size:10px;color:var(--text-dim);font-weight:var(--fw-bold);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px">ページ数</div><div style="font-size:var(--fs-sm);font-weight:var(--fw-medium)" class="mono">3</div></div>
+                    <div style="background:var(--n-50);border-radius:var(--r-md);padding:10px"><div style="font-size:10px;color:var(--text-dim);font-weight:var(--fw-bold);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px">形式</div><div style="font-size:var(--fs-sm);font-weight:var(--fw-medium)">PDF</div></div>
+                  </div>
+                  <button class="btn btn-primary btn-block"><svg class="ic-svg"><use href="#i-download"/></svg>PDF をダウンロード</button>
+                  <button class="btn btn-ghost btn-block" style="margin-top:8px"><svg class="ic-svg"><use href="#i-image"/></svg>各ページを画像で保存</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top:16px;padding:14px;background:var(--warn-50);border-radius:var(--r-md);border:1px solid rgba(245,176,65,0.25)">
+            <div style="font-size:var(--fs-xs);font-weight:var(--fw-bold);color:var(--warn-700);margin-bottom:6px">メール取込の場合</div>
+            <p style="font-size:var(--fs-xs);color:var(--text-dim);margin:0;line-height:1.6">メール本文はテキストとして保存しているため、原本画像はない。代わりに「メール本文をコピー」ボタンを表示し、ダウンロードボタンは非表示にする。</p>
+          </div>
+        </div>
+
+        <!-- ⑧ 完全画面イメージ -->
         <div class="comp-card full">
           <div class="comp-label">⑦ 完全画面イメージ（推奨適用後）</div>
           <div style="background:var(--ink-800);padding:60px 16px 0;border-radius:var(--r-lg);max-width:420px;margin:0 auto">
