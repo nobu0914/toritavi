@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /$
+Allow: /login
+Allow: /signup
+Disallow: /api/
+Disallow: /auth/
+Disallow: /trips/
+Disallow: /scan
+Disallow: /account
+Disallow: /alerts
+Disallow: /unfiled
+Disallow: /reset-password
+Disallow: /forgot-password
+Disallow: /verify-email

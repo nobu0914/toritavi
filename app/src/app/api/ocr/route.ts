@@ -65,7 +65,20 @@ ${buildOcrRulesPrompt()}
 - JSONのみ返す（説明文不要）
 `;
 
+const ALLOWED_ORIGINS = new Set([
+  "https://toritavi.com",
+  "https://app-lime-seven-80.vercel.app",
+  "http://localhost:3000",
+]);
+
 export async function POST(request: NextRequest) {
+  // Reject cross-site callers. Origin is absent on same-origin requests from our UI
+  // but present on any browser-initiated cross-site call. Skip when absent.
+  const origin = request.headers.get("origin");
+  if (origin && !ALLOWED_ORIGINS.has(origin)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     return NextResponse.json({ error: "API key not configured" }, { status: 500 });

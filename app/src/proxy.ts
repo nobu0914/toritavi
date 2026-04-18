@@ -82,6 +82,6 @@ export const config = {
      * - favicon.ico, icons/, manifest.json, sw.js, cmaps/
      * - api routes (handled inline)
      */
-    "/((?!_next/static|_next/image|favicon.ico|icons|manifest.json|sw.js|pdf.worker.min.mjs|cmaps|api).*)",
+    "/((?!_next/static|_next/image|favicon.ico|icons|manifest.json|sw.js|pdf.worker.min.mjs|cmaps|api|robots.txt|.well-known).*)",
   ],
 };
