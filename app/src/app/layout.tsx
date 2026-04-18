@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import { MantineProvider } from "@mantine/core";
 import { Notifications } from "@mantine/notifications";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
-import { GuestBanner } from "@/components/GuestBanner";
 import { theme } from "./theme";
 import "@mantine/core/styles.css";
 import "@mantine/notifications/styles.css";
@@ -41,7 +40,6 @@ export default function RootLayout({
         <MantineProvider theme={theme} defaultColorScheme="light">
           <Notifications position="top-center" />
           <ServiceWorkerRegister />
-          <GuestBanner />
           {children}
         </MantineProvider>
       </body>
