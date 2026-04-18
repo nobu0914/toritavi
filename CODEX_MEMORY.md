@@ -1,6 +1,6 @@
 # CODEX Memory
 
-最終更新: 2026-04-18
+最終更新: 2026-04-18（Design System v2 全面適用）
 
 ## 目的
 このファイルは、Codex がこのリポジトリで継続作業するための簡易メモリです。
@@ -90,6 +90,21 @@ JSON.parse(localStorage.getItem("toritavi_journeys") ?? "[]")
 ## 再開時の定型指示
 - ユーザーが `会話・作業の履歴を確認して` と指示した場合は、まず `CODEX_MEMORY.md` と `HANDOVER.md` を読む
 - セキュリティ文脈なら `SESSION_LOG_20260418_SECURITY.md` も読む
+- Design System v2 文脈なら `SESSION_LOG_20260418_DESIGN_SYSTEM_V2.md` も読む
 - 必要に応じて `CLAUDE.md`、`app/CLAUDE.md`、`app/AGENTS.md` も確認する
-- 画面修正に入る前は、必ず `mock/design-system-mantine.html` と必要なモック HTML を再確認する
+- 画面修正に入る前は、必ず `mock/design-system-v2.html`（最新）と必要なモック HTML を再確認する
 - 読み込み後は、把握した前提と現在の未完了事項を短く要約してから作業を再開する
+
+## 2026-04-18 Design System v2 全面適用セッション（追記）
+- `mock/design-system-v2.html` を 3729 行まで拡張（全12セクション、日英切替付き、SVGスプライト47種）
+- `mock/account-subpages.html` を新規作成（profile/通知/ヘルプ/データ管理 + トリミングフロー）
+- `app/src/app/design-tokens.css` で DS トークン + Mantine ブリッジを提供
+- `theme.ts` の brand/accent を DS ink/accent スケールへ書き換え
+- TOP / Journey詳細 / Scan / Trips-new / Auth 全面に DS 適用
+- AppHeader を `ink-800` フルブリード化、themeColor も `#0F1B2D` に合わせた
+- TabBar のアクティブインジケータ重なりを解消
+- Scan 画面の「青すぎる」DS 逸脱を修正（accentは点使い原則）
+- 会員ユーザーの予定反映バグを修正（store-supabase のエラー伝搬 + scan catch + TripsClient 再取得）
+- GuestBanner を削除（ユーザー指示）
+- 21 ルートビルド成功 / 生 Mantine 色参照 0 件 / HTTP スモーク全緑 で main に push（`0e64e03`）
+- **現在の DS 参照先は `mock/design-system-v2.html`**（旧 `design-system-mantine.html` より優先）
