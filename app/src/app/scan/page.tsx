@@ -1084,7 +1084,7 @@ export default function ScanPage() {
                           <TextInput
                             classNames={{ input: `${classes.formInput} ${classes.formInputEmpty}` }}
                             variant="unstyled"
-                            placeholder={f.placeholder}
+                            placeholder="未読取（タップで入力）"
                             value=""
                             onChange={(e) => setFixedValues((prev) => ({ ...prev, [f.key]: e.currentTarget.value }))}
                           />
