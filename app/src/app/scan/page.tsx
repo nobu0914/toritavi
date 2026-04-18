@@ -24,6 +24,7 @@ import {
   IconClipboardText,
   IconFlask,
 } from "@tabler/icons-react";
+import { notifications } from "@mantine/notifications";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
@@ -802,7 +803,18 @@ export default function ScanPage() {
 
     sessionStorage.setItem("toritavi_toast", "journey_created");
     router.push(`/trips/${journeyId}`);
-  } catch {
+  } catch (err) {
+    console.error("[scan] register failed:", err);
+    const msg = err instanceof Error ? err.message : "予定の登録に失敗しました";
+    notifications.show({
+      message: msg,
+      color: "red",
+      icon: <IconAlertCircle size={18} />,
+      autoClose: 4000,
+      withBorder: false,
+      style: { background: "var(--danger-500)", color: "white" },
+      styles: { icon: { color: "white", background: "transparent" } },
+    });
     setRegistering(false);
   }
   };

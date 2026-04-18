@@ -22,7 +22,6 @@ import {
   getNextActionStep,
   sortStepsByTime,
 } from "@/lib/helpers";
-import { isGuestMode } from "@/lib/guest";
 import { getJourneys as getJourneysClient } from "@/lib/store-client";
 import type { Journey } from "@/lib/types";
 import classes from "./page.module.css";
@@ -30,9 +29,11 @@ import classes from "./page.module.css";
 export default function TripsClient({ journeys: initialJourneys }: { journeys: Journey[] }) {
   const [journeys, setJourneys] = useState<Journey[]>(initialJourneys);
 
-  // Guest mode: SSR returns [] (no auth), so hydrate from localStorage on mount.
+  // Hydrate from client storage on mount:
+  //   - Guest: SSR returns []; read localStorage.
+  //   - Logged-in: SSR may return stale data when navigating back from /scan;
+  //     re-fetch from Supabase to ensure newly created journeys show up.
   useEffect(() => {
-    if (!isGuestMode()) return;
     let cancelled = false;
     (async () => {
       const data = await getJourneysClient();

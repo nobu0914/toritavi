@@ -58,7 +58,7 @@ export async function getStepImages(
 export async function addJourney(sb: SupabaseClient, userId: string, journey: Journey): Promise<void> {
   const { steps, ...rest } = journey;
 
-  await sb.from("toritavi_journeys").upsert({
+  const { error: jErr } = await sb.from("toritavi_journeys").upsert({
     id: rest.id,
     user_id: userId,
     title: rest.title,
@@ -68,11 +68,13 @@ export async function addJourney(sb: SupabaseClient, userId: string, journey: Jo
     created_at: rest.createdAt,
     updated_at: rest.updatedAt,
   });
+  if (jErr) throw new Error(`Journey保存に失敗: ${jErr.message}`);
 
   if (steps.length > 0) {
-    await sb.from("toritavi_steps").upsert(
+    const { error: sErr } = await sb.from("toritavi_steps").upsert(
       steps.map((s, i) => stepToRow(s, journey.id, userId, i))
     );
+    if (sErr) throw new Error(`ステップ保存に失敗: ${sErr.message}`);
   }
 }
 
@@ -90,14 +92,17 @@ export async function updateJourney(
   if (rest.endDate !== undefined) updateData.end_date = rest.endDate;
   if (rest.memo !== undefined) updateData.memo = rest.memo;
 
-  await sb.from("toritavi_journeys").update(updateData).eq("id", id);
+  const { error: uErr } = await sb.from("toritavi_journeys").update(updateData).eq("id", id);
+  if (uErr) throw new Error(`Journey更新に失敗: ${uErr.message}`);
 
   if (steps) {
-    await sb.from("toritavi_steps").delete().eq("journey_id", id);
+    const { error: dErr } = await sb.from("toritavi_steps").delete().eq("journey_id", id);
+    if (dErr) throw new Error(`既存ステップ削除に失敗: ${dErr.message}`);
     if (steps.length > 0) {
-      await sb.from("toritavi_steps").upsert(
+      const { error: sErr } = await sb.from("toritavi_steps").upsert(
         steps.map((s, i) => stepToRow(s, id, userId, i))
       );
+      if (sErr) throw new Error(`ステップ更新に失敗: ${sErr.message}`);
     }
   }
 }
