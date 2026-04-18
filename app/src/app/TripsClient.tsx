@@ -12,7 +12,7 @@ import {
   IconTrain,
 } from "@tabler/icons-react";
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { TabBar } from "@/components/TabBar";
 import {
@@ -21,10 +21,25 @@ import {
   getNextActionStep,
   sortStepsByTime,
 } from "@/lib/helpers";
+import { isGuestMode } from "@/lib/guest";
+import { getJourneys as getJourneysClient } from "@/lib/store-client";
 import type { Journey } from "@/lib/types";
 import classes from "./page.module.css";
 
-export default function TripsClient({ journeys }: { journeys: Journey[] }) {
+export default function TripsClient({ journeys: initialJourneys }: { journeys: Journey[] }) {
+  const [journeys, setJourneys] = useState<Journey[]>(initialJourneys);
+
+  // Guest mode: SSR returns [] (no auth), so hydrate from localStorage on mount.
+  useEffect(() => {
+    if (!isGuestMode()) return;
+    let cancelled = false;
+    (async () => {
+      const data = await getJourneysClient();
+      if (!cancelled) setJourneys(data);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   useEffect(() => {
     const toast = sessionStorage.getItem("toritavi_toast");
     if (!toast) return;
