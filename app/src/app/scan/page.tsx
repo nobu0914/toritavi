@@ -1128,18 +1128,22 @@ export default function ScanPage() {
               </>
             ) : (
               <Box className={classes.formCard}>
-                {fields.map((field) => (
-                  <Box key={field.key} className={classes.formRow}>
-                    <Text className={classes.formLabel}>{field.label}</Text>
-                    <TextInput
-                      classNames={{ input: classes.formInput }}
-                      variant="unstyled"
-                      placeholder={field.placeholder}
-                      value={formValues[field.key] || ""}
-                      onChange={(e) => updateField(field.key, e.currentTarget.value)}
-                    />
-                  </Box>
-                ))}
+                {fields.map((field) => {
+                  const val = formValues[field.key] || "";
+                  const empty = !val;
+                  return (
+                    <Box key={field.key} className={classes.formRow}>
+                      <Text className={classes.formLabel}>{field.label}</Text>
+                      <TextInput
+                        classNames={{ input: `${classes.formInput} ${empty ? classes.formInputEmpty : ""}` }}
+                        variant="unstyled"
+                        placeholder={empty ? "未読取（タップで入力）" : field.placeholder}
+                        value={val}
+                        onChange={(e) => updateField(field.key, e.currentTarget.value)}
+                      />
+                    </Box>
+                  );
+                })}
               </Box>
             )}
 
