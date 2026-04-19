@@ -203,12 +203,13 @@ export function StepDetailDrawer({
         actions={
           isEdit && mode === "view" ? (
             <>
+              {/* DS v2 §10.5 ① variant C: edit icon uses var(--info-700) */}
               <ActionIcon
                 variant="subtle"
-                color="gray"
                 radius="xl"
                 onClick={() => setMode("edit")}
                 aria-label="編集"
+                style={{ color: "var(--info-700)" }}
               >
                 <IconEdit size={18} />
               </ActionIcon>

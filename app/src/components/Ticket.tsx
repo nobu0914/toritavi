@@ -147,12 +147,13 @@ export function Ticket({ data, status, needsReview, inferred, sourceImageUrl, so
   const inferredSet = useMemo(() => new Set(inferred ?? []), [inferred]);
 
   const hl = highlightSpec(data.category);
+  // DS v2 §13.11 rule (4): keep the frame even when both values are missing
+  // so the layout stays consistent across boarding-pass / e-ticket variants.
   const highlight = useMemo(() => {
     if (!hl) return null;
     const find = (re: RegExp) => data.information.find((i) => re.test(i.label.trim()));
     const info1 = find(hl.match1);
     const info2 = find(hl.match2);
-    if (!info1 && !info2) return null;
     return {
       label1: hl.label1,
       value1: info1?.value ?? "",
