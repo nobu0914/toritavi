@@ -31,6 +31,7 @@ import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { StepDetailDrawer, emptyStepDraft } from "@/components/StepDetailDrawer";
 import type { StepDraft } from "@/components/StepDetailDrawer";
 import { SheetHeader } from "@/components/SheetHeader";
+import { AddStepDrawer } from "@/components/AddStepDrawer";
 import classes from "./page.module.css";
 import { deleteJourney, getJourney, getStepImages, updateJourney } from "@/lib/store-client";
 import {
@@ -88,6 +89,7 @@ export default function TripDetailClient({
     return () => { cancelled = true; };
   }, [initialJourney, journeyId, router]);
   const [modalOpened, { open: openModal, close: closeModal }] = useDisclosure(false);
+  const [addSheetOpened, { open: openAddSheet, close: closeAddSheet }] = useDisclosure(false);
   const [journeyModalOpened, { open: openJourneyModal, close: closeJourneyModal }] =
     useDisclosure(false);
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] =
@@ -176,10 +178,10 @@ export default function TripDetailClient({
     openModal();
   };
 
-  // "+予定を追加" → 予定登録 (/scan) に遷移し、OCR/撮影/メール貼付/手入力の
-  // フルフローを再利用する。target パラメータで現在の Journey に自動紐付け。
+  // DS v2 §10.6: +予定を追加 → Bottom Sheet (AddStepDrawer) を起動。
+  // 画面遷移なしで OCR/撮影/メール貼付/手入力のフルフローに入る。
   const openNewStep = () => {
-    router.push(`/scan?target=${journey.id}`);
+    openAddSheet();
   };
 
   const handleSaveStep = () => {
@@ -549,6 +551,18 @@ export default function TripDetailClient({
           </button>
         </Box>
       </Box>
+
+      <AddStepDrawer
+        opened={addSheetOpened}
+        onClose={closeAddSheet}
+        journey={{ id: journey.id, title: journey.title }}
+        onCompleted={async () => {
+          closeAddSheet();
+          // Sheet 閉じ後にタイムラインを最新化する
+          const fresh = await getJourney(journey.id);
+          if (fresh) setJourney(fresh);
+        }}
+      />
 
       <StepDetailDrawer
         opened={modalOpened}
