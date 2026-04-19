@@ -346,8 +346,8 @@ export function StepDetailDrawer({
       {/* 6. 下部固定CTA */}
       <Box className={classes.footer}>
         {mode === "view" ? (
-          <button className={classes.ctaButton} onClick={() => setMode("edit")}>
-            編集する
+          <button className={classes.closeButton} onClick={onClose} type="button">
+            閉じる
           </button>
         ) : (
           <Box className={classes.footerRow}>
