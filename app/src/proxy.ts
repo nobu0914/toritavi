@@ -10,7 +10,7 @@ const PUBLIC_PATHS = [
   "/auth/callback",
 ];
 
-const PROTECTED_PATHS = ["/", "/scan", "/alerts", "/unfiled", "/account", "/trips"];
+const PROTECTED_PATHS = ["/", "/scan", "/alerts", "/unfiled", "/account", "/trips", "/concierge"];
 
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));

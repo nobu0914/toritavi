@@ -5,6 +5,7 @@ import {
   IconPlane,
   IconScan,
   IconBell,
+  IconMessageCircle,
   IconUser,
 } from "@tabler/icons-react";
 import { usePathname } from "next/navigation";
@@ -14,6 +15,7 @@ import classes from "./TabBar.module.css";
 const tabs = [
   { label: "旅程", icon: IconPlane, href: "/" },
   { label: "予定登録", icon: IconScan, href: "/scan" },
+  { label: "AI", icon: IconMessageCircle, href: "/concierge" },
   { label: "通知", icon: IconBell, href: "/alerts" },
   { label: "アカウント", icon: IconUser, href: "/account" },
 ];

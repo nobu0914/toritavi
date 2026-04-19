@@ -1,0 +1,91 @@
+/* ConciergeToolCard — DS v2 §15.4 */
+
+.card {
+  align-self: flex-start;
+  max-width: 92%;
+  background: var(--accent-50);
+  border: 1.5px solid var(--accent-500);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+.card[data-state="confirmed"] {
+  background: var(--success-50);
+  border-color: var(--success-500);
+  color: var(--success-700);
+}
+.card[data-state="declined"] {
+  background: var(--n-50);
+  border-color: var(--border);
+  color: var(--text-dim);
+}
+
+.header {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 6px;
+  color: var(--accent-700);
+}
+.headerLabel {
+  font-size: 11px;
+  font-weight: var(--fw-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0;
+}
+
+.title {
+  font-size: 13px;
+  font-weight: var(--fw-bold);
+  color: var(--text);
+  margin-bottom: 6px;
+  line-height: 1.5;
+}
+
+.meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 10px;
+  line-height: 1.6;
+}
+
+.actions {
+  display: flex;
+  gap: 6px;
+}
+.confirmBtn {
+  flex: 1;
+  background: var(--accent-500);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-weight: var(--fw-bold);
+  font-family: inherit;
+  cursor: pointer;
+}
+.confirmBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.declineBtn {
+  background: var(--surface);
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.declineBtn:hover {
+  background: var(--n-50);
+}
+
+.resultRow {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
