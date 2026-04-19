@@ -4083,74 +4083,32 @@ HND → ITM
 
       </div>
 
-      <!-- ========== 10.6 Journey への予定追加 — UI 案比較 ========== -->
-      <div class="comp-card full" style="margin-top:40px;border:1.5px solid var(--accent-500);border-radius:var(--r-lg);padding:24px;background:var(--surface)">
-        <div class="comp-label" style="color:var(--accent-700);font-size:var(--fs-md)">10.6 Journey への予定追加 — UI 案（実装前レビュー）</div>
-        <p class="muted" style="font-size:var(--fs-sm);margin-bottom:20px">
-          <strong style="color:var(--text)">課題:</strong> 初期実装は /scan に遷移して細いアクセントバーの Context 帯を載せる方式だったが、「テロップのように見える」「予定登録画面と区別がつかない」との指摘。
-          カード or モーダルで実装する 2 案を比較する。
+      <!-- ========== 10.6 Journey への予定追加 — Bottom Sheet 仕様 ========== -->
+      <div class="comp-card full" style="margin-top:40px">
+        <div class="comp-label" style="color:var(--accent-700);font-size:var(--fs-md)">10.6 Journey への予定追加 — Bottom Sheet パターン</div>
+        <p class="muted" style="font-size:var(--fs-sm);margin-bottom:16px">
+          <strong style="color:var(--text)">ルール:</strong> /trips/{id} の「+予定を追加」から起動する追加フローは
+          <strong style="color:var(--text)">画面遷移を伴わない Bottom Sheet</strong> で実装する。背景に旅程（カード一覧）が透けて見えるので「今この旅程に追加している」が視覚的に明示される。
+          /scan の「予定登録」導線（TabBar から）は <strong style="color:var(--text)">旅程未指定・独立フロー</strong>として別役割を維持する。
         </p>
 
+        <!-- フローフェーズ表 -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;font-size:var(--fs-xs)">
+          <div style="background:var(--n-50);border-radius:var(--r-sm);padding:10px 12px"><strong style="color:var(--text)">Phase 1</strong><br/><span class="muted">取り込み方法選択</span></div>
+          <div style="background:var(--n-50);border-radius:var(--r-sm);padding:10px 12px"><strong style="color:var(--text)">Phase 2</strong><br/><span class="muted">OCR / テキスト解析 / 空フォーム展開</span></div>
+          <div style="background:var(--n-50);border-radius:var(--r-sm);padding:10px 12px"><strong style="color:var(--text)">Phase 3</strong><br/><span class="muted">内容確認（Ticket プレビュー）</span></div>
+          <div style="background:var(--accent-50);border-radius:var(--r-sm);padding:10px 12px"><strong style="color:var(--accent-700)">Phase 4</strong><br/><span style="color:var(--accent-700)">「この旅程に追加」CTA → 閉じ</span></div>
+        </div>
+
+        <!-- 2 フェーズの見本 -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
 
-          <!-- ===== 案 1: Journey Hero カード（/scan 遷移） ===== -->
+          <!-- Phase 1 視覚 -->
           <div>
-            <div style="font-size:var(--fs-sm);font-weight:var(--fw-bold);color:var(--ink-800);margin-bottom:6px">案 1. Journey Hero カード</div>
-            <div class="muted" style="font-size:var(--fs-xs);margin-bottom:10px">/scan に遷移。ページ冒頭が旅程一覧と同じ<strong style="color:var(--text)">大きな Journey カード</strong>になる。</div>
-            <div style="background:var(--ink-800);padding:60px 14px 0;border-radius:var(--r-lg);max-width:360px;margin:0 auto">
-              <div class="app-header" style="background:transparent;padding:12px 0;border-radius:0">
-                <button class="btn-icon" aria-label="戻る"><svg class="ic-svg"><use href="#i-back"/></svg></button>
-                <div class="ah-title">旅程に予定を追加</div>
-                <div style="width:36px"></div>
-              </div>
-              <div style="background:var(--bg);border-radius:var(--r-lg) var(--r-lg) 0 0;padding:18px 16px;min-height:440px">
-                <!-- Journey Hero Card (旅程一覧と同形) -->
-                <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:14px;box-shadow:var(--shadow-xs);margin-bottom:16px">
-                  <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-                    <span style="font-size:var(--fs-xs);font-weight:var(--fw-bold);color:var(--accent-700);background:var(--accent-50);padding:2px 8px;border-radius:var(--r-pill)">追加先</span>
-                  </div>
-                  <div style="font-size:var(--fs-lg);font-weight:var(--fw-heavy);color:var(--text);margin-bottom:4px">大阪出張 2026/04</div>
-                  <div style="font-size:var(--fs-xs);color:var(--text-dim);font-family:var(--font-mono);margin-bottom:10px">2026-04-12 — 2026-04-15 (4日間)</div>
-                  <div style="display:flex;gap:6px;flex-wrap:wrap">
-                    <span style="font-size:var(--fs-xs);background:var(--tint-plane);padding:3px 9px;border-radius:var(--r-pill)"><svg class="ic-svg" style="width:12px;height:12px;vertical-align:-2px"><use href="#i-plane"/></svg> ANA NH118</span>
-                    <span style="font-size:var(--fs-xs);background:var(--tint-lodge);padding:3px 9px;border-radius:var(--r-pill)"><svg class="ic-svg" style="width:12px;height:12px;vertical-align:-2px"><use href="#i-bed"/></svg> ホテル 2 泊</span>
-                    <span style="font-size:var(--fs-xs);color:var(--text-dim);padding:3px 9px">+ 1 件</span>
-                  </div>
-                </div>
-
-                <div style="font-size:var(--fs-xs);font-weight:var(--fw-bold);color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">取り込み方法を選ぶ</div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
-                  <button style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:20px 8px;display:flex;flex-direction:column;align-items:center;gap:6px;box-shadow:var(--shadow-xs);cursor:pointer">
-                    <svg class="ic-svg" style="width:28px;height:28px"><use href="#i-camera"/></svg>
-                    <div style="font-size:var(--fs-sm);font-weight:var(--fw-bold)">撮影する</div>
-                  </button>
-                  <button style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:20px 8px;display:flex;flex-direction:column;align-items:center;gap:6px;box-shadow:var(--shadow-xs);cursor:pointer">
-                    <svg class="ic-svg" style="width:28px;height:28px"><use href="#i-upload"/></svg>
-                    <div style="font-size:var(--fs-sm);font-weight:var(--fw-bold)">アップロード</div>
-                  </button>
-                  <button style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:20px 8px;display:flex;flex-direction:column;align-items:center;gap:6px;box-shadow:var(--shadow-xs);cursor:pointer;grid-column:span 2">
-                    <svg class="ic-svg" style="width:28px;height:28px"><use href="#i-mail"/></svg>
-                    <div style="font-size:var(--fs-sm);font-weight:var(--fw-bold)">メール貼付</div>
-                  </button>
-                </div>
-              </div>
-            </div>
-            <div style="margin-top:12px">
-              <div style="font-size:var(--fs-xs);color:var(--text-dim);line-height:1.7">
-                <strong style="color:var(--text)">長所:</strong> 旅程一覧で使われる「Journey カード」形式を再利用するので<em>「いまこの旅程に追加している」</em>が一目で分かる。<br/>
-                <strong style="color:var(--text)">短所:</strong> 画面遷移が発生するため、意図せず /scan にいる違和感が残る可能性。<br/>
-                <strong style="color:var(--text)">実装:</strong> 現行 /scan?target=id をベースにカードだけ差し替え。
-              </div>
-            </div>
-          </div>
-
-          <!-- ===== 案 2: Bottom Sheet モーダル ===== -->
-          <div>
-            <div style="font-size:var(--fs-sm);font-weight:var(--fw-bold);color:var(--ink-800);margin-bottom:6px">案 2. Bottom Sheet モーダル <span style="color:var(--accent-500);font-size:var(--fs-xs)">(画面遷移なし)</span></div>
-            <div class="muted" style="font-size:var(--fs-xs);margin-bottom:10px">/trips/{id} の上にボトムシートがせり上がる。StepDetailDrawer と同じ作法。</div>
+            <div style="font-size:var(--fs-sm);font-weight:var(--fw-bold);color:var(--ink-800);margin-bottom:6px">Phase 1 — 取り込み方法選択</div>
+            <div class="muted" style="font-size:var(--fs-xs);margin-bottom:10px">Sheet がせり上がり、取り込み 4 方式をカードで提示。背景は旅程が scrim で暗め。</div>
             <div style="background:var(--ink-800);padding:60px 14px 0;border-radius:var(--r-lg);max-width:360px;margin:0 auto;position:relative;overflow:hidden">
-              <!-- 背景：薄く旅程詳細が見える -->
-              <div style="background:var(--bg);border-radius:var(--r-lg) var(--r-lg) 0 0;padding:18px 16px;min-height:440px;position:relative">
+              <div style="background:var(--bg);border-radius:var(--r-lg) var(--r-lg) 0 0;padding:18px 16px;min-height:460px;position:relative">
                 <div style="opacity:0.25;filter:blur(0.5px);pointer-events:none">
                   <div style="font-size:var(--fs-xl);font-weight:var(--fw-heavy);color:var(--text)">大阪出張 2026/04</div>
                   <div style="font-size:var(--fs-xs);color:var(--text-dim);margin-bottom:16px">2026-04-12 — 2026-04-15</div>
@@ -4161,17 +4119,15 @@ HND → ITM
                     <div style="font-size:var(--fs-sm);font-weight:var(--fw-bold)">ホテル</div>
                   </div>
                 </div>
-                <!-- Scrim -->
                 <div style="position:absolute;inset:0;background:rgba(0,0,0,0.35);border-radius:var(--r-lg) var(--r-lg) 0 0"></div>
-                <!-- Bottom Sheet -->
-                <div style="position:absolute;left:0;right:0;bottom:0;background:var(--surface);border-radius:var(--r-lg) var(--r-lg) 0 0;padding:8px 16px 18px;box-shadow:var(--dialog-shadow);max-height:82%;overflow:hidden">
+                <div style="position:absolute;left:0;right:0;bottom:0;background:var(--surface);border-radius:var(--r-lg) var(--r-lg) 0 0;padding:8px 16px 18px;box-shadow:var(--dialog-shadow);max-height:86%;overflow:hidden">
                   <div style="width:36px;height:4px;border-radius:2px;background:var(--n-200);margin:6px auto 10px"></div>
                   <div class="modal-header" style="padding:4px 0 12px;border-bottom:1px solid var(--border)">
                     <button class="btn-icon sm" aria-label="閉じる"><svg class="ic-svg"><use href="#i-down"/></svg></button>
                     <div class="modal-title" style="font-size:var(--fs-md)">大阪出張 に予定を追加</div>
                     <div style="width:32px"></div>
                   </div>
-                  <div style="padding:14px 0 10px;font-size:var(--fs-xs);font-weight:var(--fw-bold);color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px">取り込み方法</div>
+                  <div style="padding:14px 0 10px;font-size:var(--fs-xs);font-weight:var(--fw-bold);color:var(--text-dim);letter-spacing:0.5px">取り込み方法</div>
                   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
                     <button style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:18px 8px;display:flex;flex-direction:column;align-items:center;gap:6px;box-shadow:var(--shadow-xs);cursor:pointer">
                       <svg class="ic-svg" style="width:26px;height:26px"><use href="#i-camera"/></svg>
@@ -4193,27 +4149,108 @@ HND → ITM
                 </div>
               </div>
             </div>
-            <div style="margin-top:12px">
-              <div style="font-size:var(--fs-xs);color:var(--text-dim);line-height:1.7">
-                <strong style="color:var(--text)">長所:</strong> 画面遷移ゼロで「旅程を開いたまま付け足している」感覚。StepDetailDrawer と作法統一（↓ で閉じる / ドラッグで閉じる）。<br/>
-                <strong style="color:var(--text)">短所:</strong> /scan の全機能を Drawer 内にポートする必要あり（中〜大規模リファクタ）。<br/>
-                <strong style="color:var(--text)">実装:</strong> 既存 /scan のロジックを再利用可能なコンポーネントに抽出して Drawer でラップ。
+          </div>
+
+          <!-- Phase 3 視覚 (Ticket プレビュー + CTA) -->
+          <div>
+            <div style="font-size:var(--fs-sm);font-weight:var(--fw-bold);color:var(--ink-800);margin-bottom:6px">Phase 3-4 — 内容確認 → 追加</div>
+            <div class="muted" style="font-size:var(--fs-xs);margin-bottom:10px">OCR 後はそのまま同じ Sheet 内で Ticket プレビュー + CTA に遷移。画面遷移なし。</div>
+            <div style="background:var(--ink-800);padding:60px 14px 0;border-radius:var(--r-lg);max-width:360px;margin:0 auto;position:relative;overflow:hidden">
+              <div style="background:var(--bg);border-radius:var(--r-lg) var(--r-lg) 0 0;padding:18px 16px;min-height:460px;position:relative">
+                <div style="position:absolute;inset:0;background:rgba(0,0,0,0.35);border-radius:var(--r-lg) var(--r-lg) 0 0"></div>
+                <div style="position:absolute;left:0;right:0;bottom:0;background:var(--surface);border-radius:var(--r-lg) var(--r-lg) 0 0;padding:8px 14px 14px;box-shadow:var(--dialog-shadow);max-height:90%;overflow:hidden">
+                  <div style="width:36px;height:4px;border-radius:2px;background:var(--n-200);margin:6px auto 10px"></div>
+                  <div class="modal-header" style="padding:4px 0 10px;border-bottom:1px solid var(--border)">
+                    <button class="btn-icon sm" aria-label="閉じる"><svg class="ic-svg"><use href="#i-down"/></svg></button>
+                    <div class="modal-title" style="font-size:var(--fs-md)">大阪出張 に予定を追加</div>
+                    <button class="btn-icon sm" aria-label="やり直す" style="color:var(--text-dim)"><svg class="ic-svg"><use href="#i-close"/></svg></button>
+                  </div>
+                  <!-- Mini Ticket プレビュー -->
+                  <div style="margin:12px 0;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden;box-shadow:var(--shadow-xs)">
+                    <div style="background:var(--ink-800);color:#fff;padding:10px 12px;font-size:var(--fs-xs)">
+                      <div style="opacity:0.7">飛行機 · ANA NH118</div>
+                      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:6px">
+                        <div><span style="font-size:22px;font-weight:var(--fw-heavy)">HND</span> <span style="font-family:var(--font-mono);margin-left:4px">21:15</span></div>
+                        <div>→</div>
+                        <div style="text-align:right"><span style="font-size:22px;font-weight:var(--fw-heavy)">SEA</span> <span style="font-family:var(--font-mono);margin-left:4px">—:—</span></div>
+                      </div>
+                    </div>
+                    <div style="padding:8px 12px;display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:var(--fs-xs)">
+                      <div><span class="muted">出発日</span><br/><strong>2026-04-12</strong></div>
+                      <div><span class="muted">確認番号</span><br/><strong style="font-family:var(--font-mono)">EKCJGM</strong></div>
+                    </div>
+                  </div>
+                  <div style="background:var(--info-50);border:1px solid rgba(37,99,205,0.15);border-radius:var(--r-sm);padding:8px 10px;font-size:11px;color:var(--info-700);margin-bottom:10px">
+                    <strong>要確認:</strong> 到着日と到着時刻は AI 推定です
+                  </div>
+                  <button style="width:100%;background:var(--accent-500);color:#fff;border:none;border-radius:var(--r-pill);padding:13px;font-weight:var(--fw-bold);font-size:var(--fs-md);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">
+                    <svg class="ic-svg" style="width:16px;height:16px"><use href="#i-check"/></svg>
+                    この旅程に追加
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-
         </div>
 
-        <div style="margin-top:20px;background:var(--info-50);border:1px solid rgba(37,99,205,0.2);border-radius:var(--r-md);padding:14px 16px;font-size:var(--fs-sm);line-height:1.8">
-          <strong style="color:var(--info-700)">仮想チーム所見:</strong><br/>
-          <strong>PM:</strong> 案 2 推し。「旅程の中で作業している」体験が一貫。<br/>
-          <strong>UX:</strong> 案 2。モーダル常駐で背景に旅程が透けて見えるので context が最強。<br/>
-          <strong>Eng:</strong> 案 1 なら 30 分、案 2 なら 2〜3 時間（/scan ロジックの抽出が必要）。<br/>
-          <strong>QA:</strong> 案 2 は Drawer の重ね合わせ（Step 編集 Drawer が上に乗る場合の挙動）を追加で検証。
+        <!-- 仕様詳細 -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:24px">
+          <div style="background:var(--n-50);border-radius:var(--r-md);padding:14px 16px">
+            <div style="font-size:var(--fs-xs);font-weight:var(--fw-bold);color:var(--text-dim);letter-spacing:0.5px;margin-bottom:8px">ヘッダー仕様</div>
+            <ul style="font-size:var(--fs-sm);line-height:1.8;padding-left:18px;margin:0;color:var(--text)">
+              <li>SheetHeader（DS §6 Type C）を再利用</li>
+              <li>左: <code class="mono">↓</code>（閉じる、iOS Drawer 作法）</li>
+              <li>中央: <code class="mono">{Journey 名} に予定を追加</code></li>
+              <li>Phase 3 以降は右に <code class="mono">✕</code> を追加（やり直し = Phase 1 に戻る）</li>
+            </ul>
+          </div>
+          <div style="background:var(--n-50);border-radius:var(--r-md);padding:14px 16px">
+            <div style="font-size:var(--fs-xs);font-weight:var(--fw-bold);color:var(--text-dim);letter-spacing:0.5px;margin-bottom:8px">挙動 / ジェスチャ</div>
+            <ul style="font-size:var(--fs-sm);line-height:1.8;padding-left:18px;margin:0;color:var(--text)">
+              <li>起動: /trips/{id} の [+予定を追加]</li>
+              <li>閉じ: <code class="mono">↓</code> / ドラッグダウン / 背景 scrim タップ / ESC</li>
+              <li>Phase 間遷移は Sheet 内で差し替え（画面遷移なし）</li>
+              <li>登録完了: Sheet 閉じ + 通知トースト「予定を追加しました」</li>
+            </ul>
+          </div>
+          <div style="background:var(--n-50);border-radius:var(--r-md);padding:14px 16px">
+            <div style="font-size:var(--fs-xs);font-weight:var(--fw-bold);color:var(--text-dim);letter-spacing:0.5px;margin-bottom:8px">取り込み方式</div>
+            <ul style="font-size:var(--fs-sm);line-height:1.8;padding-left:18px;margin:0;color:var(--text)">
+              <li>撮影 — カメラ起動 → OCR</li>
+              <li>アップロード — ファイル選択（PDF / 画像）→ OCR</li>
+              <li>メール貼付 — テキスト貼付欄 → 解析</li>
+              <li>手入力で作成 — 空フォーム直行（OCR スキップ）</li>
+            </ul>
+          </div>
+          <div style="background:var(--n-50);border-radius:var(--r-md);padding:14px 16px">
+            <div style="font-size:var(--fs-xs);font-weight:var(--fw-bold);color:var(--text-dim);letter-spacing:0.5px;margin-bottom:8px">CTA / 状態</div>
+            <ul style="font-size:var(--fs-sm);line-height:1.8;padding-left:18px;margin:0;color:var(--text)">
+              <li>Primary: <strong style="color:var(--accent-700)">この旅程に追加</strong>（Accent Pill）</li>
+              <li>処理中: <code class="mono">追加中...</code> + Loader、押下不可</li>
+              <li>エラー: Danger バナー表示、Sheet は閉じない</li>
+              <li>成功: Sheet 閉じ → /trips/{id} のタイムラインが即更新</li>
+            </ul>
+          </div>
         </div>
 
-        <div style="margin-top:16px;background:var(--warn-50);border:1px solid var(--warn-500);border-radius:var(--r-md);padding:12px 14px;font-size:var(--fs-xs);line-height:1.7">
-          <strong style="color:var(--warn-700)">決めたい論点:</strong> 案 1 or 案 2 どちらで進めるか。追加工数より UX 一貫性を優先するなら案 2、最短で解決するなら案 1。
+        <!-- /scan 画面との使い分け -->
+        <div style="margin-top:20px;background:var(--info-50);border:1px solid rgba(37,99,205,0.2);border-radius:var(--r-md);padding:14px 16px">
+          <div style="font-size:var(--fs-xs);font-weight:var(--fw-bold);color:var(--info-700);margin-bottom:8px">予定登録 (/scan) との使い分け</div>
+          <table style="width:100%;font-size:var(--fs-sm);line-height:1.8;border-collapse:collapse">
+            <thead><tr style="text-align:left"><th style="padding:4px 0;width:40%;color:var(--text-dim);font-weight:var(--fw-bold)">入口</th><th style="padding:4px 0;color:var(--text-dim);font-weight:var(--fw-bold)">挙動</th></tr></thead>
+            <tbody>
+              <tr><td style="padding:4px 0">TabBar「予定登録」</td><td style="padding:4px 0">/scan に遷移。旅程は同日判定 or 新規作成</td></tr>
+              <tr><td style="padding:4px 0">/trips/{id} 「+予定を追加」</td><td style="padding:4px 0"><strong style="color:var(--text)">Bottom Sheet 起動（遷移なし）</strong>。旅程は固定</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 実装メモ -->
+        <div style="margin-top:16px;background:var(--surface);border:1px dashed var(--border);border-radius:var(--r-md);padding:12px 14px;font-size:var(--fs-xs);line-height:1.7;color:var(--text-dim)">
+          <strong style="color:var(--text)">実装メモ:</strong>
+          既存 /scan の state machine（OCR / 解析 / 登録）を <code class="mono">AddStepSheet</code> コンポーネントに抽出し、Mantine Drawer（position=bottom, size=fit-content）でラップ。
+          Ticket / SheetHeader / Ticket プレビュー部品は現行のものを共用。
+          <code class="mono">/scan?target=id</code> のクエリ経由フローは<strong style="color:var(--text)">廃止</strong>し、Sheet 内に一本化する。
         </div>
       </div>
 
