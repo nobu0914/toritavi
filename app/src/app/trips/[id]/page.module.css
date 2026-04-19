@@ -302,26 +302,33 @@
   line-height: 1.7;
 }
 
-/* === Danger zone === */
-.dangerZone {
-  margin: 24px 16px 0;
+/* === Add schedule === */
+.addScheduleWrap {
+  margin: 20px 16px 0;
 }
 
-.deleteScheduleButton {
+.addScheduleButton {
   width: 100%;
-  padding: 12px;
-  border-radius: var(--r-md);
-  border: 1px solid rgba(231, 76, 60, 0.2);
-  background: var(--danger-50);
-  color: var(--danger-700);
-  font-size: var(--fs-sm);
+  padding: 14px;
+  border-radius: var(--r-pill);
+  border: 1.5px dashed var(--n-300);
+  background: var(--surface);
+  color: var(--ink-800);
+  font-size: var(--fs-md);
   font-weight: var(--fw-bold);
   cursor: pointer;
   font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  transition: background 0.12s, border-color 0.12s;
 }
 
-.deleteScheduleButton:hover {
-  background: rgba(231, 76, 60, 0.15);
+.addScheduleButton:hover {
+  background: var(--n-50);
+  border-color: var(--ink-800);
 }
 
 /* === Edit modal === */

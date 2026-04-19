@@ -176,6 +176,13 @@ export default function TripDetailClient({
     openModal();
   };
 
+  const openNewStep = () => {
+    setDraft(emptyStepDraft());
+    setEditingStepId(crypto.randomUUID());
+    setEditingIndex(null);
+    openModal();
+  };
+
   const handleSaveStep = () => {
     if (!draft.title.trim()) return;
 
@@ -532,12 +539,14 @@ export default function TripDetailClient({
           </Box>
         )}
 
-        <Box className={classes.dangerZone}>
+        <Box className={classes.addScheduleWrap}>
           <button
-            className={classes.deleteScheduleButton}
-            onClick={requestJourneyDelete}
+            type="button"
+            className={classes.addScheduleButton}
+            onClick={openNewStep}
           >
-            スケジュールを削除
+            <IconPlus size={18} />
+            予定を追加
           </button>
         </Box>
       </Box>
