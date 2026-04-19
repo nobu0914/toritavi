@@ -175,6 +175,48 @@
 .ticket-bar.thin { width: 1px; }
 .ticket-bar.thick { width: 3px; }
 
+/* ---------- Highlight zone (flight gate/seat, etc.) ---------- */
+.ticket-highlight {
+  padding: 14px 22px 16px;
+  background: linear-gradient(180deg, var(--surface) 0%, var(--n-50) 100%);
+  border-top: 1px dashed var(--n-200);
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+.ticket-highlight-cell {
+  padding: 10px 12px 11px;
+  background: var(--surface);
+  border: 1.5px solid var(--ink-800);
+  border-radius: 10px;
+  min-width: 0;
+}
+.ticket-highlight-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ink-800);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 4px;
+}
+.ticket-highlight-value {
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--ink-800);
+  letter-spacing: 1.5px;
+  line-height: 1;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ticket-highlight-value.empty {
+  color: #C99F99;
+  font-style: italic;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: 13px;
+  letter-spacing: 0;
+}
+
 /* ---------- Category tints ---------- */
 .ticket--train .ticket-hero { background: linear-gradient(135deg,#13332A 0%,#0F2A23 55%,#1A4D3F 100%); }
 .ticket--lodge .ticket-hero { background: linear-gradient(135deg,#32230F 0%,#241808 55%,#4D371A 100%); }

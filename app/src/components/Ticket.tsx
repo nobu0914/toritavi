@@ -117,6 +117,18 @@ function splitPort(value: string | undefined): { code: string; name?: string } {
   return { code: value.trim() };
 }
 
+type HighlightSpec = { label1: string; match1: RegExp; label2: string; match2: RegExp } | null;
+
+function highlightSpec(category: StepCategory): HighlightSpec {
+  switch (category) {
+    case "飛行機": return { label1: "Gate", match1: /^(ゲート|gate)$/i, label2: "Seat", match2: /^(座席|seat)$/i };
+    case "列車": return { label1: "Car", match1: /^(号車|car)$/i, label2: "Seat", match2: /^(座席|seat)$/i };
+    case "バス": return { label1: "Stop", match1: /^(のりば|乗り場|stop|platform)$/i, label2: "Seat", match2: /^(座席|seat)$/i };
+    case "観光": return { label1: "Block", match1: /^(ブロック|block)$/i, label2: "Seat", match2: /^(座席|seat|席番号)$/i };
+    default: return null;
+  }
+}
+
 export function Ticket({ data, status, needsReview, inferred, sourceImageUrl, sourceImageUrls, onCopyMailBody }: Props) {
   const [activePage, setActivePage] = useState(0);
 
@@ -130,6 +142,32 @@ export function Ticket({ data, status, needsReview, inferred, sourceImageUrl, so
   const stateCls = rootStateClass(status);
   const flag = flagFor(status, needsReview);
   const inferredSet = useMemo(() => new Set(inferred ?? []), [inferred]);
+
+  const hl = highlightSpec(data.category);
+  const highlight = useMemo(() => {
+    if (!hl) return null;
+    const find = (re: RegExp) => data.information.find((i) => re.test(i.label.trim()));
+    const info1 = find(hl.match1);
+    const info2 = find(hl.match2);
+    if (!info1 && !info2) return null;
+    return {
+      label1: hl.label1,
+      value1: info1?.value ?? "",
+      id1: info1?.id,
+      label2: hl.label2,
+      value2: info2?.value ?? "",
+      id2: info2?.id,
+    };
+  }, [data.information, hl]);
+
+  const highlightIds = useMemo(
+    () => new Set([highlight?.id1, highlight?.id2].filter(Boolean) as string[]),
+    [highlight]
+  );
+  const visibleInformation = useMemo(
+    () => data.information.filter((i) => !highlightIds.has(i.id)),
+    [data.information, highlightIds]
+  );
 
   const fixedFields = useMemo(() => getFixedFields(data.category), [data.category]);
 
@@ -234,16 +272,32 @@ export function Ticket({ data, status, needsReview, inferred, sourceImageUrl, so
         )}
       </div>
 
-      {data.confNumber && (
-        <>
-          <div className="ticket-perf"></div>
-          <div className="ticket-code-zone">
-            <div>
-              <div className="ticket-code-label">確認番号</div>
-              <div className="ticket-code-value">{data.confNumber}</div>
+      {(highlight || data.confNumber) && <div className="ticket-perf"></div>}
+
+      {highlight && (
+        <div className="ticket-highlight">
+          <div className="ticket-highlight-cell">
+            <div className="ticket-highlight-label">{highlight.label1}</div>
+            <div className={`ticket-highlight-value ${highlight.value1 ? "" : "empty"}`.trim()}>
+              {highlight.value1 || "未読取"}
             </div>
           </div>
-        </>
+          <div className="ticket-highlight-cell">
+            <div className="ticket-highlight-label">{highlight.label2}</div>
+            <div className={`ticket-highlight-value ${highlight.value2 ? "" : "empty"}`.trim()}>
+              {highlight.value2 || "未読取"}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {data.confNumber && (
+        <div className="ticket-code-zone">
+          <div>
+            <div className="ticket-code-label">確認番号</div>
+            <div className="ticket-code-value">{data.confNumber}</div>
+          </div>
+        </div>
       )}
 
       {/* 基本情報 */}
@@ -283,15 +337,15 @@ export function Ticket({ data, status, needsReview, inferred, sourceImageUrl, so
         </div>
       </div>
 
-      {/* その他の情報 */}
-      {data.information.length > 0 && (
+      {/* その他の情報（Highlight に引き上げた項目は除外） */}
+      {visibleInformation.length > 0 && (
         <div className="ticket-info-section">
           <div className="ticket-info-head">
             <span>その他の情報</span>
-            <span className="ticket-info-head-count">{data.information.length}</span>
+            <span className="ticket-info-head-count">{visibleInformation.length}</span>
           </div>
           <div className="ticket-info-list">
-            {data.information.map((info) => (
+            {visibleInformation.map((info) => (
               <div key={info.id} className="ticket-info-list-row">
                 <div className="ticket-info-list-label">{info.label}</div>
                 <div className={`ticket-info-list-value ${info.value ? "plain" : "empty"}`.trim()}>

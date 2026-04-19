@@ -1100,6 +1100,34 @@
   .ticket-bar.thin { width: 1px; }
   .ticket-bar.thick { width: 3px; }
   .ticket-bar.short { height: 70%; align-self: center; }
+
+  /* Highlight zone (flight gate/seat etc.) */
+  .ticket-highlight {
+    padding: 14px 22px 16px;
+    background: linear-gradient(180deg, var(--surface) 0%, var(--n-50) 100%);
+    border-top: 1px dashed var(--n-200);
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
+  }
+  .ticket-highlight-cell {
+    padding: 10px 12px 11px;
+    background: var(--surface);
+    border: 1.5px solid var(--ink-800);
+    border-radius: 10px; min-width: 0;
+  }
+  .ticket-highlight-label {
+    font-size: 10px; font-weight: 700; color: var(--ink-800);
+    text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 4px;
+  }
+  .ticket-highlight-value {
+    font-family: var(--font-mono); font-size: 22px; font-weight: 800;
+    color: var(--ink-800); letter-spacing: 1.5px; line-height: 1;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .ticket-highlight-value.empty {
+    color: #C99F99; font-style: italic;
+    font-family: var(--font-sans); font-weight: 500;
+    font-size: 13px; letter-spacing: 0;
+  }
   .ticket-qr {
     width: 48px; height: 48px;
     background:
@@ -4964,10 +4992,9 @@ HND → ITM
                 </div>
               </div>
               <div class="ticket-perf"></div>
-              <div class="ticket-body">
-                <div class="ticket-meta-cell"><div class="ticket-meta-label">ゲート</div><div class="ticket-meta-value empty">未読取</div></div>
-                <div class="ticket-meta-cell"><div class="ticket-meta-label">座席</div><div class="ticket-meta-value empty">未読取</div></div>
-                <div class="ticket-meta-cell"><div class="ticket-meta-label">TZ <span class="ticket-meta-badge">推定</span></div><div class="ticket-meta-value inferred">PST/JST</div></div>
+              <div class="ticket-highlight">
+                <div class="ticket-highlight-cell"><div class="ticket-highlight-label">Gate</div><div class="ticket-highlight-value">17</div></div>
+                <div class="ticket-highlight-cell"><div class="ticket-highlight-label">Seat</div><div class="ticket-highlight-value">24C</div></div>
               </div>
               <div class="ticket-code-zone">
                 <div><div class="ticket-code-label">確認番号</div><div class="ticket-code-value">W2TL8Q</div></div>
@@ -5354,10 +5381,9 @@ HND → ITM
               </div>
             </div>
             <div class="ticket-perf"></div>
-            <div class="ticket-body">
-              <div class="ticket-meta-cell"><div class="ticket-meta-label">出発</div><div class="ticket-meta-value" style="font-size:13px">2024-09-08</div></div>
-              <div class="ticket-meta-cell"><div class="ticket-meta-label">到着 <span class="ticket-meta-badge">推定</span></div><div class="ticket-meta-value inferred" style="font-size:13px">2024-09-09 (翌)</div></div>
-              <div class="ticket-meta-cell"><div class="ticket-meta-label">便名</div><div class="ticket-meta-value">ZG029</div></div>
+            <div class="ticket-highlight">
+              <div class="ticket-highlight-cell"><div class="ticket-highlight-label">Gate</div><div class="ticket-highlight-value empty">未読取</div></div>
+              <div class="ticket-highlight-cell"><div class="ticket-highlight-label">Seat</div><div class="ticket-highlight-value empty">未読取</div></div>
             </div>
             <div class="ticket-code-zone">
               <div><div class="ticket-code-label">確認番号</div><div class="ticket-code-value">W2TL8Q</div></div>
@@ -5479,10 +5505,9 @@ HND → ITM
               </div>
             </div>
             <div class="ticket-perf"></div>
-            <div class="ticket-body">
-              <div class="ticket-meta-cell"><div class="ticket-meta-label">出発日</div><div class="ticket-meta-value" style="font-size:13px">2024-12-31</div></div>
-              <div class="ticket-meta-cell"><div class="ticket-meta-label">便名</div><div class="ticket-meta-value">DL2844</div></div>
-              <div class="ticket-meta-cell"><div class="ticket-meta-label">到着日</div><div class="ticket-meta-value empty">未読取</div></div>
+            <div class="ticket-highlight">
+              <div class="ticket-highlight-cell"><div class="ticket-highlight-label">Gate</div><div class="ticket-highlight-value">D39</div></div>
+              <div class="ticket-highlight-cell"><div class="ticket-highlight-label">Seat</div><div class="ticket-highlight-value empty">ゲートにて指定</div></div>
             </div>
             <div class="ticket-code-zone">
               <div><div class="ticket-code-label">確認番号</div><div class="ticket-code-value">HHQL3Y</div></div>
@@ -5544,10 +5569,80 @@ HND → ITM
         </div>
       </div>
 
+      <!-- 13.11 Highlight ゾーン（カテゴリ別の即時行動情報） -->
+      <div class="comp-card full">
+        <div class="comp-label">13.11 Highlight ゾーン — カテゴリ別の「即時行動情報」</div>
+        <p class="muted" style="font-size:var(--fs-sm);margin-bottom:14px">
+          Perforation の直下に独立した <strong style="color:var(--text)">Highlight ゾーン</strong>（太枠 2 セル）を差し込み、
+          カテゴリごとに「到着後すぐ必要な情報」を強調する。飛行機は <strong style="color:var(--ink-800)">Gate / Seat</strong>、
+          列車は <strong style="color:var(--ink-800)">号車 / 座席</strong>、イベントは <strong style="color:var(--ink-800)">ブロック / 席番号</strong>。
+          Meta 3 セルとは役割を分け、<strong style="color:var(--text)">視認最優先</strong>で 22px monospace + ink-800 ボーダー。
+        </p>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <!-- 飛行機 highlight only -->
+          <div>
+            <div style="font-size:var(--fs-xs);color:var(--text-dim);margin-bottom:8px;font-weight:var(--fw-bold)">A. 飛行機 (Gate / Seat)</div>
+            <div class="ticket-highlight" style="border-top:1.5px solid var(--border);background:var(--surface)">
+              <div class="ticket-highlight-cell"><div class="ticket-highlight-label">Gate</div><div class="ticket-highlight-value">17</div></div>
+              <div class="ticket-highlight-cell"><div class="ticket-highlight-label">Seat</div><div class="ticket-highlight-value">24C</div></div>
+            </div>
+          </div>
+
+          <div>
+            <div style="font-size:var(--fs-xs);color:var(--text-dim);margin-bottom:8px;font-weight:var(--fw-bold)">B. 列車 (Car / Seat)</div>
+            <div class="ticket-highlight" style="border-top:1.5px solid var(--border);background:var(--surface)">
+              <div class="ticket-highlight-cell"><div class="ticket-highlight-label">Car</div><div class="ticket-highlight-value">7</div></div>
+              <div class="ticket-highlight-cell"><div class="ticket-highlight-label">Seat</div><div class="ticket-highlight-value">12A</div></div>
+            </div>
+          </div>
+
+          <div>
+            <div style="font-size:var(--fs-xs);color:var(--text-dim);margin-bottom:8px;font-weight:var(--fw-bold)">C. イベント (Block / Seat)</div>
+            <div class="ticket-highlight" style="border-top:1.5px solid var(--border);background:var(--surface)">
+              <div class="ticket-highlight-cell"><div class="ticket-highlight-label">Block</div><div class="ticket-highlight-value">22</div></div>
+              <div class="ticket-highlight-cell"><div class="ticket-highlight-label">Seat</div><div class="ticket-highlight-value" style="color:var(--accent-500)">087</div></div>
+            </div>
+          </div>
+
+          <div>
+            <div style="font-size:var(--fs-xs);color:var(--text-dim);margin-bottom:8px;font-weight:var(--fw-bold)">D. 欠落時（未読取 + 片側補完待ち）</div>
+            <div class="ticket-highlight" style="border-top:1.5px solid var(--border);background:var(--surface)">
+              <div class="ticket-highlight-cell"><div class="ticket-highlight-label">Gate</div><div class="ticket-highlight-value empty">未読取</div></div>
+              <div class="ticket-highlight-cell"><div class="ticket-highlight-label">Seat</div><div class="ticket-highlight-value empty">ゲートにて指定</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:18px;background:var(--info-50);border:1px solid rgba(37,99,205,0.2);border-radius:var(--r-md);padding:12px 14px;font-size:var(--fs-xs);line-height:1.7">
+          <strong style="color:var(--info-700)">運用ルール:</strong>
+          (1) Highlight はカテゴリで自動判定（飛行機 / 列車 / イベント / バス）。それ以外では描画しない。
+          (2) 値は <code class="mono">information[]</code> から <code class="mono">ゲート / gate / Gate / 号車 / 座席 / seat / Seat</code> を label 一致で拾う。
+          (3) Highlight に引き上げた項目は「その他の情報」リストから<strong style="color:var(--text)">重複表示しない</strong>。
+          (4) 値が欠落の場合は empty スタイルで「未読取」表示、ゼロ情報でも枠は残す（レイアウト一貫性）。
+        </div>
+
+        <div style="margin-top:16px">
+          <div style="font-size:var(--fs-xs);font-weight:var(--fw-bold);color:var(--text-dim);margin-bottom:8px">カテゴリ別 Highlight マッピング</div>
+          <div style="overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse;font-size:var(--fs-sm);min-width:520px">
+              <thead><tr style="background:var(--n-50);text-align:left"><th style="padding:10px 12px;font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);border-bottom:1px solid var(--border);width:120px">カテゴリ</th><th style="padding:10px 12px;font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);border-bottom:1px solid var(--border)">Highlight 1</th><th style="padding:10px 12px;font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);border-bottom:1px solid var(--border)">Highlight 2</th></tr></thead>
+              <tbody>
+                <tr><td style="padding:8px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)">飛行機</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">ゲート / Gate</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">座席 / Seat</td></tr>
+                <tr><td style="padding:8px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)">列車</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">号車 / Car</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">座席 / Seat</td></tr>
+                <tr><td style="padding:8px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)">バス</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">のりば / Stop</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">座席 / Seat（任意）</td></tr>
+                <tr><td style="padding:8px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)">観光 / イベント</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">ブロック / Block</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">席番号 / Seat</td></tr>
+                <tr><td style="padding:8px 12px;font-weight:var(--fw-bold)">宿泊 / 商談 / 食事 / 病院 / その他</td><td style="padding:8px 12px" class="muted">— (Highlight 非表示)</td><td style="padding:8px 12px" class="muted">—</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
     </div>
   </section>
 
-  <p class="muted" style="text-align:center;font-size:var(--fs-xs);margin-top:60px">toritavi Design System v2 · Grocery-inspired · Flat icon set · 2026-04-18</p>
+  <p class="muted" style="text-align:center;font-size:var(--fs-xs);margin-top:60px">toritavi Design System v2 · Grocery-inspired · Flat icon set · 2026-04-19</p>
 
 </div>
 <script>
