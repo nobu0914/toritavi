@@ -25,6 +25,9 @@ import {
   IconFlask,
 } from "@tabler/icons-react";
 import { notifications } from "@mantine/notifications";
+import { StepMergeDialog } from "./StepMergeDialog";
+import { findMergeCandidates, type MergeCandidate } from "@/lib/step-merge-match";
+import { applyMerge } from "@/lib/step-merge-rules";
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
@@ -439,6 +442,14 @@ export function ScanFlow({ chrome = "standalone", target, onComplete }: ScanFlow
   const [registering, setRegistering] = useState(false);
   const [errorDetail, setErrorDetail] = useState("");
 
+  // §16 Step マージ確認ダイアログ用コンテキスト。候補ヒット時に stepsToRegister を
+  // いったん保持して、ユーザー判断（統合 or 新規）を待つ。
+  const [mergeCtx, setMergeCtx] = useState<{
+    candidates: MergeCandidate[];
+    primaryDraft: Step;
+    stepsToRegister: Step[];
+  } | null>(null);
+
   const pdfToImages = async (file: File): Promise<Blob[]> => {
     const pdfjsLib = await import("pdfjs-dist");
     pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
@@ -816,6 +827,42 @@ export function ScanFlow({ chrome = "standalone", target, onComplete }: ScanFlow
       });
     }
 
+    // §16 マージ候補チェック: 通常導線 (targetJourneyId なし) かつ先頭 Step に
+    // マッチする既存があればダイアログを出して判断を仰ぐ。判断結果を受けたら
+    // finishRegister を呼んで保存を再開する。
+    if (!targetJourneyId && stepsToRegister.length > 0) {
+      const allJourneys = await getJourneys();
+      const primary = stepsToRegister[0];
+      const candidates = findMergeCandidates(primary, allJourneys, { max: 3 });
+      if (candidates.length > 0) {
+        setMergeCtx({ candidates, primaryDraft: primary, stepsToRegister });
+        // registering は true のまま（UI ロック継続）。ダイアログ側で解除する。
+        return;
+      }
+    }
+
+    await finishRegister(stepsToRegister, now, todayStr);
+  } catch (err) {
+    console.error("[scan] register failed:", err);
+    const msg = err instanceof Error ? err.message : "予定の登録に失敗しました";
+    notifications.show({
+      message: msg,
+      color: "red",
+      icon: <IconAlertCircle size={18} />,
+      autoClose: 4000,
+      withBorder: false,
+      style: { background: "var(--danger-500)", color: "white" },
+      styles: { icon: { color: "white", background: "transparent" } },
+    });
+    setRegistering(false);
+  }
+};
+
+  /**
+   * §16 マージ後 / 通常パスで Step 群を保存して画面遷移するヘルパ。
+   * 元の createStep から切り出した（マージダイアログからも呼び出すため）。
+   */
+  const finishRegister = async (stepsToRegister: Step[], now: string, todayStr: string) => {
     let journeyId: string;
     const firstDate = stepsToRegister[0]?.date;
     const lastDate = stepsToRegister[stepsToRegister.length - 1]?.endDate
@@ -863,20 +910,73 @@ export function ScanFlow({ chrome = "standalone", target, onComplete }: ScanFlow
     } else {
       router.push(`/trips/${journeyId}`);
     }
-  } catch (err) {
-    console.error("[scan] register failed:", err);
-    const msg = err instanceof Error ? err.message : "予定の登録に失敗しました";
-    notifications.show({
-      message: msg,
-      color: "red",
-      icon: <IconAlertCircle size={18} />,
-      autoClose: 4000,
-      withBorder: false,
-      style: { background: "var(--danger-500)", color: "white" },
-      styles: { icon: { color: "white", background: "transparent" } },
-    });
-    setRegistering(false);
-  }
+  };
+
+  /** §16 ダイアログで「統合する」を押した時の処理。候補ステップにマージして保存。 */
+  const handleMergeConfirm = async (candidate: MergeCandidate) => {
+    if (!mergeCtx) return;
+    const now = new Date().toISOString();
+    const todayStr = now.split("T")[0];
+    try {
+      const journey = candidate.journey;
+      const targetStep = candidate.step;
+      const { merged } = applyMerge(targetStep, mergeCtx.primaryDraft);
+      const nextSteps = journey.steps.map((s) => (s.id === targetStep.id ? merged : s));
+      await updateJourney(journey.id, { steps: nextSteps });
+
+      // 先頭以外の stepsToRegister があれば同 Journey に追記
+      const remaining = mergeCtx.stepsToRegister.slice(1);
+      if (remaining.length > 0) {
+        await updateJourney(journey.id, {
+          steps: [...nextSteps, ...remaining],
+        });
+      }
+
+      setMergeCtx(null);
+      notifications.show({
+        message: `${targetStep.title} に情報を追記しました`,
+        icon: <IconCheck size={18} />,
+        autoClose: 5000,
+        withBorder: false,
+        style: { background: "var(--success-500)", color: "white" },
+        styles: { icon: { color: "white", background: "transparent" } },
+      });
+      if (onComplete) onComplete(journey.id);
+      else router.push(`/trips/${journey.id}`);
+    } catch (err) {
+      console.error("[merge] failed:", err);
+      notifications.show({
+        message: "統合に失敗しました",
+        color: "red",
+        autoClose: 4000,
+        icon: <IconAlertCircle size={18} />,
+      });
+      setRegistering(false);
+      setMergeCtx(null);
+    }
+    // あえて todayStr を握らない（将来末尾のみ参照する場合に備え placeholder）
+    void todayStr;
+  };
+
+  /** §16 ダイアログで「新規として登録」を押した時の処理。通常パスで保存。 */
+  const handleMergeDecline = async () => {
+    if (!mergeCtx) return;
+    const ctx = mergeCtx;
+    setMergeCtx(null);
+    try {
+      const now = new Date().toISOString();
+      const todayStr = now.split("T")[0];
+      await finishRegister(ctx.stepsToRegister, now, todayStr);
+    } catch (err) {
+      console.error("[scan] register failed:", err);
+      notifications.show({
+        message: err instanceof Error ? err.message : "予定の登録に失敗しました",
+        color: "red",
+        autoClose: 4000,
+        icon: <IconAlertCircle size={18} />,
+      });
+      setRegistering(false);
+    }
   };
 
   const reset = () => {
@@ -1341,6 +1441,17 @@ export function ScanFlow({ chrome = "standalone", target, onComplete }: ScanFlow
       </Box>
 
       {!isEmbedded && <TabBar />}
+
+      {/* §16 Step マージ確認ダイアログ */}
+      {mergeCtx && (
+        <StepMergeDialog
+          opened={true}
+          candidates={mergeCtx.candidates}
+          draft={mergeCtx.primaryDraft}
+          onConfirm={handleMergeConfirm}
+          onDecline={handleMergeDecline}
+        />
+      )}
     </>
   );
 }
