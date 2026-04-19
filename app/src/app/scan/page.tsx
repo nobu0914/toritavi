@@ -381,12 +381,26 @@ export default function ScanPage() {
   // journey id we must append to. Skip the same-day-match heuristic and
   // return the user to that trip after registration.
   const targetJourneyId = searchParams.get("target") ?? null;
-  const [targetJourneyTitle, setTargetJourneyTitle] = useState<string | null>(null);
+  const [targetJourney, setTargetJourney] = useState<{
+    id: string;
+    title: string;
+    startDate: string;
+    endDate: string;
+    stepCount: number;
+  } | null>(null);
   useEffect(() => {
-    if (!targetJourneyId) { setTargetJourneyTitle(null); return; }
+    if (!targetJourneyId) { setTargetJourney(null); return; }
     let cancelled = false;
     getJourney(targetJourneyId).then((j) => {
-      if (!cancelled) setTargetJourneyTitle(j?.title ?? null);
+      if (!cancelled && j) {
+        setTargetJourney({
+          id: j.id,
+          title: j.title,
+          startDate: j.startDate,
+          endDate: j.endDate,
+          stepCount: j.steps.length,
+        });
+      }
     });
     return () => { cancelled = true; };
   }, [targetJourneyId]);
@@ -877,14 +891,28 @@ export default function ScanPage() {
   return (
     <>
       <AppHeader
-        title={targetJourneyTitle ? `${targetJourneyTitle} に追加` : "予定登録"}
+        title={targetJourney ? "旅程に予定を追加" : "予定登録"}
         back={Boolean(targetJourneyId)}
         backHref={targetJourneyId ? `/trips/${targetJourneyId}` : undefined}
       />
 
       <Box pb={110} px="md" pt="md">
-        {/* テストモード切替 */}
-        {status === "idle" && (
+        {/* 追加先 Journey コンテキストカード (target 指定時) */}
+        {targetJourney && (
+          <Box className={classes.addTargetCard}>
+            <Box className={classes.addTargetLabel}>追加先の旅程</Box>
+            <Box className={classes.addTargetTitle}>{targetJourney.title}</Box>
+            <Box className={classes.addTargetMeta}>
+              {targetJourney.startDate}
+              {targetJourney.startDate !== targetJourney.endDate && ` 〜 ${targetJourney.endDate}`}
+              <span className={classes.addTargetDot}>·</span>
+              現在 {targetJourney.stepCount} ステップ
+            </Box>
+          </Box>
+        )}
+
+        {/* テストモード切替 (通常導線のみ) */}
+        {status === "idle" && !targetJourney && (
           <Box
             className={`${classes.testModeBanner} ${!aiMode ? classes.testModeActive : ""}`}
             onClick={() => setAiMode((v) => !v)}
@@ -899,17 +927,24 @@ export default function ScanPage() {
         {/* 初期画面 */}
         {status === "idle" && (
           <>
-            <Box className={classes.captureArea}>
-              <Box className={classes.iconWrap}>
-                <IconScan size={48} stroke={1.5} />
+            {!targetJourney && (
+              <Box className={classes.captureArea}>
+                <Box className={classes.iconWrap}>
+                  <IconScan size={48} stroke={1.5} />
+                </Box>
+                <Text fw={700} size="lg" mt="md">
+                  予定の自動登録
+                </Text>
+                <Text size="sm" c="dimmed" ta="center" mt={4} lh={1.6}>
+                  種類を自動判定し、情報を読み取ります
+                </Text>
               </Box>
-              <Text fw={700} size="lg" mt="md">
-                予定の自動登録
-              </Text>
-              <Text size="sm" c="dimmed" ta="center" mt={4} lh={1.6}>
-                種類を自動判定し、情報を読み取ります
-              </Text>
-            </Box>
+            )}
+            {targetJourney && (
+              <Box className={classes.addInputHeading}>
+                取り込み方法を選ぶ
+              </Box>
+            )}
 
             {/* 入力方法グリッド */}
             <Box className={classes.inputGrid}>
@@ -1216,12 +1251,12 @@ export default function ScanPage() {
                 {registering ? (
                   <>
                     <Loader size={16} color="white" />
-                    登録中...
+                    {targetJourney ? "追加中..." : "登録中..."}
                   </>
                 ) : (
                   <>
                     <IconCheck size={18} />
-                    登録
+                    {targetJourney ? "この旅程に追加" : "登録"}
                   </>
                 )}
               </button>

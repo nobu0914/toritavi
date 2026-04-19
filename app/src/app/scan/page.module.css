@@ -2,6 +2,61 @@
  * Scan & OCR — Design System v2 Section 8 準拠
  */
 
+/* === "予定を追加" 経由時の追加先 Journey コンテキストカード === */
+.addTargetCard {
+  position: relative;
+  background: var(--accent-50);
+  border: 1px solid var(--accent-100);
+  border-radius: var(--r-md);
+  padding: 12px 14px 12px 18px;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow-xs);
+}
+
+.addTargetCard::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 10px; bottom: 10px;
+  width: 3px;
+  background: var(--accent-500);
+  border-radius: 0 2px 2px 0;
+}
+
+.addTargetLabel {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  color: var(--accent-700);
+  letter-spacing: 0.4px;
+  margin-bottom: 4px;
+}
+
+.addTargetTitle {
+  font-size: var(--fs-md);
+  font-weight: var(--fw-bold);
+  color: var(--text);
+}
+
+.addTargetMeta {
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+  margin-top: 2px;
+  font-family: var(--font-mono);
+}
+
+.addTargetDot {
+  margin: 0 6px;
+  color: var(--n-300);
+}
+
+.addInputHeading {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 12px 0 8px;
+}
+
 /* === Test Mode Banner === */
 .testModeBanner {
   display: flex;
