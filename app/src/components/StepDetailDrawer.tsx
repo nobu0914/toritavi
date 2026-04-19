@@ -270,13 +270,39 @@ export function StepDetailDrawer({
         body: { padding: 0, flex: 1, display: "flex", flexDirection: "column", minHeight: 0 },
       }}
     >
+      {/*
+        iOS 標準の grab bar。ここでのみ drag-to-close を受け付ける。
+        以前は SheetHeader 全体を drag wrapper で包んでいたが、iOS Safari の
+        touch-action: pan-y 下では ⋮ タップの合成 click が散発的に失われ、
+        Menu が開かない報告があった。
+      */}
       <div
         onTouchStart={onDragStart}
         onTouchMove={onDragMove}
         onTouchEnd={onDragEnd}
         onTouchCancel={onDragEnd}
-        style={{ touchAction: "pan-y", flexShrink: 0 }}
+        style={{
+          touchAction: "pan-y",
+          flexShrink: 0,
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          padding: "8px 0 4px",
+          background: "var(--surface)",
+          borderRadius: "16px 16px 0 0",
+          cursor: "grab",
+        }}
+        aria-hidden="true"
       >
+        <div
+          style={{
+            width: 36,
+            height: 4,
+            borderRadius: 999,
+            background: "var(--n-300)",
+          }}
+        />
+      </div>
       <SheetHeader
         title={isEdit ? editingTitle || draft.title || "予定" : "予定を追加"}
         onClose={onClose}
@@ -314,7 +340,6 @@ export function StepDetailDrawer({
           ) : null
         }
       />
-      </div>
 
       {/* スクロール可能な本体 */}
       <Box className={classes.body}>
