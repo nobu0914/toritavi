@@ -246,6 +246,8 @@ export function StepDetailDrawer({
       position="bottom"
       size="100%"
       withCloseButton={false}
+      /* TabBar (z-index: 200) を確実に覆うため 400 に引き上げ。 */
+      zIndex={400}
       styles={{
         content: {
           borderRadius: "16px 16px 0 0",

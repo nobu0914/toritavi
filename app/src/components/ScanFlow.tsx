@@ -914,8 +914,11 @@ export function ScanFlow({ chrome = "standalone", target, onComplete }: ScanFlow
       )}
 
       <Box pb={isEmbedded ? 28 : 110} px="md" pt="md">
-        {/* 追加先 Journey コンテキストカード (target 指定時) */}
-        {targetJourney && (
+        {/* 追加先 Journey コンテキストカード
+            embedded（Bottom Sheet）時は SheetHeader タイトルで既に Journey 名が
+            明示されているので表示しない。standalone（/scan?target=id の古い
+            導線）だけの保険。 */}
+        {targetJourney && !isEmbedded && (
           <Box className={classes.addTargetCard}>
             <Box className={classes.addTargetLabel}>追加先の旅程</Box>
             <Box className={classes.addTargetTitle}>{targetJourney.title}</Box>

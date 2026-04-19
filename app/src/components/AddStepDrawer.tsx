@@ -26,6 +26,10 @@ export function AddStepDrawer({ opened, onClose, journey, onCompleted }: Props) 
       position="bottom"
       size="100%"
       withCloseButton={false}
+      /* TabBar (z-index: 200) より上に出すため 400 に引き上げ。
+         同値だと DOM 順で TabBar が勝ってしまい、Drawer を開いても
+         下部ナビが透けて見える不具合を回避する。 */
+      zIndex={400}
       styles={{
         content: {
           borderRadius: "16px 16px 0 0",
