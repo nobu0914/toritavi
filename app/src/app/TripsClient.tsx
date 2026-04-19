@@ -269,10 +269,10 @@ export default function TripsClient({ journeys: initialJourneys }: { journeys: J
                 <Box className={classes.emptyIcon}>
                   <IconBox size={34} stroke={1.5} />
                 </Box>
-                <Text className={classes.emptyTitle}>まだ Journey がありません</Text>
-                <Text className={classes.emptyDescription}>
-                  右下の「+」から最初の Journey を作成しましょう
-                </Text>
+                <Text className={classes.emptyTitle}>まだ予定はありません</Text>
+                <Link href="/scan" className={classes.emptyCta} style={{ textDecoration: "none" }}>
+                  予定を登録する
+                </Link>
               </Box>
             )}
 

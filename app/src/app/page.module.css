@@ -452,3 +452,20 @@
   color: var(--text-dim);
   line-height: 1.7;
 }
+
+.emptyCta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 16px;
+  padding: 10px 20px;
+  border-radius: var(--r-pill);
+  background: var(--ink-800);
+  color: white;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  min-height: 40px;
+}
+.emptyCta:hover {
+  background: var(--ink-700);
+}
