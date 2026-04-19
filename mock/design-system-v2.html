@@ -5574,7 +5574,7 @@ HND → ITM
           Perforation の直下に独立した <strong style="color:var(--text)">Highlight ゾーン</strong>（太枠 2 セル）を差し込み、
           カテゴリごとに「到着後すぐ必要な情報」を強調する。飛行機は <strong style="color:var(--ink-800)">Gate / Seat</strong>、
           列車は <strong style="color:var(--ink-800)">号車 / 座席</strong>、イベントは <strong style="color:var(--ink-800)">ブロック / 席番号</strong>。
-          Meta 3 セルとは役割を分け、<strong style="color:var(--text)">視認最優先</strong>で 22px monospace + ink-800 ボーダー。
+          Meta 3 セルとは役割を分け、<strong style="color:var(--text)">視認最優先</strong>で 26px monospace + 中央区切り線のフラット 2 列（入力欄に見えないよう枠線なし）。
         </p>
 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
@@ -5615,7 +5615,7 @@ HND → ITM
         <div style="margin-top:18px;background:var(--info-50);border:1px solid rgba(37,99,205,0.2);border-radius:var(--r-md);padding:12px 14px;font-size:var(--fs-xs);line-height:1.7">
           <strong style="color:var(--info-700)">運用ルール:</strong>
           (1) Highlight はカテゴリで自動判定（飛行機 / 列車 / イベント / バス）。それ以外では描画しない。
-          (2) 値は <code class="mono">information[]</code> から <code class="mono">ゲート / gate / Gate / 号車 / 座席 / seat / Seat</code> を label 一致で拾う。
+          (2) 値は <code class="mono">information[]</code> の label を<strong style="color:var(--text)">部分一致</strong>で拾う（例: <code class="mono">/座席|seat|シート/i</code>、<code class="mono">/ゲート|gate/i</code>、<code class="mono">/号車|car/i</code>）。「座席番号」「ゲート番号」のような語尾付きラベルも取りこぼさない。
           (3) Highlight に引き上げた項目は「その他の情報」リストから<strong style="color:var(--text)">重複表示しない</strong>。
           (4) 値が欠落の場合は empty スタイルで「未読取」表示、ゼロ情報でも枠は残す（レイアウト一貫性）。
         </div>
@@ -5626,10 +5626,10 @@ HND → ITM
             <table style="width:100%;border-collapse:collapse;font-size:var(--fs-sm);min-width:520px">
               <thead><tr style="background:var(--n-50);text-align:left"><th style="padding:10px 12px;font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);border-bottom:1px solid var(--border);width:120px">カテゴリ</th><th style="padding:10px 12px;font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);border-bottom:1px solid var(--border)">Highlight 1</th><th style="padding:10px 12px;font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);border-bottom:1px solid var(--border)">Highlight 2</th></tr></thead>
               <tbody>
-                <tr><td style="padding:8px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)">飛行機</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">ゲート / Gate</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">座席 / Seat</td></tr>
-                <tr><td style="padding:8px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)">列車</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">号車 / Car</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">座席 / Seat</td></tr>
-                <tr><td style="padding:8px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)">バス</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">のりば / Stop</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">座席 / Seat（任意）</td></tr>
-                <tr><td style="padding:8px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)">観光 / イベント</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">ブロック / Block</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">席番号 / Seat</td></tr>
+                <tr><td style="padding:8px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)">飛行機</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)"><code class="mono">/ゲート|gate/i</code> → Gate</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)"><code class="mono">/座席|seat|シート/i</code> → Seat</td></tr>
+                <tr><td style="padding:8px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)">列車</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)"><code class="mono">/号車|car/i</code> → Car</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)"><code class="mono">/座席|seat|シート/i</code> → Seat</td></tr>
+                <tr><td style="padding:8px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)">バス</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)"><code class="mono">/のりば|stop|乗り場/i</code> → Stop</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)"><code class="mono">/座席|seat|シート/i</code> → Seat（任意）</td></tr>
+                <tr><td style="padding:8px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)">観光 / イベント</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)"><code class="mono">/ブロック|block/i</code> → Block</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)"><code class="mono">/席|seat/i</code> → Seat</td></tr>
                 <tr><td style="padding:8px 12px;font-weight:var(--fw-bold)">宿泊 / 商談 / 食事 / 病院 / その他</td><td style="padding:8px 12px" class="muted">— (Highlight 非表示)</td><td style="padding:8px 12px" class="muted">—</td></tr>
               </tbody>
             </table>
