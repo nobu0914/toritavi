@@ -136,7 +136,9 @@ export function Ticket({ data, status, needsReview, inferred, sourceImageUrl, so
     ? sourceImageUrls
     : sourceImageUrl ? [sourceImageUrl] : [];
   const isMail = data.source === "メール";
-  const showScan = images.length > 0 || (isMail && Boolean(data.memo));
+  const isImageSource = data.source === "アップロード" || data.source === "撮影";
+  const showScan = images.length > 0 || (isMail && Boolean(data.memo)) || isImageSource;
+  const hasImages = images.length > 0;
 
   const variant = variantClass(data.category);
   const stateCls = rootStateClass(status);
@@ -382,7 +384,7 @@ export function Ticket({ data, status, needsReview, inferred, sourceImageUrl, so
                 </button>
               </div>
             </div>
-          ) : images.length > 0 ? (
+          ) : hasImages ? (
             <div className="ticket-scan-full">
               <div className="ticket-scan-image-wrap">
                 <div className={`ticket-scan-image ${images.length > 1 ? "tall" : ""}`.trim()}>
@@ -406,7 +408,13 @@ export function Ticket({ data, status, needsReview, inferred, sourceImageUrl, so
                 </div>
               )}
             </div>
-          ) : null}
+          ) : (
+            <div className="ticket-scan-full">
+              <div className="ticket-scan-empty">
+                原本が見つかりません
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
