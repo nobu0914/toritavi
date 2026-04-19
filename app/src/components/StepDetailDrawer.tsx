@@ -220,7 +220,7 @@ export function StepDetailDrawer({
                   </ActionIcon>
                 </Menu.Target>
                 <Menu.Dropdown>
-                  <Menu.Item leftSection={<IconEdit size={16} />} onClick={() => setMode("edit")}>編集する</Menu.Item>
+                  {/* "編集" はヘッダーの ✎ アイコンに集約。More Menu 側では重複させない。 */}
                   <Menu.Item leftSection={<IconShare size={16} />} onClick={handleShare}>共有する</Menu.Item>
                   {onDuplicate && (
                     <Menu.Item leftSection={<IconCopy size={16} />} onClick={onDuplicate}>複製する</Menu.Item>

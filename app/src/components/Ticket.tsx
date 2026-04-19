@@ -105,16 +105,29 @@ function fileNameBase(title: string): string {
 
 /**
  * Extract IATA/short code from values like:
- *   "クライストチャーチ（CHC）" → { code: "CHC", name: "クライストチャーチ" }
- *   "San Jose (SJC)"          → { code: "SJC", name: "San Jose" }
- *   "NRT"                     → { code: "NRT" }
- *   "東京駅"                   → { code: "東京駅" }
+ *   "クライストチャーチ（CHC）"          → { code: "CHC", name: "クライストチャーチ" }
+ *   "San Jose (SJC)"                   → { code: "SJC", name: "San Jose" }
+ *   "東京 成田 (NRT) ターミナル1"         → { code: "NRT", name: "東京 成田 ターミナル1" }
+ *   "NRT"                              → { code: "NRT" }
+ *   "東京駅"                            → { code: "東京駅" }
+ *
+ * The parenthesised IATA-style code can appear anywhere in the string; text
+ * before and after it is kept as the friendly name so trailing qualifiers
+ * like "ターミナル1" / "Terminal 2" / "空港第2" aren't dropped or shoved
+ * into the big port-code slot (which would then truncate).
  */
 function splitPort(value: string | undefined): { code: string; name?: string } {
   if (!value) return { code: "—" };
-  const m = value.match(/^(.+?)\s*[（(]\s*([A-Za-z0-9]{2,5})\s*[）)]\s*$/);
-  if (m) return { code: m[2].toUpperCase(), name: m[1].trim() };
-  return { code: value.trim() };
+  const trimmed = value.trim();
+  const m = trimmed.match(/[（(]\s*([A-Za-z0-9]{2,5})\s*[）)]/);
+  if (m) {
+    const code = m[1].toUpperCase();
+    const name = (trimmed.slice(0, m.index) + " " + trimmed.slice((m.index ?? 0) + m[0].length))
+      .replace(/\s+/g, " ")
+      .trim();
+    return { code, name: name || undefined };
+  }
+  return { code: trimmed };
 }
 
 type HighlightSpec = { label1: string; match1: RegExp; label2: string; match2: RegExp } | null;

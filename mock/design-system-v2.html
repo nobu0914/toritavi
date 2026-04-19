@@ -3772,10 +3772,10 @@ HND → ITM
               <div class="sheet" style="max-width:340px;margin-left:auto;margin-right:auto">
                 <div class="sheet-handle"><div class="sheet-handle-bar"></div></div>
                 <div class="sheet-body" style="padding:8px 0 20px">
-                  <button class="menu-row"><span class="menu-row-ic"><svg class="ic-svg"><use href="#i-edit"/></svg></span><span class="menu-row-label">編集する</span></button>
                   <button class="menu-row"><span class="menu-row-ic"><svg class="ic-svg"><use href="#i-share"/></svg></span><span class="menu-row-label">共有する</span></button>
                   <button class="menu-row"><span class="menu-row-ic"><svg class="ic-svg"><use href="#i-copy"/></svg></span><span class="menu-row-label">複製する</span></button>
                   <button class="menu-row"><span class="menu-row-ic"><svg class="ic-svg"><use href="#i-calendar"/></svg></span><span class="menu-row-label">カレンダーに追加</span></button>
+                  <button class="menu-row"><span class="menu-row-ic"><svg class="ic-svg"><use href="#i-download"/></svg></span><span class="menu-row-label">原本を保存</span></button>
                   <div class="menu-row-divider"></div>
                   <button class="menu-row danger"><span class="menu-row-ic"><svg class="ic-svg"><use href="#i-trash"/></svg></span><span class="menu-row-label">削除する</span></button>
                 </div>
@@ -3784,13 +3784,13 @@ HND → ITM
             <div style="display:flex;flex-direction:column;justify-content:center;gap:10px">
               <div style="font-size:var(--fs-sm);font-weight:var(--fw-bold)">項目の順序</div>
               <ol style="font-size:var(--fs-sm);line-height:1.8;padding-left:20px;color:var(--text-dim);margin:0">
-                <li><strong style="color:var(--text)">編集する</strong> — 全項目のフォーム編集</li>
                 <li><strong style="color:var(--text)">共有する</strong> — Native Share Sheet を呼び出し</li>
                 <li><strong style="color:var(--text)">複製する</strong> — 同じ内容で新規 Step を作成</li>
                 <li><strong style="color:var(--text)">カレンダーに追加</strong> — <code class="mono">.ics</code> を生成</li>
+                <li><strong style="color:var(--text)">原本を保存</strong> — スキャン元画像を端末にダウンロード</li>
                 <li style="color:var(--danger-500)"><strong>削除する</strong> — 確認ダイアログ経由</li>
               </ol>
-              <p class="muted" style="font-size:var(--fs-xs);margin-top:4px">頻度順。破壊的操作は divider で視覚的に分離。</p>
+              <p class="muted" style="font-size:var(--fs-xs);margin-top:4px">頻度順。破壊的操作は divider で視覚的に分離。<strong style="color:var(--text)">「編集する」はヘッダー ✎ に集約</strong>したので More Menu には含めない（variant C 前提の運用）。</p>
             </div>
           </div>
         </div>
@@ -3870,7 +3870,7 @@ HND → ITM
             </div>
           </div>
           <p class="muted" style="font-size:var(--fs-xs);margin-top:10px">
-            <strong style="color:var(--text)">使い分け:</strong> 1 項目だけ直したい時は Inline Quick Edit。3 項目以上まとめて直す時は More Menu の「編集する」で全フォーム Edit モードへ。
+            <strong style="color:var(--text)">使い分け:</strong> 1 項目だけ直したい時は Inline Quick Edit。3 項目以上まとめて直す時はヘッダー ✎ で全フォーム Edit モードへ。
           </p>
         </div>
 
