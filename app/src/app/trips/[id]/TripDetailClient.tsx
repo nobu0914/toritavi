@@ -407,6 +407,7 @@ export default function TripDetailClient({
             const isDone = step.status === "完了";
             const isNext = nextAction?.id === step.id;
             const isLast = index === sortedSteps.length - 1;
+            const CategoryIcon = getCategoryIcon(step.category);
             const dotClass = isDone
               ? classes.timelineDotDone
               : isActive
@@ -424,6 +425,9 @@ export default function TripDetailClient({
                 {/* 時間行: ● 時間(基準) ... ステータス */}
                 <Box className={classes.timelineTimeRow}>
                   <Box className={`${classes.timelineDot} ${dotClass} ${step.needsReview ? classes.timelineDotReview : ""}`} />
+                  <Box className={classes.timelineCategoryIcon} aria-label={step.category}>
+                    <CategoryIcon size={16} />
+                  </Box>
                   <Text className={classes.timelineTimeText}>
                     {formatTimeDisplay(
                       step.time?.match(/\d{1,2}:\d{2}/)?.[0] || "--:--",
@@ -431,12 +435,14 @@ export default function TripDetailClient({
                     )}
                   </Text>
                   <Box style={{ flex: 1 }} />
-                  <Box
-                    className={classes.timelineBadge}
-                    data-state={isDone ? "done" : isActive || isNext ? "active" : "idle"}
-                  >
-                    {isNext && !isDone ? "次" : step.status}
-                  </Box>
+                  {step.status !== "未開始" && (
+                    <Box
+                      className={classes.timelineBadge}
+                      data-state={isDone ? "done" : isActive ? "active" : "idle"}
+                    >
+                      {step.status}
+                    </Box>
+                  )}
                 </Box>
 
                 {/* カード（情報量を絞った一覧向け） */}
