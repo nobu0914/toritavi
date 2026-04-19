@@ -396,25 +396,22 @@
 }
 .titleCardLabelRow {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 8px;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 .titleCardLabel {
-  font-size: 10px;
+  font-size: var(--fs-xs);
   font-weight: var(--fw-bold);
-  color: var(--info-500);
-  letter-spacing: 1px;
+  color: var(--text-dim);
+  letter-spacing: 0.5px;
   text-transform: uppercase;
 }
-.titleCardSubLabel {
-  font-size: var(--fs-xs);
-  color: var(--text-dim);
-}
 .titleCardInput :global(input) {
-  border: none;
-  background: transparent;
-  padding: 4px 0;
+  border: 1.5px solid var(--n-300);
+  border-radius: var(--r-sm);
+  background: var(--n-50);
+  padding: 10px 12px;
   font-size: var(--fs-lg);
   font-weight: var(--fw-bold);
   color: var(--text);
@@ -422,6 +419,8 @@
 }
 .titleCardInput :global(input:focus) {
   outline: none;
+  border-color: var(--info-500);
+  background: var(--surface);
 }
 .titleCardInput :global(input::placeholder) {
   color: var(--text-dim);

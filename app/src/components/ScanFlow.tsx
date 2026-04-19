@@ -1169,13 +1169,11 @@ export function ScanFlow({ chrome = "standalone", target, onComplete }: ScanFlow
                     <Box className={classes.titleCard}>
                       <Box className={classes.titleCardLabelRow}>
                         <Text className={classes.titleCardLabel}>タイトル</Text>
-                        <Text className={classes.titleCardSubLabel}>{titleField.label}</Text>
                         {inferredFields.includes("title") && (
                           <Text className={classes.inferredBadge}>推定</Text>
                         )}
                       </Box>
                       <TextInput
-                        classNames={{ input: "" }}
                         className={classes.titleCardInput}
                         variant="unstyled"
                         placeholder={titleField.placeholder}
