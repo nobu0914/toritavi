@@ -407,7 +407,7 @@
   letter-spacing: 0.5px;
   text-transform: uppercase;
 }
-.titleCardInput :global(input) {
+.titleCardInput {
   border: 1.5px solid var(--n-300);
   border-radius: var(--r-sm);
   background: var(--n-50);
@@ -416,13 +416,16 @@
   font-weight: var(--fw-bold);
   color: var(--text);
   width: 100%;
+  height: auto;
+  min-height: 44px;
+  line-height: 1.4;
 }
-.titleCardInput :global(input:focus) {
+.titleCardInput:focus {
   outline: none;
   border-color: var(--info-500);
   background: var(--surface);
 }
-.titleCardInput :global(input::placeholder) {
+.titleCardInput::placeholder {
   color: var(--text-dim);
   font-weight: var(--fw-medium);
 }

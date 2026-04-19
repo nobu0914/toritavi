@@ -1174,7 +1174,7 @@ export function ScanFlow({ chrome = "standalone", target, onComplete }: ScanFlow
                         )}
                       </Box>
                       <TextInput
-                        className={classes.titleCardInput}
+                        classNames={{ input: classes.titleCardInput }}
                         variant="unstyled"
                         placeholder={titleField.placeholder}
                         value={fixedValues.title || ""}
