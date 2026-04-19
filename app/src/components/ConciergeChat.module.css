@@ -3,7 +3,11 @@
 .screen {
   display: flex;
   flex-direction: column;
-  height: calc(100dvh - 56px /* AppHeader */ - 68px /* TabBar */);
+  /* AppHeader (sticky, 約 64px) と TabBar (fixed, padding-bottom で safe-area
+     を含むので 96px + safe-area) を避けて画面にぴったり収まる高さに。
+     subtract を 124px で見積もっていた旧計算だと composer が TabBar に
+     埋まっていた。 */
+  height: calc(100dvh - 64px - 96px - env(safe-area-inset-bottom, 0px));
   background: var(--bg);
 }
 
@@ -166,7 +170,7 @@
   display: flex;
   gap: 8px;
   align-items: flex-end;
-  padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+  padding: 10px 12px;
   background: var(--surface);
   border-top: 1px solid var(--border);
 }
