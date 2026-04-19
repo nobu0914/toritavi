@@ -16,7 +16,6 @@ import {
   IconEdit,
   IconInfoCircle,
   IconMapPin,
-  IconPhone,
   IconPlayerPlay,
   IconPlus,
   IconRoute,
@@ -503,7 +502,13 @@ export default function TripDetailClient({
                   const dest = nextStep?.from || nextStep?.to || nextStep?.title || "";
                   return (
                     <Box className={classes.actionBar}>
-                      <button className={classes.actionBtn} onClick={(e) => { e.stopPropagation(); /* TODO */ }}>
+                      <button
+                        className={classes.actionBtn}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openNewStep();
+                        }}
+                      >
                         <IconPlus size={14} />
                         <span>予定追加</span>
                       </button>
@@ -519,19 +524,6 @@ export default function TripDetailClient({
                       >
                         <IconRoute size={14} />
                         <span>経路</span>
-                      </button>
-                      <button
-                        className={classes.actionBtn}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          window.open(
-                            `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(dest)}&travelmode=driving`,
-                            "_blank", "noopener"
-                          );
-                        }}
-                      >
-                        <IconPhone size={14} />
-                        <span>タクシー</span>
                       </button>
                     </Box>
                   );
