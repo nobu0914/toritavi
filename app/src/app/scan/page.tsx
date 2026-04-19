@@ -686,8 +686,14 @@ export default function ScanPage() {
     try {
     let savedImageUrl: string | undefined;
     let savedImageUrls: string[] | undefined;
+    console.log("[scan] pre-save: imageUrl=", imageUrl, "pageUrls.length=", pageUrls.length);
     if (imageUrl) {
-      try { savedImageUrl = await blobToBase64(imageUrl); } catch { /* ignore */ }
+      try {
+        savedImageUrl = await blobToBase64(imageUrl);
+        console.log("[scan] savedImageUrl length=", savedImageUrl?.length);
+      } catch (e) {
+        console.error("[scan] blobToBase64(imageUrl) failed:", e);
+      }
     }
     if (pageUrls.length > 1) {
       try {
@@ -696,7 +702,10 @@ export default function ScanPage() {
           urls.push(await blobToBase64(u));
         }
         savedImageUrls = urls;
-      } catch { /* ignore */ }
+        console.log("[scan] savedImageUrls count=", urls.length, "total=", urls.reduce((a, b) => a + b.length, 0));
+      } catch (e) {
+        console.error("[scan] blobToBase64(pageUrls) failed:", e);
+      }
     }
 
     const now = new Date().toISOString();

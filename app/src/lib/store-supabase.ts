@@ -43,12 +43,24 @@ export async function getStepImages(
   sb: SupabaseClient,
   stepId: string
 ): Promise<{ sourceImageUrl?: string; sourceImageUrls?: string[] }> {
-  const { data } = await sb
+  const { data, error } = await sb
     .from("toritavi_steps")
     .select("source_image_url, source_image_urls")
     .eq("id", stepId)
     .single();
-  if (!data) return {};
+  if (error) {
+    console.error("[getStepImages] error for", stepId, error);
+    return {};
+  }
+  if (!data) {
+    console.warn("[getStepImages] no row for", stepId);
+    return {};
+  }
+  console.log(
+    "[getStepImages]", stepId,
+    "url_len=", data.source_image_url ? String(data.source_image_url).length : 0,
+    "urls_count=", Array.isArray(data.source_image_urls) ? data.source_image_urls.length : 0
+  );
   return {
     sourceImageUrl: data.source_image_url || undefined,
     sourceImageUrls: data.source_image_urls || undefined,
@@ -71,10 +83,20 @@ export async function addJourney(sb: SupabaseClient, userId: string, journey: Jo
   if (jErr) throw new Error(`Journey保存に失敗: ${jErr.message}`);
 
   if (steps.length > 0) {
-    const { error: sErr } = await sb.from("toritavi_steps").upsert(
-      steps.map((s, i) => stepToRow(s, journey.id, userId, i))
-    );
-    if (sErr) throw new Error(`ステップ保存に失敗: ${sErr.message}`);
+    const rows = steps.map((s, i) => stepToRow(s, journey.id, userId, i));
+    rows.forEach((r) => {
+      console.log(
+        "[addJourney] step", r.id,
+        "has_url=", r.source_image_url !== undefined && r.source_image_url !== null,
+        "url_len=", typeof r.source_image_url === "string" ? r.source_image_url.length : 0,
+        "has_urls=", Array.isArray(r.source_image_urls)
+      );
+    });
+    const { error: sErr } = await sb.from("toritavi_steps").upsert(rows);
+    if (sErr) {
+      console.error("[addJourney] upsert error:", sErr);
+      throw new Error(`ステップ保存に失敗: ${sErr.message}`);
+    }
   }
 }
 
@@ -136,8 +158,19 @@ export async function updateJourney(
         }
         return row;
       });
+      rows.forEach((r) => {
+        console.log(
+          "[updateJourney] step", r.id,
+          "url_len=", typeof r.source_image_url === "string" ? r.source_image_url.length : 0,
+          "url_null=", r.source_image_url === null,
+          "urls_len=", Array.isArray(r.source_image_urls) ? r.source_image_urls.length : 0
+        );
+      });
       const { error: sErr } = await sb.from("toritavi_steps").upsert(rows);
-      if (sErr) throw new Error(`ステップ更新に失敗: ${sErr.message}`);
+      if (sErr) {
+        console.error("[updateJourney] upsert error:", sErr);
+        throw new Error(`ステップ更新に失敗: ${sErr.message}`);
+      }
     }
   }
 }
