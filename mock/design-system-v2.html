@@ -5571,7 +5571,7 @@ HND → ITM
       <div class="comp-card full">
         <div class="comp-label">13.11 Highlight ゾーン — カテゴリ別の「即時行動情報」</div>
         <p class="muted" style="font-size:var(--fs-sm);margin-bottom:14px">
-          Perforation の直下に独立した <strong style="color:var(--text)">Highlight ゾーン</strong>（太枠 2 セル）を差し込み、
+          Perforation の直下に独立した <strong style="color:var(--text)">Highlight ゾーン</strong>（中央区切り線のフラット 2 列）を差し込み、
           カテゴリごとに「到着後すぐ必要な情報」を強調する。飛行機は <strong style="color:var(--ink-800)">Gate / Seat</strong>、
           列車は <strong style="color:var(--ink-800)">号車 / 座席</strong>、イベントは <strong style="color:var(--ink-800)">ブロック / 席番号</strong>。
           Meta 3 セルとは役割を分け、<strong style="color:var(--text)">視認最優先</strong>で 26px monospace + 中央区切り線のフラット 2 列（入力欄に見えないよう枠線なし）。
@@ -5581,33 +5581,41 @@ HND → ITM
           <!-- 飛行機 highlight only -->
           <div>
             <div style="font-size:var(--fs-xs);color:var(--text-dim);margin-bottom:8px;font-weight:var(--fw-bold)">A. 飛行機 (Gate / Seat)</div>
-            <div class="ticket-highlight" style="border-top:1.5px solid var(--border);background:var(--surface)">
-              <div class="ticket-highlight-cell"><div class="ticket-highlight-label">Gate</div><div class="ticket-highlight-value">17</div></div>
-              <div class="ticket-highlight-cell"><div class="ticket-highlight-label">Seat</div><div class="ticket-highlight-value">24C</div></div>
+            <div style="border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden;box-shadow:var(--shadow-xs)">
+              <div class="ticket-highlight">
+                <div class="ticket-highlight-cell"><div class="ticket-highlight-label">Gate</div><div class="ticket-highlight-value">17</div></div>
+                <div class="ticket-highlight-cell"><div class="ticket-highlight-label">Seat</div><div class="ticket-highlight-value">24C</div></div>
+              </div>
             </div>
           </div>
 
           <div>
             <div style="font-size:var(--fs-xs);color:var(--text-dim);margin-bottom:8px;font-weight:var(--fw-bold)">B. 列車 (Car / Seat)</div>
-            <div class="ticket-highlight" style="border-top:1.5px solid var(--border);background:var(--surface)">
-              <div class="ticket-highlight-cell"><div class="ticket-highlight-label">Car</div><div class="ticket-highlight-value">7</div></div>
-              <div class="ticket-highlight-cell"><div class="ticket-highlight-label">Seat</div><div class="ticket-highlight-value">12A</div></div>
+            <div style="border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden;box-shadow:var(--shadow-xs)">
+              <div class="ticket-highlight">
+                <div class="ticket-highlight-cell"><div class="ticket-highlight-label">Car</div><div class="ticket-highlight-value">7</div></div>
+                <div class="ticket-highlight-cell"><div class="ticket-highlight-label">Seat</div><div class="ticket-highlight-value">12A</div></div>
+              </div>
             </div>
           </div>
 
           <div>
             <div style="font-size:var(--fs-xs);color:var(--text-dim);margin-bottom:8px;font-weight:var(--fw-bold)">C. イベント (Block / Seat)</div>
-            <div class="ticket-highlight" style="border-top:1.5px solid var(--border);background:var(--surface)">
-              <div class="ticket-highlight-cell"><div class="ticket-highlight-label">Block</div><div class="ticket-highlight-value">22</div></div>
-              <div class="ticket-highlight-cell"><div class="ticket-highlight-label">Seat</div><div class="ticket-highlight-value" style="color:var(--accent-500)">087</div></div>
+            <div style="border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden;box-shadow:var(--shadow-xs)">
+              <div class="ticket-highlight">
+                <div class="ticket-highlight-cell"><div class="ticket-highlight-label">Block</div><div class="ticket-highlight-value">22</div></div>
+                <div class="ticket-highlight-cell"><div class="ticket-highlight-label">Seat</div><div class="ticket-highlight-value" style="color:var(--accent-500)">087</div></div>
+              </div>
             </div>
           </div>
 
           <div>
             <div style="font-size:var(--fs-xs);color:var(--text-dim);margin-bottom:8px;font-weight:var(--fw-bold)">D. 欠落時（未読取 + 片側補完待ち）</div>
-            <div class="ticket-highlight" style="border-top:1.5px solid var(--border);background:var(--surface)">
-              <div class="ticket-highlight-cell"><div class="ticket-highlight-label">Gate</div><div class="ticket-highlight-value empty">未読取</div></div>
-              <div class="ticket-highlight-cell"><div class="ticket-highlight-label">Seat</div><div class="ticket-highlight-value empty">ゲートにて指定</div></div>
+            <div style="border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden;box-shadow:var(--shadow-xs)">
+              <div class="ticket-highlight">
+                <div class="ticket-highlight-cell"><div class="ticket-highlight-label">Gate</div><div class="ticket-highlight-value empty">未読取</div></div>
+                <div class="ticket-highlight-cell"><div class="ticket-highlight-label">Seat</div><div class="ticket-highlight-value empty">ゲートにて指定</div></div>
+              </div>
             </div>
           </div>
         </div>
