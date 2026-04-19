@@ -8,7 +8,7 @@ import type { Journey, Step, JourneyDraft } from "./types";
 
 /* ====== Journey CRUD ====== */
 
-const STEP_COLUMNS_LIGHT = "id,journey_id,category,title,date,end_date,time,end_time,from,to,detail,conf_number,memo,source,timezone,status,inferred,needs_review,information,sort_order";
+const STEP_COLUMNS_LIGHT = "id,journey_id,category,title,date,end_date,time,end_time,from,to,airline,detail,conf_number,memo,source,timezone,status,inferred,needs_review,information,sort_order";
 
 export async function getJourneys(sb: SupabaseClient): Promise<Journey[]> {
   const { data, error } = await sb
@@ -210,6 +210,7 @@ function rowToStep(row: any): Step {
     endTime: row.end_time || undefined,
     from: row.from || undefined,
     to: row.to || undefined,
+    airline: row.airline || undefined,
     detail: row.detail || undefined,
     confNumber: row.conf_number || undefined,
     memo: row.memo || undefined,
@@ -237,6 +238,7 @@ function stepToRow(step: Step, journeyId: string, userId: string, sortOrder: num
     end_time: step.endTime || null,
     from: step.from || null,
     to: step.to || null,
+    airline: step.airline || null,
     detail: step.detail || null,
     conf_number: step.confNumber || null,
     memo: step.memo || null,

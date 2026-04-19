@@ -32,6 +32,7 @@ export type Step = {
   timezone?: string;     // タイムゾーン（例: JST, CET）
   from?: string;         // 出発地・場所
   to?: string;           // 到着地
+  airline?: string;      // 運行航空会社（飛行機のみ。コードシェア時の実運航キャリア名 例: "Air New Zealand"）
   detail?: string;       // 旧互換用
   confNumber?: string;
   memo?: string;

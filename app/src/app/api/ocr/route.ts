@@ -34,6 +34,7 @@ const SYSTEM_PROMPT = `あなたは旅行・予約文書の情報抽出専門家
         "endTime": "終了時刻（HH:MM）",
         "from": "出発地・場所",
         "to": "到着地",
+        "airline": "運行航空会社（飛行機のみ。コードシェア便は実運航キャリア名。例: ANA便名 NZ90 で Air New Zealand 運航表記あり → 'Air New Zealand'。明記なし・非飛行機はnull）",
         "confNumber": "確認番号",
         "timezone": "タイムゾーン略称（国際線のみ。国内はnull）"
       },

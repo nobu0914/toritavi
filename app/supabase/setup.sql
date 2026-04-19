@@ -32,6 +32,7 @@ create table if not exists toritavi_steps (
   source text,
   source_image_url text,
   source_image_urls jsonb,
+  airline text,
   timezone text,
   status text not null default '未開始',
   inferred jsonb,

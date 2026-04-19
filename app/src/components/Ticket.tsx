@@ -25,7 +25,7 @@ import {
 import { notifications } from "@mantine/notifications";
 import type { Information, StepCategory, StepSource, StepStatus } from "@/lib/types";
 import { getFixedFields } from "@/lib/ocr-rules";
-import { getFieldLink, type StepLink } from "@/lib/step-links";
+import { getFieldLink, resolveMapsUrl, resolveSearchUrl, type StepLink } from "@/lib/step-links";
 import "./ticket.css";
 
 export type TicketData = {
@@ -39,6 +39,7 @@ export type TicketData = {
   timezone?: string;
   from?: string;
   to?: string;
+  airline?: string;
   confNumber?: string;
   memo?: string;
   information: Information[];
@@ -225,13 +226,16 @@ function FieldLinkButton({ link }: { link: StepLink }) {
       }
       return;
     }
-    if (link.url) {
-      window.open(link.url, "_blank", "noopener,noreferrer");
-    }
+    // click 時に URL を組み立てる（iOS なら Apple Maps Universal Link、それ以外は
+    // Google Maps）。SSR / hydration 不一致を避けるため、render 時は生クエリだけ持つ。
+    let url: string | undefined;
+    if (link.kind === "maps" && link.mapsQuery) url = resolveMapsUrl(link.mapsQuery);
+    else if (link.kind === "official" && link.searchQuery) url = resolveSearchUrl(link.searchQuery);
+    if (url) window.open(url, "_blank", "noopener,noreferrer");
   };
   const icon = link.kind === "maps"
     ? <IconMapPin size={LINK_ICON_SIZE} />
-    : link.kind === "flight-status"
+    : link.kind === "official"
       ? <IconExternalLink size={LINK_ICON_SIZE} />
       : <IconCopy size={LINK_ICON_SIZE} />;
   return (
@@ -317,6 +321,7 @@ export function Ticket({ data, status, needsReview, inferred, sourceImageUrl, so
       case "endDate": return "endDate";
       case "from": return "from";
       case "to": return "to";
+      case "airline": return "airline";
       case "confNumber": return "confNumber";
       case "timezone": return "timezone";
       default: return null;

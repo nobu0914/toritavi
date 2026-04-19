@@ -168,6 +168,7 @@ export default function NewTripPage() {
         endTime: item.step.endTime ?? "",
         from: item.step.from ?? "",
         to: item.step.to ?? "",
+        airline: item.step.airline ?? "",
         confNumber: item.step.confNumber ?? "",
         information: item.step.information ?? [],
       });

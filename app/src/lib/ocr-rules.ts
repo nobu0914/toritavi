@@ -161,6 +161,7 @@ export type FixedFieldDef = {
 export const CATEGORY_FIXED_FIELDS: Record<string, FixedFieldDef[]> = {
   飛行機: [
     { key: "title", label: "便名", placeholder: "NH225" },
+    { key: "airline", label: "運行航空会社", placeholder: "Air New Zealand" },
     { key: "date", label: "出発日", placeholder: "2026-04-15" },
     { key: "startTime", label: "出発時刻", placeholder: "10:00" },
     { key: "endDate", label: "到着日", placeholder: "2026-04-15" },

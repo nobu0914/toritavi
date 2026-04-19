@@ -42,6 +42,7 @@ export type StepDraft = {
   endTime: string;
   from: string;
   to: string;
+  airline: string;
   confNumber: string;
   information: Information[];
   memo?: string;
@@ -51,7 +52,7 @@ export function emptyStepDraft(): StepDraft {
   return {
     category: "列車", source: "手入力",
     title: "", date: "", endDate: "", time: "", endTime: "",
-    from: "", to: "", confNumber: "", information: [],
+    from: "", to: "", airline: "", confNumber: "", information: [],
   };
 }
 
@@ -257,6 +258,7 @@ export function StepDetailDrawer({
                 endTime: draft.endTime,
                 from: draft.from,
                 to: draft.to,
+                airline: draft.airline,
                 confNumber: draft.confNumber,
                 information: draft.information,
                 memo: draft.memo,
