@@ -176,11 +176,10 @@ export default function TripDetailClient({
     openModal();
   };
 
+  // "+予定を追加" → 予定登録 (/scan) に遷移し、OCR/撮影/メール貼付/手入力の
+  // フルフローを再利用する。target パラメータで現在の Journey に自動紐付け。
   const openNewStep = () => {
-    setDraft(emptyStepDraft());
-    setEditingStepId(crypto.randomUUID());
-    setEditingIndex(null);
-    openModal();
+    router.push(`/scan?target=${journey.id}`);
   };
 
   const handleSaveStep = () => {

@@ -25,11 +25,11 @@ import {
   IconFlask,
 } from "@tabler/icons-react";
 import { notifications } from "@mantine/notifications";
-import { useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
 import { TabBar } from "@/components/TabBar";
-import { addJourney, getJourneys, updateJourney, generateId } from "@/lib/store-client";
+import { addJourney, getJourney, getJourneys, updateJourney, generateId } from "@/lib/store-client";
 import type { Step, StepCategory } from "@/lib/types";
 import { getFixedFields } from "@/lib/ocr-rules";
 import classes from "./page.module.css";
@@ -376,6 +376,20 @@ type ScanStatus = "idle" | "processing" | "done" | "error";
 
 export default function ScanPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  // When "+予定を追加" on /trips/[id] is the entry point, target is the
+  // journey id we must append to. Skip the same-day-match heuristic and
+  // return the user to that trip after registration.
+  const targetJourneyId = searchParams.get("target") ?? null;
+  const [targetJourneyTitle, setTargetJourneyTitle] = useState<string | null>(null);
+  useEffect(() => {
+    if (!targetJourneyId) { setTargetJourneyTitle(null); return; }
+    let cancelled = false;
+    getJourney(targetJourneyId).then((j) => {
+      if (!cancelled) setTargetJourneyTitle(j?.title ?? null);
+    });
+    return () => { cancelled = true; };
+  }, [targetJourneyId]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -782,7 +796,17 @@ export default function ScanPage() {
     const lastDate = stepsToRegister[stepsToRegister.length - 1]?.endDate
       || stepsToRegister[stepsToRegister.length - 1]?.date;
 
-    // 同日Journeyを検索
+    // 1) target 指定あり: /trips/[id] から「+予定を追加」で来たケース。
+    //    同日判定をスキップして、必ず指定 Journey に append する。
+    if (targetJourneyId) {
+      const target = await getJourney(targetJourneyId);
+      if (!target) throw new Error("指定の Journey が見つかりません");
+      await updateJourney(target.id, {
+        steps: [...target.steps, ...stepsToRegister],
+      });
+      journeyId = target.id;
+    } else {
+    // 2) 通常導線: 同日 Journey に追加 or 新規作成
     const allJourneys = await getJourneys();
     const sameDayTarget = allJourneys.find((j) => j.startDate <= todayStr && j.endDate >= todayStr);
 
@@ -806,6 +830,7 @@ export default function ScanPage() {
         updatedAt: now,
       });
     }
+    } // close else (target 無し分岐)
 
     sessionStorage.setItem("toritavi_toast", "journey_created");
     router.push(`/trips/${journeyId}`);
@@ -851,7 +876,11 @@ export default function ScanPage() {
 
   return (
     <>
-      <AppHeader title="予定登録" />
+      <AppHeader
+        title={targetJourneyTitle ? `${targetJourneyTitle} に追加` : "予定登録"}
+        back={Boolean(targetJourneyId)}
+        backHref={targetJourneyId ? `/trips/${targetJourneyId}` : undefined}
+      />
 
       <Box pb={110} px="md" pt="md">
         {/* テストモード切替 */}
@@ -1165,8 +1194,8 @@ export default function ScanPage() {
               </details>
             )}
 
-            {/* 同じ日の予定に追加チェック */}
-            {(
+            {/* 同じ日の予定に追加チェック — target 指定時は確定済みなので非表示 */}
+            {!targetJourneyId && (
               <Checkbox
                 label="同じ日の予定があれば追加する"
                 checked={addToExisting}
