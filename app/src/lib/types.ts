@@ -43,6 +43,12 @@ export type Step = {
   information: Information[];
   inferred?: string[];      // 推定値のフィールド名リスト
   needsReview?: boolean;    // 要確認フラグ
+  /**
+   * §16 Step マージ用: 直前世代のスナップショット（1 世代のみ保持）。
+   * マージ後の Toast「元に戻す」でここに復元する。
+   * 2 回目のマージで上書きされる。
+   */
+  previous?: Omit<Step, "previous">;
 };
 
 export type Journey = {
