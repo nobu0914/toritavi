@@ -1,0 +1,39 @@
+/*
+ * SheetHeader — Design System v2 §6 Header System Type C (Sheet / Drawer / Modal)
+ * Drawer と Modal の上部バーで共通利用。
+ */
+
+.root {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.title {
+  flex: 1;
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
+  color: var(--text);
+  text-align: center;
+  padding: 0 8px;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.leftSlot {
+  flex-shrink: 0;
+}

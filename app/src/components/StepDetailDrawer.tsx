@@ -12,19 +12,18 @@ import {
 } from "@mantine/core";
 import {
   IconCalendarPlus,
-  IconChevronDown,
   IconCopy,
   IconDotsVertical,
   IconDownload,
   IconEdit,
   IconShare,
   IconTrash,
-  IconX,
 } from "@tabler/icons-react";
 import classes from "./StepDetailDrawer.module.css";
 import type { StepCategory, StepSource, Information, StepStatus } from "@/lib/types";
 import { getFixedFields } from "@/lib/ocr-rules";
 import { Ticket } from "./Ticket";
+import { SheetHeader } from "./SheetHeader";
 
 const categories: StepCategory[] = [
   "列車", "飛行機", "バス", "車", "徒歩",
@@ -197,58 +196,52 @@ export function StepDetailDrawer({
         body: { padding: 0, flex: 1, display: "flex", flexDirection: "column", minHeight: 0 },
       }}
     >
-      {/* ヘッダー */}
-      <Box className={classes.header}>
-        <ActionIcon variant="subtle" color="gray" radius="xl" onClick={onClose} aria-label="閉じる">
-          <IconChevronDown size={22} />
-        </ActionIcon>
-        <Text className={classes.headerTitle} lineClamp={1}>
-          {isEdit ? editingTitle || draft.title || "予定" : "予定を追加"}
-        </Text>
-        {isEdit && mode === "view" ? (
-          <Box className={classes.headerActions}>
-            <ActionIcon
-              variant="subtle"
-              color="gray"
-              radius="xl"
-              onClick={() => setMode("edit")}
-              aria-label="編集"
-            >
-              <IconEdit size={18} />
-            </ActionIcon>
-            <Menu position="bottom-end" shadow="md" width={220} withArrow>
-              <Menu.Target>
-                <ActionIcon variant="subtle" color="gray" radius="xl" aria-label="その他">
-                  <IconDotsVertical size={18} />
-                </ActionIcon>
-              </Menu.Target>
-              <Menu.Dropdown>
-                <Menu.Item leftSection={<IconEdit size={16} />} onClick={() => setMode("edit")}>編集する</Menu.Item>
-                <Menu.Item leftSection={<IconShare size={16} />} onClick={handleShare}>共有する</Menu.Item>
-                {onDuplicate && (
-                  <Menu.Item leftSection={<IconCopy size={16} />} onClick={onDuplicate}>複製する</Menu.Item>
-                )}
-                <Menu.Item leftSection={<IconCalendarPlus size={16} />} onClick={handleAddToCalendar}>カレンダーに追加</Menu.Item>
-                {images.length > 0 && (
-                  <Menu.Item leftSection={<IconDownload size={16} />} onClick={handleDownloadAll}>
-                    {images.length > 1 ? `原本を保存 (${images.length}件)` : "原本を保存"}
-                  </Menu.Item>
-                )}
-                {onDelete && (
-                  <>
-                    <Menu.Divider />
-                    <Menu.Item color="red" leftSection={<IconTrash size={16} />} onClick={onDelete}>削除する</Menu.Item>
-                  </>
-                )}
-              </Menu.Dropdown>
-            </Menu>
-          </Box>
-        ) : (
-          <ActionIcon variant="subtle" color="gray" radius="xl" onClick={onClose} aria-label="閉じる">
-            <IconX size={18} />
-          </ActionIcon>
-        )}
-      </Box>
+      <SheetHeader
+        title={isEdit ? editingTitle || draft.title || "予定" : "予定を追加"}
+        onClose={onClose}
+        leftIcon="down"
+        actions={
+          isEdit && mode === "view" ? (
+            <>
+              <ActionIcon
+                variant="subtle"
+                color="gray"
+                radius="xl"
+                onClick={() => setMode("edit")}
+                aria-label="編集"
+              >
+                <IconEdit size={18} />
+              </ActionIcon>
+              <Menu position="bottom-end" shadow="md" width={220} withArrow>
+                <Menu.Target>
+                  <ActionIcon variant="subtle" color="gray" radius="xl" aria-label="その他">
+                    <IconDotsVertical size={18} />
+                  </ActionIcon>
+                </Menu.Target>
+                <Menu.Dropdown>
+                  <Menu.Item leftSection={<IconEdit size={16} />} onClick={() => setMode("edit")}>編集する</Menu.Item>
+                  <Menu.Item leftSection={<IconShare size={16} />} onClick={handleShare}>共有する</Menu.Item>
+                  {onDuplicate && (
+                    <Menu.Item leftSection={<IconCopy size={16} />} onClick={onDuplicate}>複製する</Menu.Item>
+                  )}
+                  <Menu.Item leftSection={<IconCalendarPlus size={16} />} onClick={handleAddToCalendar}>カレンダーに追加</Menu.Item>
+                  {images.length > 0 && (
+                    <Menu.Item leftSection={<IconDownload size={16} />} onClick={handleDownloadAll}>
+                      {images.length > 1 ? `原本を保存 (${images.length}件)` : "原本を保存"}
+                    </Menu.Item>
+                  )}
+                  {onDelete && (
+                    <>
+                      <Menu.Divider />
+                      <Menu.Item color="red" leftSection={<IconTrash size={16} />} onClick={onDelete}>削除する</Menu.Item>
+                    </>
+                  )}
+                </Menu.Dropdown>
+              </Menu>
+            </>
+          ) : null
+        }
+      />
 
       {/* スクロール可能な本体 */}
       <Box className={classes.body}>

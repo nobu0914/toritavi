@@ -2586,7 +2586,7 @@
         </div>
       </div>
 
-      <!-- FAB + App Header -->
+      <!-- FAB -->
       <div class="comp-card">
         <div class="comp-label">FAB (Floating Action Button)</div>
         <div class="comp-row">
@@ -2594,12 +2594,143 @@
           <button class="fab ink" aria-label="新規Journey"><svg class="ic-svg"><use href="#i-plus"/></svg></button>
           <span class="muted" style="font-size:var(--fs-xs)">Accent(推奨) / Ink</span>
         </div>
-        <div style="height:18px"></div>
-        <div class="comp-label">App Header (Dark)</div>
+      </div>
+
+      <!-- Header System (unified) -->
+      <div class="comp-card full">
+        <div class="comp-label" style="color:var(--accent-700);font-size:var(--fs-md)">Header System（統一仕様）</div>
+        <p class="muted" style="font-size:var(--fs-sm);margin-bottom:14px">
+          アプリ全体で使うヘッダーは <strong style="color:var(--text)">3 タイプ</strong>に集約する。
+          ①② は <code class="mono">ink-800</code> 背景で統一し <strong style="color:var(--text)">back prop の有無</strong> だけで切り替え。
+          ③ は Drawer / モーダル用で <code class="mono">surface</code> 背景。すべて<strong style="color:var(--text)">左=閉じる/戻る・中央=タイトル・右=アクション</strong>の 3 スロット構造。
+        </p>
+
+        <!-- Type A: Global Header -->
+        <div style="font-size:var(--fs-sm);font-weight:var(--fw-bold);margin:18px 0 8px">① Global Header（Dark, ルートページ）</div>
+        <div class="app-header">
+          <div class="ah-title">旅程</div>
+          <button class="btn-icon" aria-label="メニュー"><svg class="ic-svg"><use href="#i-more-h"/></svg></button>
+        </div>
+        <p class="muted" style="font-size:var(--fs-xs);margin-top:6px">
+          TabBar から到達する最上位ページ（旅程 / 予定登録 / 通知 / アカウント）で使用。戻るボタンなし。タイトルはページ名。右アクションは任意（通知バッジ等）。
+        </p>
+
+        <!-- Type B: Page Header -->
+        <div style="font-size:var(--fs-sm);font-weight:var(--fw-bold);margin:18px 0 8px">② Page Header（Dark, サブページ）</div>
         <div class="app-header">
           <button class="btn-icon" aria-label="戻る"><svg class="ic-svg"><use href="#i-back"/></svg></button>
           <div class="ah-title">大阪出張 2026/04</div>
           <button class="btn-icon" aria-label="メニュー"><svg class="ic-svg"><use href="#i-more-h"/></svg></button>
+        </div>
+        <p class="muted" style="font-size:var(--fs-xs);margin-top:6px">
+          スタック遷移した下階層ページで使用。背景色・高さ・タイポ・icon サイズは ① と<strong style="color:var(--text)">完全同一</strong>（実装は <code class="mono">AppHeader</code> の <code class="mono">back</code> prop で分岐）。戻る = <code class="mono">&lt;</code>（chevron-left）。
+        </p>
+
+        <!-- Type B': Page Header with Save -->
+        <div style="font-size:var(--fs-sm);font-weight:var(--fw-bold);margin:18px 0 8px">② Save variant（フォーム確定ページ）</div>
+        <div class="app-header">
+          <button class="btn-icon" aria-label="キャンセル"><svg class="ic-svg"><use href="#i-close"/></svg></button>
+          <div class="ah-title">予定を登録</div>
+          <button style="background:var(--accent-500);color:#fff;border:none;border-radius:var(--r-pill);padding:6px 14px;font-size:var(--fs-sm);font-weight:var(--fw-bold);cursor:pointer">保存</button>
+        </div>
+        <p class="muted" style="font-size:var(--fs-xs);margin-top:6px">
+          予定登録 / 旅程の新規作成など<strong style="color:var(--text)">フォーム確定画面</strong>用。左は <code class="mono">✕</code>（戻るではなくキャンセル）。右は Pill ボタン「保存」= Accent。入力が妥当でない場合は disabled（opacity 0.5）。
+        </p>
+
+        <!-- Type C: Sheet Header -->
+        <div style="font-size:var(--fs-sm);font-weight:var(--fw-bold);margin:18px 0 8px">③ Sheet Header（Drawer / モーダル）</div>
+        <div class="modal-header">
+          <button class="btn-icon sm" aria-label="閉じる"><svg class="ic-svg"><use href="#i-down"/></svg></button>
+          <div class="modal-title">ANA NH118</div>
+          <div style="display:flex;gap:2px">
+            <button class="btn-icon sm" aria-label="編集" style="color:var(--info-700)"><svg class="ic-svg"><use href="#i-edit"/></svg></button>
+            <button class="btn-icon sm" aria-label="その他"><svg class="ic-svg"><use href="#i-more-v"/></svg></button>
+          </div>
+        </div>
+        <p class="muted" style="font-size:var(--fs-xs);margin-top:6px">
+          Step Detail Drawer / Edit Modal で使用。閉じる = <code class="mono">↓</code>（iOS Drawer 規範）。右は ✎（編集）+ ⋮（More Menu）の 2 連配置。詳細は §10.5 ①。
+        </p>
+
+        <!-- Common Specs -->
+        <div style="margin-top:20px">
+          <div style="font-size:var(--fs-xs);font-weight:var(--fw-bold);color:var(--text-dim);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px">共通仕様</div>
+          <div style="overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse;font-size:var(--fs-sm);min-width:520px">
+              <thead>
+                <tr style="background:var(--n-50);text-align:left">
+                  <th style="padding:10px 12px;font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);border-bottom:1px solid var(--border);width:140px">項目</th>
+                  <th style="padding:10px 12px;font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);border-bottom:1px solid var(--border)">① / ② (Dark)</th>
+                  <th style="padding:10px 12px;font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);border-bottom:1px solid var(--border)">③ Sheet</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style="padding:8px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)">背景</td>
+                  <td style="padding:8px 12px;border-bottom:1px dashed var(--border)"><code class="mono">var(--ink-800)</code></td>
+                  <td style="padding:8px 12px;border-bottom:1px dashed var(--border)"><code class="mono">var(--surface)</code></td>
+                </tr>
+                <tr>
+                  <td style="padding:8px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)">テキスト色</td>
+                  <td style="padding:8px 12px;border-bottom:1px dashed var(--border)"><code class="mono">#fff</code></td>
+                  <td style="padding:8px 12px;border-bottom:1px dashed var(--border)"><code class="mono">var(--text)</code></td>
+                </tr>
+                <tr>
+                  <td style="padding:8px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)">高さ（内容）</td>
+                  <td style="padding:8px 12px;border-bottom:1px dashed var(--border)">52px + safe-area-inset-top</td>
+                  <td style="padding:8px 12px;border-bottom:1px dashed var(--border)">52px</td>
+                </tr>
+                <tr>
+                  <td style="padding:8px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)">padding</td>
+                  <td style="padding:8px 12px;border-bottom:1px dashed var(--border)">14px 16px（full-bleed）</td>
+                  <td style="padding:8px 12px;border-bottom:1px dashed var(--border)">16px 20px</td>
+                </tr>
+                <tr>
+                  <td style="padding:8px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)">タイトル</td>
+                  <td style="padding:8px 12px;border-bottom:1px dashed var(--border)"><code class="mono">fs-lg / fw-bold</code> 1行ellipsis</td>
+                  <td style="padding:8px 12px;border-bottom:1px dashed var(--border)"><code class="mono">fs-lg / fw-bold</code> 1行ellipsis</td>
+                </tr>
+                <tr>
+                  <td style="padding:8px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)">Icon ボタン</td>
+                  <td style="padding:8px 12px;border-bottom:1px dashed var(--border)">36×36 / transparent / #fff</td>
+                  <td style="padding:8px 12px;border-bottom:1px dashed var(--border)">32×32 / subtle / gray</td>
+                </tr>
+                <tr>
+                  <td style="padding:8px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)">左スロット</td>
+                  <td style="padding:8px 12px;border-bottom:1px dashed var(--border)">なし / <code class="mono">&lt;</code> / <code class="mono">✕</code></td>
+                  <td style="padding:8px 12px;border-bottom:1px dashed var(--border)"><code class="mono">↓</code></td>
+                </tr>
+                <tr>
+                  <td style="padding:8px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)">右スロット</td>
+                  <td style="padding:8px 12px;border-bottom:1px dashed var(--border)">最大 1（⋮ or 保存ボタン）</td>
+                  <td style="padding:8px 12px;border-bottom:1px dashed var(--border)">最大 2（✎ + ⋮）</td>
+                </tr>
+                <tr>
+                  <td style="padding:8px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)">Sticky</td>
+                  <td style="padding:8px 12px;border-bottom:1px dashed var(--border)"><code class="mono">position: sticky; top: 0</code></td>
+                  <td style="padding:8px 12px;border-bottom:1px dashed var(--border)">Drawer 内 sticky</td>
+                </tr>
+                <tr>
+                  <td style="padding:8px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)">Full-bleed</td>
+                  <td style="padding:8px 12px;border-bottom:1px dashed var(--border)"><code class="mono">width: 100vw</code>（body max-width を貫通）</td>
+                  <td style="padding:8px 12px;border-bottom:1px dashed var(--border)">Drawer 幅に一致</td>
+                </tr>
+                <tr>
+                  <td style="padding:8px 12px;font-weight:var(--fw-bold)">タップ領域</td>
+                  <td style="padding:8px 12px">44×44 最低（アイコンは 36, padding で拡張）</td>
+                  <td style="padding:8px 12px">44×44 最低</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div style="margin-top:16px;background:var(--info-50);border:1px solid rgba(37,99,205,0.2);border-radius:var(--r-md);padding:12px 14px;font-size:var(--fs-xs);line-height:1.7">
+          <strong style="color:var(--info-700)">運用ルール:</strong>
+          (1) ①② は <strong style="color:var(--text)">同一コンポーネント</strong>（<code class="mono">AppHeader</code>）の <code class="mono">back</code> prop で切替。色・高さ・タイポを重複定義しない。
+          (2) Save variant は <code class="mono">action</code> prop に Accent Pill ボタンを注入する実装。
+          (3) ③ は <code class="mono">Drawer</code> / <code class="mono">Modal</code> の中で使用、グローバルに露出しない。
+          (4) 右スロットは <strong style="color:var(--text)">最大 2 つ</strong>。これを超える場合は必ず ⋮ メニューに退避。
+          (5) 閉じるアイコンの使い分け: <code class="mono">&lt;</code> = スタック戻り、<code class="mono">✕</code> = モーダル的破棄、<code class="mono">↓</code> = Drawer 下降。
         </div>
       </div>
 

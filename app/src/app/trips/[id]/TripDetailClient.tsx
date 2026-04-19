@@ -21,7 +21,6 @@ import {
   IconPlus,
   IconRoute,
   IconTrash,
-  IconX,
 } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
 import { useDisclosure } from "@mantine/hooks";
@@ -31,6 +30,7 @@ import { TabBar } from "@/components/TabBar";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { StepDetailDrawer, emptyStepDraft } from "@/components/StepDetailDrawer";
 import type { StepDraft } from "@/components/StepDetailDrawer";
+import { SheetHeader } from "@/components/SheetHeader";
 import classes from "./page.module.css";
 import { deleteJourney, getJourney, getStepImages, updateJourney } from "@/lib/store-client";
 import {
@@ -591,12 +591,11 @@ export default function TripDetailClient({
         withCloseButton={false}
       >
         <Box className={classes.modalPanel}>
-          <Box className={classes.modalTop}>
-            <Text className={classes.modalTitle}>Journey を編集</Text>
-            <ActionIcon variant="subtle" color="gray" radius="xl" onClick={closeJourneyModal}>
-              <IconX size={18} />
-            </ActionIcon>
-          </Box>
+          <SheetHeader
+            title="Journey を編集"
+            onClose={closeJourneyModal}
+            leftIcon="close"
+          />
           <Box className={classes.modalBody}>
             <Text className={classes.modalSectionLabel}>Journey</Text>
             <Box className={classes.formSection}>

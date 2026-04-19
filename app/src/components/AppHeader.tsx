@@ -4,8 +4,12 @@ import { IconChevronLeft } from "@tabler/icons-react";
 import { LoadingOverlay, useNavigateWithLoading } from "@/components/LoadingOverlay";
 
 /*
- * AppHeader — Design System v2 Section 6 "App Header (Dark)" 準拠
- * background: var(--ink-800), 白文字, 戻るボタン + タイトル + 右アクション
+ * AppHeader — Design System v2 §6 Header System Type A/B 準拠
+ *   Type A (Global):  back=false。TabBar 到達の最上位ページで使用。
+ *   Type B (Page):    back=true。 スタック下階層で使用。
+ *   Type B' (Save):   action に Accent Pill ボタンを注入、left=✕（キャンセル）想定。
+ *
+ * background: var(--ink-800), 白文字, 戻るボタン + タイトル + 右アクション の 3 スロット。
  * body max-width (430px) を越えて、広い画面でも横幅を viewport 全域に展開する。
  */
 
