@@ -5,7 +5,6 @@ import { notifications } from "@mantine/notifications";
 import {
   IconAlertCircle,
   IconArrowRight,
-  IconBell,
   IconBox,
   IconCheck,
   IconChevronRight,
@@ -198,13 +197,6 @@ export default function TripsClient({ journeys: initialJourneys }: { journeys: J
 
         {!isSearching && (
         <Box className={classes.hero}>
-          <Box className={classes.heroTop}>
-            <Text className={classes.heroLabel}>ジャーニー ワークスペース</Text>
-            <Box className={classes.heroBell}>
-              <IconBell size={18} />
-            </Box>
-          </Box>
-
           <Box className={classes.heroStats}>
             <Box className={classes.statCard}>
               <Text className={classes.statValue}>{upcomingJourneys.length}</Text>
@@ -266,11 +258,11 @@ export default function TripsClient({ journeys: initialJourneys }: { journeys: J
         )}
 
         <Box className={classes.section}>
-          <Box className={classes.sectionHead}>
-            <Text className={classes.sectionLabel}>
-              {isSearching ? "検索結果" : "ジャーニー"}
-            </Text>
-          </Box>
+          {isSearching && (
+            <Box className={classes.sectionHead}>
+              <Text className={classes.sectionLabel}>検索結果</Text>
+            </Box>
+          )}
           <Box className={classes.stack}>
             {!isSearching && sortedJourneys.length === 0 && (
               <Box className={classes.emptyCard}>
