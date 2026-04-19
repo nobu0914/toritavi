@@ -5979,6 +5979,383 @@ HND → ITM
     </div>
   </section>
 
+  <!-- ============================================================ -->
+  <!-- === 14. Auto Links (外部リンク連携)                       === -->
+  <!-- ============================================================ -->
+  <section class="section">
+    <h2 class="section-title">14. 外部リンク (Auto Links)</h2>
+    <p class="section-desc">
+      Step Detail 内の情報（出発地 / 到着地 / 便名 / 会場 / 電話番号 etc.）から、<strong>ワンタップで外部リソースを開ける</strong>ためのパターン。予約確認 / 地図 / フライト状況 / 通話 / コピーの 5 種をカバーし、
+      解決できないものは検索フォールバックに回す堅牢な 3 層設計とする。対応実装候補: <code class="mono">components/StepDetailDrawer.tsx, components/Ticket.tsx, lib/step-links.ts (new)</code>
+    </p>
+    <div class="section-divider"></div>
+
+    <div class="components">
+
+      <!-- 14.1 目的 -->
+      <div class="comp-card full">
+        <div class="comp-label">14.1 目的と原則</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">
+          <div style="background:var(--info-50);border-radius:var(--r-md);padding:16px">
+            <div style="font-size:var(--fs-xs);font-weight:var(--fw-bold);color:var(--info-700);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px">Single Tap</div>
+            <div style="font-size:var(--fs-sm);line-height:1.7">住所の Maps、便名の状況確認、電話発信までを、アプリ内で値を長押しコピー→ブラウザ貼り付けの手間なしで実行する。</div>
+          </div>
+          <div style="background:var(--accent-50);border-radius:var(--r-md);padding:16px">
+            <div style="font-size:var(--fs-xs);font-weight:var(--fw-bold);color:var(--accent-700);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px">Graceful Fallback</div>
+            <div style="font-size:var(--fs-sm);line-height:1.7">会場 HP のように一意に解決できない情報は Google 検索へ。<strong>リンク切れしない設計</strong>を優先し、公式サイトより検索の方が堅牢と割り切る。</div>
+          </div>
+          <div style="background:var(--success-50);border-radius:var(--r-md);padding:16px">
+            <div style="font-size:var(--fs-xs);font-weight:var(--fw-bold);color:var(--success-700);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px">Pure Resolver</div>
+            <div style="font-size:var(--fs-sm);line-height:1.7">Step → StepLink[] の純関数で解決。副作用なし、単体テスト容易、UI は結果を受け取って描画するだけ。</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 14.2 リンク種別カタログ -->
+      <div class="comp-card full">
+        <div class="comp-label">14.2 リンク種別（Kind）カタログ</div>
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:var(--fs-sm);min-width:640px">
+            <thead>
+              <tr style="background:var(--n-50);text-align:left">
+                <th style="padding:10px 12px;font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);border-bottom:1px solid var(--border);width:120px">Kind</th>
+                <th style="padding:10px 12px;font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);border-bottom:1px solid var(--border);width:60px">Icon</th>
+                <th style="padding:10px 12px;font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);border-bottom:1px solid var(--border)">用途</th>
+                <th style="padding:10px 12px;font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);border-bottom:1px solid var(--border)">URL スキーム / 出力</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td style="padding:8px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)"><code class="mono">maps</code></td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)"><svg class="ic-svg sm" style="color:var(--info-700)"><use href="#i-map-pin"/></svg></td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">住所 / 空港 / 駅 / 会場 を地図で開く</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)"><code class="mono">https://www.google.com/maps/search/?api=1&amp;query=...</code></td></tr>
+              <tr><td style="padding:8px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)"><code class="mono">flight-status</code></td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)"><svg class="ic-svg sm" style="color:var(--info-700)"><use href="#i-plane"/></svg></td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">便名 → 遅延 / ゲート / 到着時刻</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)"><code class="mono">https://flightaware.com/live/flight/NZ90</code></td></tr>
+              <tr><td style="padding:8px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)"><code class="mono">official</code></td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)"><svg class="ic-svg sm" style="color:var(--info-700)"><use href="#i-globe"/></svg></td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">航空会社 / 空港 / 主要駅 の公式サイト（静的辞書ヒット時）</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)"><code class="mono">https://www.ana.co.jp/</code></td></tr>
+              <tr><td style="padding:8px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)"><code class="mono">search</code></td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)"><svg class="ic-svg sm" style="color:var(--info-700)"><use href="#i-search"/></svg></td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">辞書に無い会場 / 店舗 / 病院 を検索</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)"><code class="mono">https://www.google.com/search?q=...</code></td></tr>
+              <tr><td style="padding:8px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)"><code class="mono">tel</code></td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)"><svg class="ic-svg sm" style="color:var(--success-700)"><use href="#i-phone"/></svg></td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">電話番号を検出して発信</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)"><code class="mono">tel:+819012345678</code></td></tr>
+              <tr><td style="padding:8px 12px;font-weight:var(--fw-bold)"><code class="mono">copy</code></td><td style="padding:8px 12px"><svg class="ic-svg sm" style="color:var(--text-dim)"><use href="#i-copy"/></svg></td><td style="padding:8px 12px">確認番号 / 認証コードをクリップボードへ（外部遷移しない）</td><td style="padding:8px 12px"><code class="mono">Clipboard.writeText()</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 14.3 解決戦略 3 層 -->
+      <div class="comp-card full">
+        <div class="comp-label">14.3 解決戦略（3 層）</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">
+          <div style="background:var(--surface);border:1.5px solid var(--info-500);border-radius:var(--r-md);padding:16px">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+              <div style="width:28px;height:28px;border-radius:50%;background:var(--info-700);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:var(--fw-heavy);font-size:var(--fs-sm)">A</div>
+              <div style="font-weight:var(--fw-bold);font-size:var(--fs-sm)">静的辞書</div>
+            </div>
+            <div style="font-size:var(--fs-xs);color:var(--text-dim);line-height:1.7;margin-bottom:8px">確度: <strong style="color:var(--success-700)">高</strong></div>
+            <ul style="margin:0;padding-left:18px;font-size:var(--fs-xs);line-height:1.8">
+              <li>IATA 航空会社コード（NH → ANA）</li>
+              <li>IATA 空港コード（NRT / AKL / HND…）</li>
+              <li>主要駅名（東京 / 新大阪…）</li>
+            </ul>
+            <div style="margin-top:10px;font-size:var(--fs-xs);color:var(--text-dim)"><code class="mono">lib/static-links/*.ts</code> で管理</div>
+          </div>
+          <div style="background:var(--surface);border:1.5px solid var(--accent-500);border-radius:var(--r-md);padding:16px">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+              <div style="width:28px;height:28px;border-radius:50%;background:var(--accent-500);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:var(--fw-heavy);font-size:var(--fs-sm)">B</div>
+              <div style="font-weight:var(--fw-bold);font-size:var(--fs-sm)">URL テンプレート</div>
+            </div>
+            <div style="font-size:var(--fs-xs);color:var(--text-dim);line-height:1.7;margin-bottom:8px">確度: <strong style="color:var(--info-700)">中</strong></div>
+            <ul style="margin:0;padding-left:18px;font-size:var(--fs-xs);line-height:1.8">
+              <li>Maps: <code class="mono">/maps/search/?query={q}</code></li>
+              <li>FlightAware: <code class="mono">/flight/{IATA}{No}</code></li>
+              <li>Tel: <code class="mono">tel:{digits}</code></li>
+            </ul>
+            <div style="margin-top:10px;font-size:var(--fs-xs);color:var(--text-dim)">値を <code class="mono">encodeURIComponent</code> で挿入</div>
+          </div>
+          <div style="background:var(--surface);border:1.5px solid var(--n-300);border-radius:var(--r-md);padding:16px">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+              <div style="width:28px;height:28px;border-radius:50%;background:var(--n-700);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:var(--fw-heavy);font-size:var(--fs-sm)">C</div>
+              <div style="font-weight:var(--fw-bold);font-size:var(--fs-sm)">検索フォールバック</div>
+            </div>
+            <div style="font-size:var(--fs-xs);color:var(--text-dim);line-height:1.7;margin-bottom:8px">確度: <strong style="color:var(--text-dim)">低（常に成功）</strong></div>
+            <ul style="margin:0;padding-left:18px;font-size:var(--fs-xs);line-height:1.8">
+              <li>会場 / 店舗 / 病院など一意解決できないもの</li>
+              <li>Google 検索クエリ</li>
+              <li>ユーザーが結果から選ぶ</li>
+            </ul>
+            <div style="margin-top:10px;font-size:var(--fs-xs);color:var(--text-dim)">既定ラベル: 「〜を Google で検索」</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 14.4 カテゴリ × フィールド × リンク マトリクス -->
+      <div class="comp-card full">
+        <div class="comp-label">14.4 カテゴリ × フィールド × リンク マトリクス</div>
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:var(--fs-sm);min-width:680px">
+            <thead>
+              <tr style="background:var(--n-50);text-align:left">
+                <th style="padding:10px 12px;font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);border-bottom:1px solid var(--border);width:110px">カテゴリ</th>
+                <th style="padding:10px 12px;font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);border-bottom:1px solid var(--border);width:150px">フィールド</th>
+                <th style="padding:10px 12px;font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);border-bottom:1px solid var(--border)">候補リンク</th>
+                <th style="padding:10px 12px;font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);border-bottom:1px solid var(--border);width:90px">解決層</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td style="padding:8px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)" rowspan="4">飛行機</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">便名</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">FlightAware / 航空会社公式</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">B + A</td></tr>
+              <tr><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">出発地 (NRT)</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">空港公式 / Maps</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">A + B</td></tr>
+              <tr><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">到着地 (AKL)</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">空港公式 / Maps</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">A + B</td></tr>
+              <tr><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">確認番号</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">コピー</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">—</td></tr>
+              <tr><td style="padding:8px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)" rowspan="2">列車</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">駅名</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">駅情報 / Maps</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">A → C</td></tr>
+              <tr><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">確認番号</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">コピー</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">—</td></tr>
+              <tr><td style="padding:8px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)" rowspan="3">宿泊</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">施設名</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">公式 / 検索</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">C</td></tr>
+              <tr><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">住所</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">Maps</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">B</td></tr>
+              <tr><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">電話</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">tel:</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">B</td></tr>
+              <tr><td style="padding:8px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)" rowspan="3">観光 / イベント</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">会場</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">会場 HP / Maps / 検索</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">B + C</td></tr>
+              <tr><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">イベント名</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">検索（チケット販売元サイト）</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">C</td></tr>
+              <tr><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">住所</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">Maps</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">B</td></tr>
+              <tr><td style="padding:8px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)" rowspan="2">食事</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">店名</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">食べログ検索 / Google</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">C</td></tr>
+              <tr><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">住所</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">Maps</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">B</td></tr>
+              <tr><td style="padding:8px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)" rowspan="2">病院</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">病院名</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">公式検索 / Maps</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">C</td></tr>
+              <tr><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">電話</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">tel:</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">B</td></tr>
+              <tr><td style="padding:8px 12px;font-weight:var(--fw-bold)">共通</td><td style="padding:8px 12px">メモ内の電話番号</td><td style="padding:8px 12px">tel:（正規表現検出）</td><td style="padding:8px 12px">B</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 14.5 配置パターン -->
+      <div class="comp-card full">
+        <div class="comp-label">14.5 配置パターン — 3 つの UI バリアント</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">
+
+          <!-- ① インライン ↗ アイコン -->
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:14px">
+            <div style="font-size:var(--fs-xs);font-weight:var(--fw-bold);color:var(--info-700);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:10px">① インライン ↗ アイコン</div>
+            <div style="background:#fff;border:1px solid var(--border);border-radius:8px;overflow:hidden">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--n-100)">
+                <div>
+                  <div style="font-size:11px;font-weight:600;color:var(--text-dim);margin-bottom:2px">出発地</div>
+                  <div style="font-size:14px;font-weight:600">東京 成田 (NRT)</div>
+                </div>
+                <button style="width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:#fff;color:var(--info-700);display:flex;align-items:center;justify-content:center" aria-label="地図で開く">
+                  <svg class="ic-svg sm"><use href="#i-link"/></svg>
+                </button>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px">
+                <div>
+                  <div style="font-size:11px;font-weight:600;color:var(--text-dim);margin-bottom:2px">確認番号</div>
+                  <div style="font-size:14px;font-weight:600;font-family:var(--mono)">EKCJGM</div>
+                </div>
+                <button style="width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:#fff;color:var(--text-dim);display:flex;align-items:center;justify-content:center" aria-label="コピー">
+                  <svg class="ic-svg sm"><use href="#i-copy"/></svg>
+                </button>
+              </div>
+            </div>
+            <div style="font-size:var(--fs-xs);color:var(--text-dim);margin-top:10px;line-height:1.7">候補が <strong>1 つだけ</strong>のフィールドに使用。アイコンそのものがリンク、ラベル / 値は非クリック。</div>
+          </div>
+
+          <!-- ② Menu で複数候補 -->
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:14px">
+            <div style="font-size:var(--fs-xs);font-weight:var(--fw-bold);color:var(--info-700);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:10px">② Menu で複数候補</div>
+            <div style="position:relative">
+              <div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between">
+                <div>
+                  <div style="font-size:11px;font-weight:600;color:var(--text-dim);margin-bottom:2px">便名</div>
+                  <div style="font-size:14px;font-weight:600">ANA NZ90</div>
+                </div>
+                <button style="width:28px;height:28px;border-radius:50%;border:1px solid var(--info-500);background:var(--info-50);color:var(--info-700);display:flex;align-items:center;justify-content:center" aria-label="リンクを開く">
+                  <svg class="ic-svg sm"><use href="#i-link"/></svg>
+                </button>
+              </div>
+              <div style="margin-top:6px;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,0.08);overflow:hidden">
+                <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--n-100)">
+                  <svg class="ic-svg sm" style="color:var(--info-700)"><use href="#i-plane"/></svg>
+                  <div style="flex:1">
+                    <div style="font-size:13px;font-weight:600">FlightAware で状況を確認</div>
+                    <div style="font-size:11px;color:var(--text-dim)">flightaware.com/live/flight/NZ90</div>
+                  </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;padding:10px 14px">
+                  <svg class="ic-svg sm" style="color:var(--info-700)"><use href="#i-globe"/></svg>
+                  <div style="flex:1">
+                    <div style="font-size:13px;font-weight:600">Air New Zealand 公式</div>
+                    <div style="font-size:11px;color:var(--text-dim)">airnewzealand.co.jp</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div style="font-size:var(--fs-xs);color:var(--text-dim);margin-top:10px;line-height:1.7">候補が <strong>2 つ以上</strong>のフィールドに使用。Mantine Menu で bottom-end 配置、各行に icon + title + hostname。</div>
+          </div>
+
+          <!-- ③ メモ内の電話番号 自動検出 -->
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:14px">
+            <div style="font-size:var(--fs-xs);font-weight:var(--fw-bold);color:var(--info-700);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:10px">③ メモ内の電話番号 自動検出</div>
+            <div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:12px 14px">
+              <div style="font-size:11px;font-weight:600;color:var(--text-dim);margin-bottom:4px">メモ</div>
+              <div style="font-size:13px;line-height:1.7">フロント: <span style="color:var(--info-700);text-decoration:underline;font-weight:600">03-1234-5678</span> — チェックイン後にルーム予約確認。緊急連絡: <span style="color:var(--info-700);text-decoration:underline;font-weight:600">+64-9-555-0100</span></div>
+            </div>
+            <div style="font-size:var(--fs-xs);color:var(--text-dim);margin-top:10px;line-height:1.7"><code class="mono">/\+?\d[\d -]{7,}\d/g</code> で検出して <code class="mono">tel:</code> に変換。タップで iOS / Android の通話 UI が開く。</div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- 14.6 完成系サンプル: 飛行機 Step Detail -->
+      <div class="comp-card full">
+        <div class="comp-label">14.6 完成系プレビュー — 飛行機 Step Detail（フィールド右にリンク）</div>
+        <div style="max-width:420px;margin:0 auto;background:#fff;border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,0.08)">
+          <!-- Header -->
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);background:var(--surface)">
+            <button style="width:32px;height:32px;border-radius:50%;border:none;background:transparent;color:var(--text-dim);display:flex;align-items:center;justify-content:center"><svg class="ic-svg"><use href="#i-down"/></svg></button>
+            <div style="flex:1;text-align:center;font-weight:var(--fw-bold);font-size:var(--fs-md)">ANA NZ90 NRT → AKL</div>
+            <button style="width:32px;height:32px;border-radius:50%;border:none;background:transparent;color:var(--text-dim);display:flex;align-items:center;justify-content:center"><svg class="ic-svg"><use href="#i-more-v"/></svg></button>
+          </div>
+          <!-- Body -->
+          <div style="padding:16px">
+            <!-- 基本情報 with links -->
+            <div style="background:#fff;border:1px solid var(--border);border-radius:8px;overflow:hidden">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--n-100)">
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:11px;font-weight:600;color:var(--text-dim);margin-bottom:2px">便名</div>
+                  <div style="font-size:14px;font-weight:600">ANA NZ90</div>
+                </div>
+                <button style="width:28px;height:28px;border-radius:50%;border:1px solid var(--info-500);background:var(--info-50);color:var(--info-700);display:flex;align-items:center;justify-content:center;flex-shrink:0" aria-label="リンクを開く">
+                  <svg class="ic-svg sm"><use href="#i-link"/></svg>
+                </button>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--n-100)">
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:11px;font-weight:600;color:var(--text-dim);margin-bottom:2px">出発地</div>
+                  <div style="font-size:14px;font-weight:600">東京 成田 (NRT) ターミナル1</div>
+                </div>
+                <button style="width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:#fff;color:var(--info-700);display:flex;align-items:center;justify-content:center;flex-shrink:0" aria-label="地図で開く">
+                  <svg class="ic-svg sm"><use href="#i-map-pin"/></svg>
+                </button>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--n-100)">
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:11px;font-weight:600;color:var(--text-dim);margin-bottom:2px">到着地</div>
+                  <div style="font-size:14px;font-weight:600">オークランド (AKL) ターミナル1</div>
+                </div>
+                <button style="width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:#fff;color:var(--info-700);display:flex;align-items:center;justify-content:center;flex-shrink:0" aria-label="地図で開く">
+                  <svg class="ic-svg sm"><use href="#i-map-pin"/></svg>
+                </button>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px">
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:11px;font-weight:600;color:var(--text-dim);margin-bottom:2px">確認番号</div>
+                  <div style="font-size:14px;font-weight:600;font-family:var(--mono)">EKCJGM</div>
+                </div>
+                <button style="width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:#fff;color:var(--text-dim);display:flex;align-items:center;justify-content:center;flex-shrink:0" aria-label="コピー">
+                  <svg class="ic-svg sm"><use href="#i-copy"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 14.7 完成系サンプル: コンサート会場 -->
+      <div class="comp-card full">
+        <div class="comp-label">14.7 完成系プレビュー — 観光（コンサート会場）</div>
+        <div style="max-width:420px;margin:0 auto;background:#fff;border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,0.08)">
+          <div style="padding:16px">
+            <div style="background:#fff;border:1px solid var(--border);border-radius:8px;overflow:hidden">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--n-100)">
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:11px;font-weight:600;color:var(--text-dim);margin-bottom:2px">会場</div>
+                  <div style="font-size:14px;font-weight:600">東京ドーム</div>
+                </div>
+                <button style="width:28px;height:28px;border-radius:50%;border:1px solid var(--info-500);background:var(--info-50);color:var(--info-700);display:flex;align-items:center;justify-content:center;flex-shrink:0" aria-label="リンクを開く">
+                  <svg class="ic-svg sm"><use href="#i-link"/></svg>
+                </button>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--n-100)">
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:11px;font-weight:600;color:var(--text-dim);margin-bottom:2px">住所</div>
+                  <div style="font-size:14px;font-weight:600">東京都文京区後楽1-3-61</div>
+                </div>
+                <button style="width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:#fff;color:var(--info-700);display:flex;align-items:center;justify-content:center;flex-shrink:0" aria-label="地図で開く">
+                  <svg class="ic-svg sm"><use href="#i-map-pin"/></svg>
+                </button>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px">
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:11px;font-weight:600;color:var(--text-dim);margin-bottom:2px">イベント名</div>
+                  <div style="font-size:14px;font-weight:600">TAYLOR SWIFT | The Eras Tour</div>
+                </div>
+                <button style="width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:#fff;color:var(--info-700);display:flex;align-items:center;justify-content:center;flex-shrink:0" aria-label="検索">
+                  <svg class="ic-svg sm"><use href="#i-search"/></svg>
+                </button>
+              </div>
+            </div>
+            <div style="margin-top:12px;background:var(--info-50);border:1px solid #C6D8F0;border-radius:8px;padding:10px 14px;font-size:12px;line-height:1.7">
+              <strong>会場:</strong> 解決層 B + C（Maps + 検索）の 2 択 Menu。<br/>
+              <strong>住所:</strong> Maps 直リンク（1 択インライン）。<br/>
+              <strong>イベント:</strong> 辞書に無いので Google 検索フォールバック。
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 14.8 安全性ルール -->
+      <div class="comp-card full">
+        <div class="comp-label">14.8 安全性 / UX ルール</div>
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px">
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:14px">
+            <div style="font-size:var(--fs-sm);font-weight:var(--fw-bold);margin-bottom:8px;color:var(--success-700)">必ずやる</div>
+            <ul style="margin:0;padding-left:18px;font-size:var(--fs-xs);line-height:1.9">
+              <li><code class="mono">target="_blank"</code> + <code class="mono">rel="noopener noreferrer"</code></li>
+              <li>値は <code class="mono">encodeURIComponent</code></li>
+              <li>Offline 時は disabled + tooltip</li>
+              <li><code class="mono">resolveStepLinks</code> は純関数（副作用なし）</li>
+              <li>Copy 成功時は <code class="mono">notifications</code> でトースト</li>
+            </ul>
+          </div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:14px">
+            <div style="font-size:var(--fs-sm);font-weight:var(--fw-bold);margin-bottom:8px;color:var(--danger-500)">やらない</div>
+            <ul style="margin:0;padding-left:18px;font-size:var(--fs-xs);line-height:1.9">
+              <li>確認番号 / 認証コードを URL クエリに載せない</li>
+              <li>「外部へ移動します」確認ダイアログ（<code class="mono">tel:</code> のみ OS 任せ）</li>
+              <li>リンクエンコードをサーバーで生成しない</li>
+              <li>リンクアイコンを全フィールドには付けない（ノイズ）</li>
+              <li>公式サイトの <em>絶対</em> マッピング（メンテ負荷）— 静的辞書は主要のみ</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- 14.9 フェーズ分け -->
+      <div class="comp-card full">
+        <div class="comp-label">14.9 フェーズ分け</div>
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:var(--fs-sm);min-width:560px">
+            <thead>
+              <tr style="background:var(--n-50);text-align:left">
+                <th style="padding:10px 12px;font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);border-bottom:1px solid var(--border);width:110px">Phase</th>
+                <th style="padding:10px 12px;font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);border-bottom:1px solid var(--border)">含むもの</th>
+                <th style="padding:10px 12px;font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);border-bottom:1px solid var(--border);width:80px">工数</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="padding:10px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)">Phase 1<br/><span style="font-weight:400;font-size:var(--fs-xs);color:var(--success-700)">MVP</span></td>
+                <td style="padding:10px 12px;border-bottom:1px dashed var(--border);line-height:1.8">住所 / 出発地 / 到着地 → Maps<br/>便名 → FlightAware<br/>メモ内電話 → tel:<br/>確認番号 → コピー<br/>配置は「インライン ↗」1 種のみ</td>
+                <td style="padding:10px 12px;border-bottom:1px dashed var(--border);color:var(--text-dim)">~1 日</td>
+              </tr>
+              <tr>
+                <td style="padding:10px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)">Phase 2</td>
+                <td style="padding:10px 12px;border-bottom:1px dashed var(--border);line-height:1.8">IATA 航空会社 / 空港 / 主要駅 静的辞書<br/>航空会社公式へ直リンク<br/>Menu で複数候補（配置 ②）<br/>宿泊 / 観光 / 食事 / 病院 にも拡張</td>
+                <td style="padding:10px 12px;border-bottom:1px dashed var(--border);color:var(--text-dim)">~1-2 日</td>
+              </tr>
+              <tr>
+                <td style="padding:10px 12px;font-weight:var(--fw-bold)">Phase 3<br/><span style="font-weight:400;font-size:var(--fs-xs);color:var(--text-dim)">将来</span></td>
+                <td style="padding:10px 12px;line-height:1.8">会場 HP 自動解決（Wikipedia / Places API）<br/>サーバー側 link resolver キャッシュ<br/>Apple Maps / Google Maps の選択設定<br/>リンク遷移履歴</td>
+                <td style="padding:10px 12px;color:var(--text-dim)">未定</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
   <p class="muted" style="text-align:center;font-size:var(--fs-xs);margin-top:60px">toritavi Design System v2 · Grocery-inspired · Flat icon set · 2026-04-19</p>
 
 </div>
