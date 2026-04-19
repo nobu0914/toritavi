@@ -232,11 +232,12 @@ export function StepDetailDrawer({
 
   const dragTransform =
     dragY > 0 || isSnappingBack ? `translateY(${dragY}px)` : undefined;
-  const dragTransition = isDragging
-    ? "none"
-    : isSnappingBack
-      ? "transform 0.22s cubic-bezier(.2,.9,.2,1)"
-      : undefined;
+  // Use longhand transition properties to avoid clashing with Mantine Drawer's
+  // internal `transitionDuration` (React 19 warns when shorthand + longhand
+  // mix on the same element).
+  const dragTransitionProperty = isDragging ? "none" : isSnappingBack ? "transform" : undefined;
+  const dragTransitionDuration = isSnappingBack ? "0.22s" : undefined;
+  const dragTransitionTimingFunction = isSnappingBack ? "cubic-bezier(.2,.9,.2,1)" : undefined;
 
   return (
     <Drawer
@@ -251,7 +252,9 @@ export function StepDetailDrawer({
           display: "flex",
           flexDirection: "column",
           transform: dragTransform,
-          transition: dragTransition,
+          transitionProperty: dragTransitionProperty,
+          transitionDuration: dragTransitionDuration,
+          transitionTimingFunction: dragTransitionTimingFunction,
         },
         body: { padding: 0, flex: 1, display: "flex", flexDirection: "column", minHeight: 0 },
       }}
