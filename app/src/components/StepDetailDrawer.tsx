@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import {
   ActionIcon,
   Box,
@@ -184,84 +184,6 @@ export function StepDetailDrawer({
     });
   };
 
-  /*
-   * Drag-to-close gesture (iOS sheet convention).
-   * User starts a touch on the SheetHeader region and drags downward.
-   * We track the delta, apply a translateY on the Mantine Drawer content so
-   * the sheet follows the finger, and on release decide:
-   *   - past threshold (≥ 120px or strong flick) → call onClose; Mantine
-   *     then plays its normal exit animation from the current position.
-   *   - otherwise → snap back to 0 with a short easing.
-   */
-  const DRAG_CLOSE_THRESHOLD = 120;
-  const DRAG_FLICK_VELOCITY = 0.6; // px/ms
-  const [dragY, setDragY] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
-  const [isSnappingBack, setIsSnappingBack] = useState(false);
-  const touchStartY = useRef<number | null>(null);
-  const touchStartT = useRef<number>(0);
-  const bodyRef = useRef<HTMLDivElement>(null);
-
-  // grab bar 用: 常に drag を発動する。
-  const onDragStart = (e: React.TouchEvent) => {
-    const target = e.target as HTMLElement | null;
-    if (target?.closest('button, [role="button"], [data-no-drag="true"]')) {
-      touchStartY.current = null;
-      return;
-    }
-    touchStartY.current = e.touches[0].clientY;
-    touchStartT.current = Date.now();
-  };
-  // body（スクロール領域）用: scrollTop が先頭のときだけ drag を armed にする。
-  // iOS 標準の Bottom Sheet 挙動 — スクロールし切った後に下スワイプで sheet が閉じる。
-  const onBodyDragStart = (e: React.TouchEvent) => {
-    const target = e.target as HTMLElement | null;
-    if (target?.closest('button, [role="button"], input, textarea, [contenteditable="true"], [data-no-drag="true"]')) {
-      touchStartY.current = null;
-      return;
-    }
-    const body = bodyRef.current;
-    if (body && body.scrollTop > 0) {
-      touchStartY.current = null;
-      return;
-    }
-    touchStartY.current = e.touches[0].clientY;
-    touchStartT.current = Date.now();
-  };
-  const onDragMove = (e: React.TouchEvent) => {
-    if (touchStartY.current == null) return;
-    const dy = e.touches[0].clientY - touchStartY.current;
-    if (dy <= 0) { if (dragY !== 0) setDragY(0); return; }
-    if (!isDragging) setIsDragging(true);
-    setDragY(dy);
-  };
-  const onDragEnd = () => {
-    if (touchStartY.current == null) return;
-    const dt = Math.max(1, Date.now() - touchStartT.current);
-    const velocity = dragY / dt;
-    touchStartY.current = null;
-    setIsDragging(false);
-    const shouldClose = dragY >= DRAG_CLOSE_THRESHOLD || velocity >= DRAG_FLICK_VELOCITY;
-    if (shouldClose) {
-      onClose();
-      // Keep dragY as-is so the Mantine exit transition picks up from the
-      // current translated position — avoids a visible jump back to 0.
-      return;
-    }
-    setIsSnappingBack(true);
-    setDragY(0);
-    window.setTimeout(() => setIsSnappingBack(false), 250);
-  };
-
-  const dragTransform =
-    dragY > 0 || isSnappingBack ? `translateY(${dragY}px)` : undefined;
-  // Use longhand transition properties to avoid clashing with Mantine Drawer's
-  // internal `transitionDuration` (React 19 warns when shorthand + longhand
-  // mix on the same element).
-  const dragTransitionProperty = isDragging ? "none" : isSnappingBack ? "transform" : undefined;
-  const dragTransitionDuration = isSnappingBack ? "0.22s" : undefined;
-  const dragTransitionTimingFunction = isSnappingBack ? "cubic-bezier(.2,.9,.2,1)" : undefined;
-
   return (
     <Drawer
       opened={opened}
@@ -276,47 +198,10 @@ export function StepDetailDrawer({
           borderRadius: "16px 16px 0 0",
           display: "flex",
           flexDirection: "column",
-          transform: dragTransform,
-          transitionProperty: dragTransitionProperty,
-          transitionDuration: dragTransitionDuration,
-          transitionTimingFunction: dragTransitionTimingFunction,
         },
         body: { padding: 0, flex: 1, display: "flex", flexDirection: "column", minHeight: 0 },
       }}
     >
-      {/*
-        iOS 標準の grab bar。ここでのみ drag-to-close を受け付ける。
-        以前は SheetHeader 全体を drag wrapper で包んでいたが、iOS Safari の
-        touch-action: pan-y 下では ⋮ タップの合成 click が散発的に失われ、
-        Menu が開かない報告があった。
-      */}
-      <div
-        onTouchStart={onDragStart}
-        onTouchMove={onDragMove}
-        onTouchEnd={onDragEnd}
-        onTouchCancel={onDragEnd}
-        style={{
-          touchAction: "pan-y",
-          flexShrink: 0,
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          padding: "8px 0 4px",
-          background: "var(--surface)",
-          borderRadius: "16px 16px 0 0",
-          cursor: "grab",
-        }}
-        aria-hidden="true"
-      >
-        <div
-          style={{
-            width: 36,
-            height: 4,
-            borderRadius: 999,
-            background: "var(--n-300)",
-          }}
-        />
-      </div>
       <SheetHeader
         title={isEdit ? editingTitle || draft.title || "予定" : "予定を追加"}
         onClose={onClose}
@@ -358,15 +243,7 @@ export function StepDetailDrawer({
       />
 
       {/* スクロール可能な本体 */}
-      <Box
-        className={classes.body}
-        ref={bodyRef}
-        onTouchStart={onBodyDragStart}
-        onTouchMove={onDragMove}
-        onTouchEnd={onDragEnd}
-        onTouchCancel={onDragEnd}
-        style={{ touchAction: "pan-y" }}
-      >
+      <Box className={classes.body}>
         {mode === "view" ? (
           <>
             <Ticket
