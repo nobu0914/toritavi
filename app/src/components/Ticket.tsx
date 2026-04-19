@@ -184,6 +184,19 @@ function highlightSpec(category: StepCategory): HighlightSpec {
   }
 }
 
+/** Pull a terminal label out of strings like "東京 成田 (NRT) ターミナル1",
+ *  "Terminal 2", "T1", or "（ターミナル3）". Returns "1" / "T2" / "3" etc. */
+function extractTerminal(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  const jp = value.match(/ターミナル\s*([0-9A-Za-z]+)/);
+  if (jp) return jp[1];
+  const en = value.match(/Terminal\s*([0-9A-Za-z]+)/i);
+  if (en) return en[1];
+  const short = value.match(/(?:^|\s)T-?([0-9]+)(?:\s|$)/);
+  if (short) return `T${short[1]}`;
+  return undefined;
+}
+
 export function Ticket({ data, status, needsReview, inferred, sourceImageUrl, sourceImageUrls, onCopyMailBody }: Props) {
   const [activePage, setActivePage] = useState(0);
 
@@ -201,26 +214,41 @@ export function Ticket({ data, status, needsReview, inferred, sourceImageUrl, so
   const inferredSet = useMemo(() => new Set(inferred ?? []), [inferred]);
 
   const hl = highlightSpec(data.category);
-  // DS v2 §13.11 rule (4): keep the frame even when both values are missing
-  // so the layout stays consistent across boarding-pass / e-ticket variants.
-  const highlight = useMemo(() => {
+  // DS v2 §13.11 rule (4): keep the frame even when values are missing so the
+  // layout stays consistent across boarding-pass / e-ticket variants.
+  // 飛行機 gets a 4-cell row (Time / Terminal / Gate / Seat) — the full set of
+  // "need right now" departure info. Other categories keep the 2-cell pair.
+  const highlightCells = useMemo<
+    { label: string; value: string; infoId?: string }[] | null
+  >(() => {
     if (!hl) return null;
     const find = (re: RegExp) => data.information.find((i) => re.test(i.label.trim()));
-    const info1 = find(hl.match1);
-    const info2 = find(hl.match2);
-    return {
-      label1: hl.label1,
-      value1: info1?.value ?? "",
-      id1: info1?.id,
-      label2: hl.label2,
-      value2: info2?.value ?? "",
-      id2: info2?.id,
-    };
-  }, [data.information, hl]);
+    const gate = find(hl.match1);
+    const seat = find(hl.match2);
+    if (data.category !== "飛行機") {
+      return [
+        { label: hl.label1, value: gate?.value ?? "", infoId: gate?.id },
+        { label: hl.label2, value: seat?.value ?? "", infoId: seat?.id },
+      ];
+    }
+    const termInfo = data.information.find((i) => /ターミナル|terminal/i.test(i.label));
+    const terminal = termInfo?.value ?? extractTerminal(data.from);
+    return [
+      { label: "Time",     value: data.time ?? "" },
+      { label: "Terminal", value: terminal ?? "", infoId: termInfo?.id },
+      { label: hl.label1,  value: gate?.value ?? "", infoId: gate?.id },
+      { label: hl.label2,  value: seat?.value ?? "", infoId: seat?.id },
+    ];
+  }, [data.category, data.information, data.from, data.time, hl]);
 
   const highlightIds = useMemo(
-    () => new Set([highlight?.id1, highlight?.id2].filter(Boolean) as string[]),
-    [highlight]
+    () =>
+      new Set(
+        (highlightCells ?? [])
+          .map((c) => c.infoId)
+          .filter((id): id is string => Boolean(id))
+      ),
+    [highlightCells]
   );
   const visibleInformation = useMemo(
     () => data.information.filter((i) => !highlightIds.has(i.id)),
@@ -330,22 +358,18 @@ export function Ticket({ data, status, needsReview, inferred, sourceImageUrl, so
         )}
       </div>
 
-      {(highlight || data.confNumber) && <div className="ticket-perf"></div>}
+      {(highlightCells || data.confNumber) && <div className="ticket-perf"></div>}
 
-      {highlight && (
-        <div className="ticket-highlight">
-          <div className="ticket-highlight-cell">
-            <div className="ticket-highlight-label">{highlight.label1}</div>
-            <div className={`ticket-highlight-value ${highlight.value1 ? "" : "empty"}`.trim()}>
-              {highlight.value1 || "未読取"}
+      {highlightCells && (
+        <div className="ticket-highlight" data-cells={highlightCells.length}>
+          {highlightCells.map((c, i) => (
+            <div key={i} className="ticket-highlight-cell">
+              <div className="ticket-highlight-label">{c.label}</div>
+              <div className={`ticket-highlight-value ${c.value ? "" : "empty"}`.trim()}>
+                {c.value || "未読取"}
+              </div>
             </div>
-          </div>
-          <div className="ticket-highlight-cell">
-            <div className="ticket-highlight-label">{highlight.label2}</div>
-            <div className={`ticket-highlight-value ${highlight.value2 ? "" : "empty"}`.trim()}>
-              {highlight.value2 || "未読取"}
-            </div>
-          </div>
+          ))}
         </div>
       )}
 
