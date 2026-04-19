@@ -144,7 +144,10 @@ function splitPort(value: string | undefined): { code: string; name?: string } {
     // Japanese and Latin names are present (OCR often doubles them up).
     const cleaned = raw
       .replace(/[（(][^)）]*[)）]/g, " ")
-      .replace(/\s*[-–—]\s*.+$/, "")
+      // Strip trailing " - ターミナル1" / " – Terminal 2" qualifiers.
+      // Require whitespace on BOTH sides of the dash so we don't bite into
+      // names like "Tokyo-Narita" or "Rio de Janeiro-Galeão".
+      .replace(/\s+[-–—]\s+.+$/, "")
       .replace(/\s+/g, " ")
       .trim();
     const jp = cleaned.match(JP_PHRASE);
