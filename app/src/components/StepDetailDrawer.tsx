@@ -202,6 +202,15 @@ export function StepDetailDrawer({
   const touchStartT = useRef<number>(0);
 
   const onDragStart = (e: React.TouchEvent) => {
+    // ⋮ / ✕ など操作系の子要素に触れたときは drag を無効化する。
+    // 有効にしてしまうと iOS Safari で touchAction: pan-y の影響で
+    // 合成 click がキャンセルされ、Menu が開かず Drawer だけが閉じる挙動に
+    // 見える報告があった。操作ボタンの範囲では drag しない方針。
+    const target = e.target as HTMLElement | null;
+    if (target?.closest('button, [role="button"], [data-no-drag="true"]')) {
+      touchStartY.current = null;
+      return;
+    }
     touchStartY.current = e.touches[0].clientY;
     touchStartT.current = Date.now();
   };
