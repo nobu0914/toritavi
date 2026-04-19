@@ -8,6 +8,59 @@
   padding: 12px 14px 0;
 }
 
+/* === Search Bar (DS v2 "Search Pill") === */
+.searchBar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-pill);
+  padding: 10px 12px 10px 16px;
+  margin-bottom: 14px;
+}
+
+.searchIcon {
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+
+.searchInput {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--text);
+  font-size: var(--fs-sm);
+  font-family: inherit;
+  padding: 0;
+}
+
+.searchInput::placeholder {
+  color: var(--text-dim);
+}
+
+.searchClear {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
+  background: var(--n-100);
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+}
+
+.searchClear:hover {
+  background: var(--n-300);
+  color: var(--text);
+}
+
 /* === Workspace Hero (white surface card) === */
 .hero {
   background: var(--surface);

@@ -10,7 +10,9 @@ import {
   IconCheck,
   IconChevronRight,
   IconInfoCircle,
+  IconSearch,
   IconTrain,
+  IconX,
 } from "@tabler/icons-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -28,6 +30,7 @@ import classes from "./page.module.css";
 
 export default function TripsClient({ journeys: initialJourneys }: { journeys: Journey[] }) {
   const [journeys, setJourneys] = useState<Journey[]>(initialJourneys);
+  const [query, setQuery] = useState("");
 
   // Hydrate from client storage on mount:
   //   - Guest: SSR returns []; read localStorage.
@@ -98,6 +101,19 @@ export default function TripsClient({ journeys: initialJourneys }: { journeys: J
   const now = new Date();
   now.setHours(0, 0, 0, 0);
 
+  // 検索: title / step.title / step.detail / step.confNumber / step.from / step.to を
+  // 部分一致・大小無視・前後空白無視で AND 検索（1 本のクエリ）。
+  const normalizedQuery = query.trim().toLowerCase();
+  const isSearching = normalizedQuery.length > 0;
+  const matchesQuery = (journey: Journey): boolean => {
+    if (!isSearching) return true;
+    const fields: (string | undefined)[] = [journey.title];
+    for (const step of journey.steps) {
+      fields.push(step.title, step.detail, step.confNumber, step.from, step.to);
+    }
+    return fields.some((f) => f && f.toLowerCase().includes(normalizedQuery));
+  };
+
   const sortedJourneys = [...journeys].sort((a, b) => {
     const aState = getJourneyState(a);
     const bState = getJourneyState(b);
@@ -110,6 +126,7 @@ export default function TripsClient({ journeys: initialJourneys }: { journeys: J
     return aTime - bTime;
   });
 
+  const filteredJourneys = sortedJourneys.filter(matchesQuery);
   const upcomingJourneys = sortedJourneys.filter((journey) => getJourneyState(journey) !== "完了");
   const focusJourney = upcomingJourneys[0];
   const focusStep = focusJourney ? getNextActionStep(sortStepsByTime(focusJourney.steps)) : undefined;
@@ -155,6 +172,31 @@ export default function TripsClient({ journeys: initialJourneys }: { journeys: J
     <>
       <AppHeader title="toritavi" />
       <Box className={classes.screen} pb={110}>
+        <Box className={classes.searchBar}>
+          <IconSearch size={18} className={classes.searchIcon} />
+          <input
+            className={classes.searchInput}
+            type="text"
+            inputMode="search"
+            enterKeyHint="search"
+            value={query}
+            onChange={(e) => setQuery(e.currentTarget.value)}
+            placeholder="旅程名・便名・確認番号で検索"
+            aria-label="Journey を検索"
+          />
+          {isSearching && (
+            <button
+              type="button"
+              className={classes.searchClear}
+              onClick={() => setQuery("")}
+              aria-label="検索をクリア"
+            >
+              <IconX size={14} />
+            </button>
+          )}
+        </Box>
+
+        {!isSearching && (
         <Box className={classes.hero}>
           <Box className={classes.heroTop}>
             <Text className={classes.heroLabel}>ジャーニー ワークスペース</Text>
@@ -196,8 +238,9 @@ export default function TripsClient({ journeys: initialJourneys }: { journeys: J
             </Link>
           )}
         </Box>
+        )}
 
-        {attentionCards.length > 0 && (
+        {!isSearching && attentionCards.length > 0 && (
           <Box className={classes.section}>
             <Box className={classes.sectionHead}>
               <Text className={classes.sectionLabel}>要確認</Text>
@@ -224,10 +267,12 @@ export default function TripsClient({ journeys: initialJourneys }: { journeys: J
 
         <Box className={classes.section}>
           <Box className={classes.sectionHead}>
-            <Text className={classes.sectionLabel}>ジャーニー</Text>
+            <Text className={classes.sectionLabel}>
+              {isSearching ? "検索結果" : "ジャーニー"}
+            </Text>
           </Box>
           <Box className={classes.stack}>
-            {sortedJourneys.length === 0 && (
+            {!isSearching && sortedJourneys.length === 0 && (
               <Box className={classes.emptyCard}>
                 <Box className={classes.emptyIcon}>
                   <IconBox size={34} stroke={1.5} />
@@ -239,7 +284,19 @@ export default function TripsClient({ journeys: initialJourneys }: { journeys: J
               </Box>
             )}
 
-            {sortedJourneys.map((journey, index) => {
+            {isSearching && filteredJourneys.length === 0 && (
+              <Box className={classes.emptyCard}>
+                <Box className={classes.emptyIcon}>
+                  <IconSearch size={34} stroke={1.5} />
+                </Box>
+                <Text className={classes.emptyTitle}>一致する Journey はありません</Text>
+                <Text className={classes.emptyDescription}>
+                  旅程名、便名、確認番号で検索できます
+                </Text>
+              </Box>
+            )}
+
+            {filteredJourneys.map((journey, index) => {
               const state = stateLabel(journey);
               const nextStep = getNextActionStep(sortStepsByTime(journey.steps));
               const coverVariant = index === 0 ? "primary" : index === 1 ? "dark" : "muted";
@@ -283,7 +340,7 @@ export default function TripsClient({ journeys: initialJourneys }: { journeys: J
           </Box>
         </Box>
 
-        {queueItems.length > 0 && (
+        {!isSearching && queueItems.length > 0 && (
           <Box className={classes.section}>
             <Box className={classes.sectionHead}>
               <Text className={classes.sectionLabel}>取り込み待ち</Text>
