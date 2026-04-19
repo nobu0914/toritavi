@@ -311,7 +311,9 @@ export function StepDetailDrawer({
           isEdit && mode === "view" ? (
             // DS v2 §10.5 ① variant A: header has ⋮ のみ。編集は ⋮ メニュー or
             // 下部 CTA から。ヘッダーに ✎ を置くと 3 経路になって重複するため。
-            <Menu position="bottom-end" shadow="md" width={220} withArrow>
+            // Drawer を zIndex=400 に上げているため、Menu の dropdown portal も
+            // 500 まで持ち上げないと背後に潜って無反応に見える。
+            <Menu position="bottom-end" shadow="md" width={220} withArrow zIndex={500}>
               <Menu.Target>
                 <ActionIcon variant="subtle" color="gray" radius="xl" aria-label="その他">
                   <IconDotsVertical size={18} />
