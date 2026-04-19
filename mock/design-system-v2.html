@@ -1115,7 +1115,7 @@
   .ticket-highlight-cell + .ticket-highlight-cell { border-left: 1px solid var(--n-200); }
   .ticket-highlight-label {
     font-size: 10px; font-weight: 700; color: var(--text-dim);
-    text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 4px;
+    letter-spacing: 0.2px; margin-bottom: 4px;
   }
   .ticket-highlight-value {
     font-family: var(--font-mono); font-weight: 800;
@@ -5719,15 +5719,15 @@ HND → ITM
         </p>
 
         <div style="display:grid;grid-template-columns:1fr;gap:16px">
-          <!-- 飛行機: Time / Terminal / Gate / Seat (4 cells, 最頻出カテゴリ) -->
+          <!-- 飛行機: 出発時刻 / ターミナル / ゲート / 座席 (4 cells, 最頻出カテゴリ) -->
           <div>
-            <div style="font-size:var(--fs-xs);color:var(--text-dim);margin-bottom:8px;font-weight:var(--fw-bold)">A. 飛行機 (Time / Terminal / Gate / Seat) — 4 セル</div>
+            <div style="font-size:var(--fs-xs);color:var(--text-dim);margin-bottom:8px;font-weight:var(--fw-bold)">A. 飛行機（出発時刻 / ターミナル / ゲート / 座席）— 4 セル</div>
             <div style="border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden;box-shadow:var(--shadow-xs)">
               <div class="ticket-highlight" data-cells="4">
-                <div class="ticket-highlight-cell"><div class="ticket-highlight-label">Time</div><div class="ticket-highlight-value">21:15</div></div>
-                <div class="ticket-highlight-cell"><div class="ticket-highlight-label">Terminal</div><div class="ticket-highlight-value">1</div></div>
-                <div class="ticket-highlight-cell"><div class="ticket-highlight-label">Gate</div><div class="ticket-highlight-value">107B</div></div>
-                <div class="ticket-highlight-cell"><div class="ticket-highlight-label">Seat</div><div class="ticket-highlight-value">28H</div></div>
+                <div class="ticket-highlight-cell"><div class="ticket-highlight-label">出発時刻</div><div class="ticket-highlight-value">21:15</div></div>
+                <div class="ticket-highlight-cell"><div class="ticket-highlight-label">ターミナル</div><div class="ticket-highlight-value">1</div></div>
+                <div class="ticket-highlight-cell"><div class="ticket-highlight-label">ゲート</div><div class="ticket-highlight-value">107B</div></div>
+                <div class="ticket-highlight-cell"><div class="ticket-highlight-label">座席</div><div class="ticket-highlight-value">28H</div></div>
               </div>
             </div>
           </div>
@@ -5735,21 +5735,21 @@ HND → ITM
 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
           <div>
-            <div style="font-size:var(--fs-xs);color:var(--text-dim);margin-bottom:8px;font-weight:var(--fw-bold)">B. 列車 (Car / Seat)</div>
+            <div style="font-size:var(--fs-xs);color:var(--text-dim);margin-bottom:8px;font-weight:var(--fw-bold)">B. 列車（号車 / 座席）</div>
             <div style="border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden;box-shadow:var(--shadow-xs)">
               <div class="ticket-highlight" data-cells="2">
-                <div class="ticket-highlight-cell"><div class="ticket-highlight-label">Car</div><div class="ticket-highlight-value">7</div></div>
-                <div class="ticket-highlight-cell"><div class="ticket-highlight-label">Seat</div><div class="ticket-highlight-value">12A</div></div>
+                <div class="ticket-highlight-cell"><div class="ticket-highlight-label">号車</div><div class="ticket-highlight-value">7</div></div>
+                <div class="ticket-highlight-cell"><div class="ticket-highlight-label">座席</div><div class="ticket-highlight-value">12A</div></div>
               </div>
             </div>
           </div>
 
           <div>
-            <div style="font-size:var(--fs-xs);color:var(--text-dim);margin-bottom:8px;font-weight:var(--fw-bold)">C. イベント (Block / Seat)</div>
+            <div style="font-size:var(--fs-xs);color:var(--text-dim);margin-bottom:8px;font-weight:var(--fw-bold)">C. イベント（ブロック / 座席）</div>
             <div style="border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden;box-shadow:var(--shadow-xs)">
               <div class="ticket-highlight" data-cells="2">
-                <div class="ticket-highlight-cell"><div class="ticket-highlight-label">Block</div><div class="ticket-highlight-value">22</div></div>
-                <div class="ticket-highlight-cell"><div class="ticket-highlight-label">Seat</div><div class="ticket-highlight-value" style="color:var(--accent-500)">087</div></div>
+                <div class="ticket-highlight-cell"><div class="ticket-highlight-label">ブロック</div><div class="ticket-highlight-value">22</div></div>
+                <div class="ticket-highlight-cell"><div class="ticket-highlight-label">座席</div><div class="ticket-highlight-value" style="color:var(--accent-500)">087</div></div>
               </div>
             </div>
           </div>
@@ -5758,20 +5758,20 @@ HND → ITM
             <div style="font-size:var(--fs-xs);color:var(--text-dim);margin-bottom:8px;font-weight:var(--fw-bold)">D. 飛行機 / 欠落時</div>
             <div style="border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden;box-shadow:var(--shadow-xs)">
               <div class="ticket-highlight" data-cells="4">
-                <div class="ticket-highlight-cell"><div class="ticket-highlight-label">Time</div><div class="ticket-highlight-value">21:15</div></div>
-                <div class="ticket-highlight-cell"><div class="ticket-highlight-label">Terminal</div><div class="ticket-highlight-value empty">未読取</div></div>
-                <div class="ticket-highlight-cell"><div class="ticket-highlight-label">Gate</div><div class="ticket-highlight-value">107B</div></div>
-                <div class="ticket-highlight-cell"><div class="ticket-highlight-label">Seat</div><div class="ticket-highlight-value empty">ゲートにて指定</div></div>
+                <div class="ticket-highlight-cell"><div class="ticket-highlight-label">出発時刻</div><div class="ticket-highlight-value">21:15</div></div>
+                <div class="ticket-highlight-cell"><div class="ticket-highlight-label">ターミナル</div><div class="ticket-highlight-value empty">未読取</div></div>
+                <div class="ticket-highlight-cell"><div class="ticket-highlight-label">ゲート</div><div class="ticket-highlight-value">107B</div></div>
+                <div class="ticket-highlight-cell"><div class="ticket-highlight-label">座席</div><div class="ticket-highlight-value empty">ゲートにて指定</div></div>
               </div>
             </div>
           </div>
 
           <div>
-            <div style="font-size:var(--fs-xs);color:var(--text-dim);margin-bottom:8px;font-weight:var(--fw-bold)">E. バス (Stop / Seat)</div>
+            <div style="font-size:var(--fs-xs);color:var(--text-dim);margin-bottom:8px;font-weight:var(--fw-bold)">E. バス（のりば / 座席）</div>
             <div style="border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden;box-shadow:var(--shadow-xs)">
               <div class="ticket-highlight" data-cells="2">
-                <div class="ticket-highlight-cell"><div class="ticket-highlight-label">Stop</div><div class="ticket-highlight-value">3</div></div>
-                <div class="ticket-highlight-cell"><div class="ticket-highlight-label">Seat</div><div class="ticket-highlight-value empty">自由席</div></div>
+                <div class="ticket-highlight-cell"><div class="ticket-highlight-label">のりば</div><div class="ticket-highlight-value">3</div></div>
+                <div class="ticket-highlight-cell"><div class="ticket-highlight-label">座席</div><div class="ticket-highlight-value empty">自由席</div></div>
               </div>
             </div>
           </div>

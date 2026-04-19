@@ -176,10 +176,10 @@ type HighlightSpec = { label1: string; match1: RegExp; label2: string; match2: R
 // Permissive contains-based matching so labels like "座席番号" / "ゲート番号" / "Gate No." も拾える
 function highlightSpec(category: StepCategory): HighlightSpec {
   switch (category) {
-    case "飛行機": return { label1: "Gate", match1: /ゲート|gate/i,        label2: "Seat", match2: /座席|seat|シート/i };
-    case "列車":   return { label1: "Car",  match1: /号車|car/i,           label2: "Seat", match2: /座席|seat|シート/i };
-    case "バス":   return { label1: "Stop", match1: /のりば|乗り場|stop|platform/i, label2: "Seat", match2: /座席|seat|シート/i };
-    case "観光":   return { label1: "Block",match1: /ブロック|block/i,     label2: "Seat", match2: /座席|seat|シート|席番号/i };
+    case "飛行機": return { label1: "ゲート",   match1: /ゲート|gate/i,                    label2: "座席", match2: /座席|seat|シート/i };
+    case "列車":   return { label1: "号車",     match1: /号車|car/i,                       label2: "座席", match2: /座席|seat|シート/i };
+    case "バス":   return { label1: "のりば",   match1: /のりば|乗り場|stop|platform/i,    label2: "座席", match2: /座席|seat|シート/i };
+    case "観光":   return { label1: "ブロック", match1: /ブロック|block/i,                 label2: "座席", match2: /座席|seat|シート|席番号/i };
     default: return null;
   }
 }
@@ -234,10 +234,10 @@ export function Ticket({ data, status, needsReview, inferred, sourceImageUrl, so
     const termInfo = data.information.find((i) => /ターミナル|terminal/i.test(i.label));
     const terminal = termInfo?.value ?? extractTerminal(data.from);
     return [
-      { label: "Time",     value: data.time ?? "" },
-      { label: "Terminal", value: terminal ?? "", infoId: termInfo?.id },
-      { label: hl.label1,  value: gate?.value ?? "", infoId: gate?.id },
-      { label: hl.label2,  value: seat?.value ?? "", infoId: seat?.id },
+      { label: "出発時刻",   value: data.time ?? "" },
+      { label: "ターミナル", value: terminal ?? "", infoId: termInfo?.id },
+      { label: hl.label1,    value: gate?.value ?? "", infoId: gate?.id },
+      { label: hl.label2,    value: seat?.value ?? "", infoId: seat?.id },
     ];
   }, [data.category, data.information, data.from, data.time, hl]);
 
