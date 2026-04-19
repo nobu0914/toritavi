@@ -96,8 +96,24 @@ export async function updateJourney(
   if (uErr) throw new Error(`Journey更新に失敗: ${uErr.message}`);
 
   if (steps) {
-    const { error: dErr } = await sb.from("toritavi_steps").delete().eq("journey_id", id);
-    if (dErr) throw new Error(`既存ステップ削除に失敗: ${dErr.message}`);
+    // Fetch existing step IDs so we can diff and preserve image columns.
+    // Using light select (id only) — avoids shipping image blobs we don't need.
+    const { data: existingRows } = await sb
+      .from("toritavi_steps")
+      .select("id")
+      .eq("journey_id", id);
+    const existingIds = new Set((existingRows ?? []).map((r: { id: string }) => r.id));
+    const nextIds = new Set(steps.map((s) => s.id));
+    const removedIds = [...existingIds].filter((eid) => !nextIds.has(eid));
+
+    if (removedIds.length > 0) {
+      const { error: dErr } = await sb
+        .from("toritavi_steps")
+        .delete()
+        .in("id", removedIds);
+      if (dErr) throw new Error(`ステップ削除に失敗: ${dErr.message}`);
+    }
+
     if (steps.length > 0) {
       const { error: sErr } = await sb.from("toritavi_steps").upsert(
         steps.map((s, i) => stepToRow(s, id, userId, i))
@@ -180,7 +196,7 @@ function rowToStep(row: any): Step {
 }
 
 function stepToRow(step: Step, journeyId: string, userId: string, sortOrder: number): Record<string, unknown> {
-  return {
+  const row: Record<string, unknown> = {
     id: step.id,
     journey_id: journeyId,
     user_id: userId,
@@ -196,8 +212,6 @@ function stepToRow(step: Step, journeyId: string, userId: string, sortOrder: num
     conf_number: step.confNumber || null,
     memo: step.memo || null,
     source: step.source || null,
-    source_image_url: step.sourceImageUrl || null,
-    source_image_urls: step.sourceImageUrls || null,
     timezone: step.timezone || null,
     status: step.status,
     inferred: step.inferred || null,
@@ -205,4 +219,14 @@ function stepToRow(step: Step, journeyId: string, userId: string, sortOrder: num
     information: step.information || [],
     sort_order: sortOrder,
   };
+  // Omit image fields when undefined so upsert preserves existing DB values
+  // (the calling layer loads steps via STEP_COLUMNS_LIGHT which excludes images for perf).
+  // Pass an explicit null/empty string to clear.
+  if (step.sourceImageUrl !== undefined) {
+    row.source_image_url = step.sourceImageUrl || null;
+  }
+  if (step.sourceImageUrls !== undefined) {
+    row.source_image_urls = step.sourceImageUrls || null;
+  }
+  return row;
 }
