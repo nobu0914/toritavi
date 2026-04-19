@@ -6356,6 +6356,337 @@ HND → ITM
     </div>
   </section>
 
+  <!-- ============================================================ -->
+  <!-- === 15. AI コンシェルジュ                                 === -->
+  <!-- ============================================================ -->
+  <section class="section">
+    <h2 class="section-title">15. AI コンシェルジュ</h2>
+    <p class="section-desc">
+      登録済みの Journey / Step データを文脈に、ユーザーの自然言語質問に答える対話 UI。
+      「検索する」（§TOP 検索）の対になる「<strong>相談する</strong>」体験。モデルは Claude Haiku 4.5 から開始、Tool Use で
+      「予定に追加」等の操作を <strong>ユーザー確認付き</strong>で実行する。対応実装候補:
+      <code class="mono">app/concierge/page.tsx (new), api/concierge/route.ts (new), components/ConciergeChat.tsx,
+      components/ConciergeToolCard.tsx, lib/concierge-context.ts (PII マスク含む)</code>
+    </p>
+    <div class="section-divider"></div>
+
+    <div class="components">
+
+      <!-- 15.1 原則 -->
+      <div class="comp-card full">
+        <div class="comp-label">15.1 5 原則</div>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px">
+          <div style="background:var(--info-50);border-radius:var(--r-md);padding:12px">
+            <div style="font-size:var(--fs-xs);font-weight:var(--fw-bold);color:var(--info-700);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Safe by Default</div>
+            <div style="font-size:var(--fs-xs);line-height:1.7">サーバー側 proxy / PII マスク / Tool は確認必須。</div>
+          </div>
+          <div style="background:var(--accent-50);border-radius:var(--r-md);padding:12px">
+            <div style="font-size:var(--fs-xs);font-weight:var(--fw-bold);color:var(--accent-700);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Low Cost</div>
+            <div style="font-size:var(--fs-xs);line-height:1.7">Haiku 4.5 を既定。重い提案時だけ Sonnet へ自動昇格（P2）。</div>
+          </div>
+          <div style="background:var(--success-50);border-radius:var(--r-md);padding:12px">
+            <div style="font-size:var(--fs-xs);font-weight:var(--fw-bold);color:var(--success-700);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Context Aware</div>
+            <div style="font-size:var(--fs-xs);line-height:1.7">直近 3 Journey + 指定 Step を system prompt に注入。</div>
+          </div>
+          <div style="background:var(--warn-50);border-radius:var(--r-md);padding:12px">
+            <div style="font-size:var(--fs-xs);font-weight:var(--fw-bold);color:var(--warn-700);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Observable</div>
+            <div style="font-size:var(--fs-xs);line-height:1.7">会話は Supabase 保存、ユーザーは履歴を見返せる。</div>
+          </div>
+          <div style="background:var(--n-100);border-radius:var(--r-md);padding:12px">
+            <div style="font-size:var(--fs-xs);font-weight:var(--fw-bold);color:var(--n-700);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Graceful Cap</div>
+            <div style="font-size:var(--fs-xs);line-height:1.7">月予算 + 分/日 流量超過時は専用テロップで無効化。</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 15.2 TabBar 5 tabs -->
+      <div class="comp-card full">
+        <div class="comp-label">15.2 TabBar 5 タブ構成</div>
+        <div style="max-width:420px;margin:0 auto">
+          <div style="background:var(--ink-800);border-radius:16px 16px 0 0;padding:10px 10px 14px;display:flex;justify-content:space-around;gap:4px">
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 2px;color:var(--ink-100)">
+              <svg class="ic-svg" style="width:22px;height:22px"><use href="#i-plane"/></svg>
+              <div style="font-size:10px;font-weight:600">旅程</div>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 2px;color:var(--ink-100)">
+              <svg class="ic-svg" style="width:22px;height:22px"><use href="#i-image"/></svg>
+              <div style="font-size:10px;font-weight:600">予定登録</div>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 2px;color:#fff;background:rgba(255,255,255,0.12);border-radius:10px;position:relative">
+              <svg class="ic-svg" style="width:22px;height:22px"><use href="#i-message"/></svg>
+              <div style="font-size:10px;font-weight:600">コンシェルジュ</div>
+              <div style="position:absolute;top:2px;right:8px;width:6px;height:6px;border-radius:50%;background:var(--accent-500)"></div>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 2px;color:var(--ink-100)">
+              <svg class="ic-svg" style="width:22px;height:22px"><use href="#i-bell"/></svg>
+              <div style="font-size:10px;font-weight:600">通知</div>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 2px;color:var(--ink-100)">
+              <svg class="ic-svg" style="width:22px;height:22px"><use href="#i-user"/></svg>
+              <div style="font-size:10px;font-weight:600">アカウント</div>
+            </div>
+          </div>
+        </div>
+        <div style="font-size:var(--fs-xs);color:var(--text-dim);margin-top:10px;line-height:1.8">
+          <strong>配置</strong>: 旅程 / 予定登録 の主要 2 タブの右隣、通知 / アカウント の「メタ系」との境目に置く。初回 / 新規提案時に右上ドット（accent）で attention。
+        </div>
+      </div>
+
+      <!-- 15.3 ランディング画面（入口） -->
+      <div class="comp-card full">
+        <div class="comp-label">15.3 入口: ランディング（初回・空の状態）</div>
+        <div style="max-width:380px;margin:0 auto;background:var(--bg);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden">
+          <!-- AppHeader -->
+          <div style="background:var(--ink-800);color:#fff;padding:14px 16px;font-weight:var(--fw-bold);font-size:var(--fs-md)">コンシェルジュ</div>
+          <div style="padding:20px 16px 16px">
+            <!-- Greeting -->
+            <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:20px">
+              <div style="width:40px;height:40px;border-radius:50%;background:var(--info-500);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                <svg class="ic-svg"><use href="#i-message"/></svg>
+              </div>
+              <div>
+                <div style="font-size:var(--fs-md);font-weight:var(--fw-bold);margin-bottom:4px">なにかお手伝いできることはありますか？</div>
+                <div style="font-size:var(--fs-sm);color:var(--text-dim);line-height:1.7">登録済みの旅程から準備の抜けチェックや、当日の動きをご提案します。</div>
+              </div>
+            </div>
+            <!-- Suggested prompts -->
+            <div style="font-size:var(--fs-xs);font-weight:var(--fw-bold);color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">よく使う質問</div>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <button style="text-align:left;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:13px;cursor:pointer">🧳 次の出張、準備は足りてる？</button>
+              <button style="text-align:left;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:13px;cursor:pointer">🗓 来週の予定をまとめて</button>
+              <button style="text-align:left;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:13px;cursor:pointer">✈️ 乗継時間は十分？</button>
+              <button style="text-align:left;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:13px;cursor:pointer">📍 到着後の動線を教えて</button>
+            </div>
+          </div>
+          <!-- Input -->
+          <div style="padding:12px 14px;border-top:1px solid var(--border);background:var(--surface);display:flex;gap:8px;align-items:center">
+            <input placeholder="質問やお願いを入力" style="flex:1;border:1.5px solid var(--border);border-radius:999px;padding:10px 14px;font-size:14px" />
+            <button style="width:40px;height:40px;border-radius:50%;border:none;background:var(--info-700);color:#fff;display:flex;align-items:center;justify-content:center"><svg class="ic-svg"><use href="#i-forward"/></svg></button>
+          </div>
+        </div>
+        <div style="font-size:var(--fs-xs);color:var(--text-dim);margin-top:10px;line-height:1.8">
+          空状態では <strong>suggested prompts 4 枠</strong>を出して「何を聞けるか」を示す。タップで即送信（下書き編集は不要）。入力は最下部固定、送信ボタンは info-700 円形。
+        </div>
+      </div>
+
+      <!-- 15.4 チャット画面（本体 + tool_use） -->
+      <div class="comp-card full">
+        <div class="comp-label">15.4 チャット画面 — 対話 + Tool Use 確認カード</div>
+        <div style="max-width:380px;margin:0 auto;background:var(--bg);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden">
+          <!-- Header with Context pill -->
+          <div style="background:var(--ink-800);color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between">
+            <div>
+              <div style="font-weight:var(--fw-bold);font-size:var(--fs-md)">コンシェルジュ</div>
+              <div style="font-size:11px;color:var(--ink-100);margin-top:2px">参照中: 大阪出張 · 2026-04-12</div>
+            </div>
+            <button style="background:rgba(255,255,255,0.16);border:none;color:#fff;border-radius:999px;padding:4px 10px;font-size:11px">変更</button>
+          </div>
+          <!-- Messages -->
+          <div style="padding:14px 12px;display:flex;flex-direction:column;gap:10px">
+            <!-- User bubble -->
+            <div style="align-self:flex-end;max-width:75%;background:var(--info-700);color:#fff;border-radius:16px 16px 4px 16px;padding:10px 14px;font-size:13px;line-height:1.6">
+              NZ90 乗継までに何時間ある？空港で食事できそう？
+            </div>
+            <!-- AI bubble -->
+            <div style="align-self:flex-start;max-width:88%;background:var(--surface);border:1px solid var(--border);border-radius:16px 16px 16px 4px;padding:10px 14px;font-size:13px;line-height:1.7">
+              羽田発 NH118 の到着が <strong>08:53 SEA</strong>、成田発 NZ90 は <strong>20:00</strong> なので <strong>約 11 時間</strong>空きます。シアトル空港内のターミナル移動は不要で、S ゲート周辺にレストラン多数。ただし出国 / 入国審査で 60-90 分は見ておくと安全。
+            </div>
+            <!-- Tool use card (confirm-to-act) -->
+            <div style="align-self:flex-start;max-width:92%;background:var(--accent-50);border:1.5px solid var(--accent-500);border-radius:12px;padding:12px 14px">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                <svg class="ic-svg sm" style="color:var(--accent-700)"><use href="#i-plus"/></svg>
+                <div style="font-size:12px;font-weight:var(--fw-bold);color:var(--accent-700);text-transform:uppercase;letter-spacing:0.5px">操作の提案</div>
+              </div>
+              <div style="font-size:13px;font-weight:var(--fw-bold);margin-bottom:4px">乗継中の「シアトル空港ランチ」を予定に追加しますか？</div>
+              <div style="font-size:12px;color:var(--text-dim);line-height:1.7;margin-bottom:10px">カテゴリ: 食事 · 時刻: 11:30-13:00 · 場所: SEA Central Terminal<br/>確認後、大阪出張 の旅程に追加します。</div>
+              <div style="display:flex;gap:6px">
+                <button style="flex:1;background:var(--accent-500);color:#fff;border:none;border-radius:8px;padding:8px 10px;font-size:13px;font-weight:var(--fw-bold)">追加する</button>
+                <button style="background:var(--surface);color:var(--text-dim);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:13px">いいえ</button>
+              </div>
+            </div>
+            <!-- PII masked notice (small) -->
+            <div style="align-self:flex-start;font-size:10px;color:var(--text-dim);padding-left:4px">🔒 確認番号は <code class="mono">LAS****86</code> として送信しています</div>
+          </div>
+          <!-- Input -->
+          <div style="padding:10px 12px;border-top:1px solid var(--border);background:var(--surface);display:flex;gap:6px;align-items:center">
+            <input placeholder="続けて質問..." style="flex:1;border:1.5px solid var(--border);border-radius:999px;padding:10px 14px;font-size:14px" />
+            <button style="width:40px;height:40px;border-radius:50%;border:none;background:var(--info-700);color:#fff;display:flex;align-items:center;justify-content:center"><svg class="ic-svg"><use href="#i-forward"/></svg></button>
+          </div>
+        </div>
+        <div style="font-size:var(--fs-xs);color:var(--text-dim);margin-top:10px;line-height:1.8">
+          <strong>Bubble</strong>: ユーザー=info-700 右寄せ / AI=surface 枠 左寄せ。<strong>Tool card</strong>: accent 枠で強調、確認ボタン 2 つ（実行 / キャンセル）。<strong>Context pill</strong>: どの Journey を参照中かヘッダーに常時表示、「変更」で切替。<strong>PII</strong>: マスク状態を控えめに告知。
+        </div>
+      </div>
+
+      <!-- 15.5 PII マスキング規則 -->
+      <div class="comp-card full">
+        <div class="comp-label">15.5 PII マスキング規則</div>
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:var(--fs-sm);min-width:560px">
+            <thead>
+              <tr style="background:var(--n-50);text-align:left">
+                <th style="padding:10px 12px;font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);border-bottom:1px solid var(--border);width:160px">項目</th>
+                <th style="padding:10px 12px;font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);border-bottom:1px solid var(--border);width:140px">扱い</th>
+                <th style="padding:10px 12px;font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);border-bottom:1px solid var(--border)">変換例</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td style="padding:8px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)">確認番号 / 航空券番号</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)"><span style="background:var(--warn-50);color:var(--warn-700);padding:2px 6px;border-radius:4px;font-size:11px">MASK</span></td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)"><code class="mono">LASKNT86</code> → <code class="mono">LAS****86</code>（先頭3桁 + 末尾2桁）</td></tr>
+              <tr><td style="padding:8px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)">SkyMiles / マイレージ番号</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)"><span style="background:var(--warn-50);color:var(--warn-700);padding:2px 6px;border-radius:4px;font-size:11px">MASK</span></td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)"><code class="mono">1234567724</code> → <code class="mono">XXXXXX7724</code>（末尾 4 桁）</td></tr>
+              <tr><td style="padding:8px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)">電話番号</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)"><span style="background:var(--warn-50);color:var(--warn-700);padding:2px 6px;border-radius:4px;font-size:11px">MASK</span></td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)"><code class="mono">03-1234-5678</code> → <code class="mono">03-****-5678</code></td></tr>
+              <tr><td style="padding:8px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)">メールアドレス</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)"><span style="background:var(--danger-50);color:var(--danger-500);padding:2px 6px;border-radius:4px;font-size:11px">DROP</span></td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">送信しない</td></tr>
+              <tr><td style="padding:8px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)">氏名（搭乗者名）</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)"><span style="background:var(--info-50);color:var(--info-700);padding:2px 6px;border-radius:4px;font-size:11px">KEEP</span></td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">そのまま（自分宛ての問い合わせ文面生成に必要）</td></tr>
+              <tr><td style="padding:8px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)">便名 / 空港 / 駅 / 時刻</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)"><span style="background:var(--success-50);color:var(--success-700);padding:2px 6px;border-radius:4px;font-size:11px">KEEP</span></td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">そのまま（AI が回答に必要）</td></tr>
+              <tr><td style="padding:8px 12px;font-weight:var(--fw-bold)">クレジット情報 / パスポート</td><td style="padding:8px 12px"><span style="background:var(--danger-50);color:var(--danger-500);padding:2px 6px;border-radius:4px;font-size:11px">DROP</span></td><td style="padding:8px 12px">送信しない（プロンプトに混入しない正規表現で事前除去）</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="font-size:var(--fs-xs);color:var(--text-dim);margin-top:10px;line-height:1.8">
+          実装は <code class="mono">lib/pii-mask.ts</code> の純関数。<code class="mono">maskStep(step) → SafeStep</code> で prompt 投入前に全項目を通す。ユニットテストで未マスクの値が混入していないことを検証。
+        </div>
+      </div>
+
+      <!-- 15.6 エラー / 上限テロップ -->
+      <div class="comp-card full">
+        <div class="comp-label">15.6 エラー / 流量上限テロップ</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">
+          <!-- Rate limit -->
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:14px">
+            <div style="font-size:var(--fs-xs);font-weight:var(--fw-bold);color:var(--warn-700);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">分間レート超過</div>
+            <div style="background:var(--warn-50);border:1px solid var(--warn-500);border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.7">
+              <strong>少しお待ちください</strong><br/>
+              短時間に質問が多すぎます。約 45 秒後に再試行できます。
+            </div>
+          </div>
+          <!-- Daily limit -->
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:14px">
+            <div style="font-size:var(--fs-xs);font-weight:var(--fw-bold);color:var(--warn-700);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">日次上限</div>
+            <div style="background:var(--warn-50);border:1px solid var(--warn-500);border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.7">
+              <strong>本日の利用上限に達しました</strong><br/>
+              明日 0:00 にリセット。検索機能は通常通りご利用いただけます。
+            </div>
+          </div>
+          <!-- Monthly budget -->
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:14px">
+            <div style="font-size:var(--fs-xs);font-weight:var(--fw-bold);color:var(--danger-500);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">月次予算停止</div>
+            <div style="background:var(--danger-50);border:1px solid var(--danger-500);border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.7">
+              <strong>コンシェルジュを一時停止中</strong><br/>
+              今月の想定利用量を超えたため機能を停止しました。翌月 1 日に再開。
+            </div>
+          </div>
+        </div>
+        <div style="overflow-x:auto;margin-top:14px">
+          <table style="width:100%;border-collapse:collapse;font-size:var(--fs-sm);min-width:520px">
+            <thead>
+              <tr style="background:var(--n-50);text-align:left">
+                <th style="padding:10px 12px;font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);border-bottom:1px solid var(--border);width:140px">キャップ</th>
+                <th style="padding:10px 12px;font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);border-bottom:1px solid var(--border)">既定値（調整可）</th>
+                <th style="padding:10px 12px;font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);border-bottom:1px solid var(--border);width:140px">違反時</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td style="padding:8px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)">分間 (/user)</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">5 req/min</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">429 + 再試行秒数</td></tr>
+              <tr><td style="padding:8px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)">日次 (/user)</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">100 req/day · 200,000 tok/day</td><td style="padding:8px 12px;border-bottom:1px dashed var(--border)">429 + 0:00 リセット</td></tr>
+              <tr><td style="padding:8px 12px;font-weight:var(--fw-bold)">月次 (全体)</td><td style="padding:8px 12px">$50 / month (env: <code class="mono">CONCIERGE_BUDGET_MONTHLY</code>)</td><td style="padding:8px 12px">503 + 翌月 1 日再開</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 15.7 技術構成 -->
+      <div class="comp-card full">
+        <div class="comp-label">15.7 技術構成</div>
+        <div style="font-family:var(--font-mono);font-size:12px;line-height:1.8;background:var(--n-50);border:1px solid var(--border);border-radius:var(--r-md);padding:14px;color:var(--text)">
+          Client (PWA)<br/>
+          &nbsp;&nbsp;├─ /concierge/page.tsx      … Chat UI entry (new tab)<br/>
+          &nbsp;&nbsp;├─ components/ConciergeChat.tsx … message list + input<br/>
+          &nbsp;&nbsp;├─ components/ConciergeToolCard.tsx … Tool Use 確認カード<br/>
+          &nbsp;&nbsp;├─ lib/concierge-context.ts … 直近 3 Journey 収集<br/>
+          &nbsp;&nbsp;└─ lib/pii-mask.ts          … マスク純関数 (ユニットテスト必須)<br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;↓ POST /api/concierge<br/>
+          Server (Next.js Route Handler)<br/>
+          &nbsp;&nbsp;├─ api/concierge/route.ts   … Claude API proxy<br/>
+          &nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;- model: claude-haiku-4-5-20251001<br/>
+          &nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;- tool_use: <code class="mono">add_step, set_status, open_link</code><br/>
+          &nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;- ALLOWED_ORIGINS guard (OCR と共通)<br/>
+          &nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;- rate limit + budget check (Supabase RPC で atomic increment)<br/>
+          &nbsp;&nbsp;└─ supabase<br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ toritavi_concierge_threads<br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ toritavi_concierge_messages<br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└─ toritavi_concierge_usage (per user, monthly bucket)
+        </div>
+      </div>
+
+      <!-- 15.8 フェーズ分け -->
+      <div class="comp-card full">
+        <div class="comp-label">15.8 フェーズ分け</div>
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:var(--fs-sm);min-width:560px">
+            <thead>
+              <tr style="background:var(--n-50);text-align:left">
+                <th style="padding:10px 12px;font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);border-bottom:1px solid var(--border);width:110px">Phase</th>
+                <th style="padding:10px 12px;font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);border-bottom:1px solid var(--border)">含むもの</th>
+                <th style="padding:10px 12px;font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);border-bottom:1px solid var(--border);width:80px">工数</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="padding:10px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)">Phase 0<br/><span style="font-weight:400;font-size:var(--fs-xs);color:var(--info-700)">設計</span></td>
+                <td style="padding:10px 12px;border-bottom:1px dashed var(--border);line-height:1.8">DS v2 §15 モック（本節）/ チームレビュー / 判断 5 点の合意</td>
+                <td style="padding:10px 12px;border-bottom:1px dashed var(--border);color:var(--text-dim)">半日</td>
+              </tr>
+              <tr>
+                <td style="padding:10px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)">Phase 1<br/><span style="font-weight:400;font-size:var(--fs-xs);color:var(--success-700)">MVP</span></td>
+                <td style="padding:10px 12px;border-bottom:1px dashed var(--border);line-height:1.8">
+                  ・ TabBar 5 タブ化（コンシェルジュ追加）<br/>
+                  ・ /concierge ランディング + チャット<br/>
+                  ・ Supabase schema（threads / messages / usage）+ RLS<br/>
+                  ・ api/concierge route + PII マスク + 3 階層キャップ<br/>
+                  ・ Tool Use: add_step のみ（確認カード）<br/>
+                  ・ エラー 3 種テロップ
+                </td>
+                <td style="padding:10px 12px;border-bottom:1px dashed var(--border);color:var(--text-dim)">2-3 日</td>
+              </tr>
+              <tr>
+                <td style="padding:10px 12px;font-weight:var(--fw-bold);border-bottom:1px dashed var(--border)">Phase 2</td>
+                <td style="padding:10px 12px;border-bottom:1px dashed var(--border);line-height:1.8">
+                  ・ Tool Use 拡張（set_status / delete_step / open_link）<br/>
+                  ・ Journey 詳細から「このジャーニーについて聞く」導線追加<br/>
+                  ・ スレッド一覧 + 履歴検索<br/>
+                  ・ 提案の質で Sonnet へ自動昇格判定
+                </td>
+                <td style="padding:10px 12px;border-bottom:1px dashed var(--border);color:var(--text-dim)">2-3 日</td>
+              </tr>
+              <tr>
+                <td style="padding:10px 12px;font-weight:var(--fw-bold)">Phase 3<br/><span style="font-weight:400;font-size:var(--fs-xs);color:var(--text-dim)">将来</span></td>
+                <td style="padding:10px 12px;line-height:1.8">
+                  ・ 出発 24h 前など TOP に先読み提案カード<br/>
+                  ・ 音声入力 / Push 通知連携<br/>
+                  ・ 画像添付（ホテル領収書を渡して経費まとめ等）
+                </td>
+                <td style="padding:10px 12px;color:var(--text-dim)">未定</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 15.9 やらないこと -->
+      <div class="comp-card full">
+        <div class="comp-label">15.9 明示的にやらないこと</div>
+        <ul style="margin:0;padding-left:20px;line-height:2;font-size:var(--fs-sm);color:var(--text)">
+          <li>クライアント側で API キーを扱う（プロキシ必須）</li>
+          <li>会話履歴をプレーンテキストで localStorage に置く</li>
+          <li>クレジット / パスポート情報を prompt に乗せる</li>
+          <li>AI が確認なしで予定を add / update / delete する（常に Tool Use 確認カード経由）</li>
+          <li>初期から Sonnet を既定にする（コスト監視できるまでは Haiku 固定）</li>
+          <li>自動翻訳 / 勝手に観光提案 — 依頼されたときのみ</li>
+        </ul>
+      </div>
+
+    </div>
+  </section>
+
   <p class="muted" style="text-align:center;font-size:var(--fs-xs);margin-top:60px">toritavi Design System v2 · Grocery-inspired · Flat icon set · 2026-04-19</p>
 
 </div>
