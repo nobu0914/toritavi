@@ -13,8 +13,8 @@
 
 import { Modal, ActionIcon } from "@mantine/core";
 import { IconX, IconDownload, IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
-import { useEffect, useState } from "react";
-import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
+import { useEffect, useRef, useState } from "react";
+import { TransformWrapper, TransformComponent, type ReactZoomPanPinchRef } from "react-zoom-pan-pinch";
 
 type Props = {
   opened: boolean;
@@ -34,6 +34,28 @@ export function ImageZoomViewer({ opened, onClose, images, initialIndex = 0, onD
 
   const hasPrev = index > 0;
   const hasNext = index < images.length - 1;
+
+  // 横スワイプでページ移動。ただし拡大中（scale > 1）は pan を優先するため無効化。
+  // 閾値 50px 以上 + 横>縦 の条件で確定スワイプ判定。
+  const transformRef = useRef<ReactZoomPanPinchRef | null>(null);
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
+  const SWIPE_THRESHOLD = 50;
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (!touchStart.current) return;
+    const dx = e.changedTouches[0].clientX - touchStart.current.x;
+    const dy = e.changedTouches[0].clientY - touchStart.current.y;
+    touchStart.current = null;
+    const scale = transformRef.current?.instance.state.scale ?? 1;
+    if (scale > 1.05) return; // 拡大中は pan 優先、ページ切替しない
+    if (Math.abs(dx) < SWIPE_THRESHOLD) return;
+    if (Math.abs(dx) < Math.abs(dy)) return; // 縦主体なら無視（下スワイプ等）
+    if (dx < 0 && hasNext) setIndex((i) => i + 1);
+    else if (dx > 0 && hasPrev) setIndex((i) => i - 1);
+  };
 
   return (
     <Modal
@@ -93,37 +115,44 @@ export function ImageZoomViewer({ opened, onClose, images, initialIndex = 0, onD
         )}
       </div>
 
-      {/* 画像エリア: pinch / pan / double-tap */}
-      <TransformWrapper
-        key={index} // ページ切替時に state をリセット
-        minScale={1}
-        maxScale={4}
-        doubleClick={{ mode: "toggle", step: 2 }}
-        wheel={{ step: 0.2 }}
-        panning={{ velocityDisabled: false }}
-        centerOnInit
-        limitToBounds
+      {/* 画像エリア: pinch / pan / double-tap。横スワイプはラッパで検出する */}
+      <div
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+        style={{ width: "100vw", height: "100vh" }}
       >
-        <TransformComponent
-          wrapperStyle={{ width: "100vw", height: "100vh" }}
-          contentStyle={{ width: "100vw", height: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}
+        <TransformWrapper
+          key={index} // ページ切替時に state をリセット
+          ref={transformRef}
+          minScale={1}
+          maxScale={4}
+          doubleClick={{ mode: "toggle", step: 2 }}
+          wheel={{ step: 0.2 }}
+          panning={{ velocityDisabled: false }}
+          centerOnInit
+          limitToBounds
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={images[index]}
-            alt={`スキャン元 ${index + 1} / ${images.length}`}
-            style={{
-              maxWidth: "100%",
-              maxHeight: "100%",
-              objectFit: "contain",
-              userSelect: "none",
-              WebkitUserSelect: "none",
-              WebkitTouchCallout: "none",
-            }}
-            draggable={false}
-          />
-        </TransformComponent>
-      </TransformWrapper>
+          <TransformComponent
+            wrapperStyle={{ width: "100vw", height: "100vh" }}
+            contentStyle={{ width: "100vw", height: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={images[index]}
+              alt={`スキャン元 ${index + 1} / ${images.length}`}
+              style={{
+                maxWidth: "100%",
+                maxHeight: "100%",
+                objectFit: "contain",
+                userSelect: "none",
+                WebkitUserSelect: "none",
+                WebkitTouchCallout: "none",
+              }}
+              draggable={false}
+            />
+          </TransformComponent>
+        </TransformWrapper>
+      </div>
 
       {/* ページ送りボタン（多ページ時のみ） */}
       {images.length > 1 && (

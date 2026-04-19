@@ -549,13 +549,18 @@ export function Ticket({ data, status, needsReview, inferred, sourceImageUrl, so
               </div>
               {images.length > 1 && (
                 <div className="ticket-scan-pages">
-                  {images.map((_, i) => (
+                  {images.map((src, i) => (
                     <button
                       key={i}
                       type="button"
                       className={`ticket-scan-page-thumb ${i === activePage ? "active" : ""}`.trim()}
                       onClick={() => setActivePage(i)}
-                    >{i + 1}</button>
+                      aria-label={`ページ ${i + 1}`}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={src} alt="" draggable={false} />
+                      <span className="ticket-scan-page-thumb-num">{i + 1}</span>
+                    </button>
                   ))}
                 </div>
               )}

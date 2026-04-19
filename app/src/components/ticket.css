@@ -337,17 +337,34 @@
   overflow-x: auto; padding-bottom: 2px;
 }
 .ticket-scan-page-thumb {
+  position: relative;
   width: 44px; height: 58px; border-radius: 4px;
-  background: linear-gradient(135deg, var(--n-100), var(--n-200));
+  background: var(--surface);
   border: 1px solid var(--border); flex-shrink: 0;
-  display: flex; align-items: flex-end; justify-content: center;
-  padding-bottom: 3px;
+  padding: 0;
+  overflow: hidden;
+  cursor: pointer;
+}
+.ticket-scan-page-thumb img {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover; object-position: top;
+  pointer-events: none;
+}
+.ticket-scan-page-thumb-num {
+  position: absolute; right: 2px; bottom: 2px;
   font-family: var(--font-mono); font-size: 10px; font-weight: 700;
-  color: var(--text-dim); cursor: pointer;
+  line-height: 1;
+  padding: 2px 4px; border-radius: 3px;
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--text);
+  pointer-events: none;
 }
 .ticket-scan-page-thumb.active {
-  border: 2px solid var(--info-500); color: var(--info-700);
-  background: var(--surface);
+  border: 2px solid var(--info-500);
+}
+.ticket-scan-page-thumb.active .ticket-scan-page-thumb-num {
+  background: var(--info-700); color: #fff;
 }
 
 /* ---------- Info sections ---------- */
