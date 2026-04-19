@@ -313,6 +313,7 @@
   color: var(--text);
 }
 
-.footerRow .ctaButton {
+.footerRow .ctaButton,
+.footerRow .closeButton {
   flex: 1;
 }

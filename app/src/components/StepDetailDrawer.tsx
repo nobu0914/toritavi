@@ -185,6 +185,29 @@ export function StepDetailDrawer({
     });
   };
 
+  // ヘッダー ⋮ と下部「操作する」で同じ項目を出すため共通化。
+  const actionMenuItems = (
+    <>
+      <Menu.Item leftSection={<IconEdit size={16} />} onClick={() => setMode("edit")}>編集する</Menu.Item>
+      <Menu.Item leftSection={<IconShare size={16} />} onClick={handleShare}>共有する</Menu.Item>
+      {onDuplicate && (
+        <Menu.Item leftSection={<IconCopy size={16} />} onClick={onDuplicate}>複製する</Menu.Item>
+      )}
+      <Menu.Item leftSection={<IconCalendarPlus size={16} />} onClick={handleAddToCalendar}>カレンダーに追加</Menu.Item>
+      {images.length > 0 && (
+        <Menu.Item leftSection={<IconDownload size={16} />} onClick={handleDownloadAll}>
+          {images.length > 1 ? `原本を保存 (${images.length}件)` : "原本を保存"}
+        </Menu.Item>
+      )}
+      {onDelete && (
+        <>
+          <Menu.Divider />
+          <Menu.Item color="red" leftSection={<IconTrash size={16} />} onClick={onDelete}>削除する</Menu.Item>
+        </>
+      )}
+    </>
+  );
+
   return (
     <Drawer
       opened={opened}
@@ -219,25 +242,7 @@ export function StepDetailDrawer({
                   <IconDotsVertical size={18} />
                 </ActionIcon>
               </Menu.Target>
-              <Menu.Dropdown>
-                <Menu.Item leftSection={<IconEdit size={16} />} onClick={() => setMode("edit")}>編集する</Menu.Item>
-                <Menu.Item leftSection={<IconShare size={16} />} onClick={handleShare}>共有する</Menu.Item>
-                {onDuplicate && (
-                  <Menu.Item leftSection={<IconCopy size={16} />} onClick={onDuplicate}>複製する</Menu.Item>
-                )}
-                <Menu.Item leftSection={<IconCalendarPlus size={16} />} onClick={handleAddToCalendar}>カレンダーに追加</Menu.Item>
-                {images.length > 0 && (
-                  <Menu.Item leftSection={<IconDownload size={16} />} onClick={handleDownloadAll}>
-                    {images.length > 1 ? `原本を保存 (${images.length}件)` : "原本を保存"}
-                  </Menu.Item>
-                )}
-                {onDelete && (
-                  <>
-                    <Menu.Divider />
-                    <Menu.Item color="red" leftSection={<IconTrash size={16} />} onClick={onDelete}>削除する</Menu.Item>
-                  </>
-                )}
-              </Menu.Dropdown>
+              <Menu.Dropdown>{actionMenuItems}</Menu.Dropdown>
             </Menu>
           ) : null
         }
@@ -346,9 +351,19 @@ export function StepDetailDrawer({
       {/* 6. 下部固定CTA */}
       <Box className={classes.footer}>
         {mode === "view" ? (
-          <button className={classes.closeButton} onClick={onClose} type="button">
-            閉じる
-          </button>
+          <Box className={classes.footerRow}>
+            <button className={classes.closeButton} onClick={onClose} type="button">
+              閉じる
+            </button>
+            <Menu position="top-end" shadow="md" width={220} withArrow zIndex={500}>
+              <Menu.Target>
+                <button className={classes.ctaButton} type="button" aria-label="操作メニューを開く">
+                  操作する
+                </button>
+              </Menu.Target>
+              <Menu.Dropdown>{actionMenuItems}</Menu.Dropdown>
+            </Menu>
+          </Box>
         ) : (
           <Box className={classes.footerRow}>
             <button
