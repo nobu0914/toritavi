@@ -741,15 +741,6 @@ export function ScanFlow({ chrome = "standalone", target, onComplete }: ScanFlow
         console.error("[scan] blobToBase64(pageUrls) failed:", e);
       }
     }
-    console.log(
-      "[scan/createStep] image capture:",
-      "single=",
-      savedImageUrl ? `${Math.round(savedImageUrl.length / 1024)}KB` : "(none)",
-      "multi=",
-      savedImageUrls ? savedImageUrls.map((u) => `${Math.round(u.length / 1024)}KB`).join(",") : "(none)",
-      "target=",
-      targetJourneyId,
-    );
 
     const now = new Date().toISOString();
     const todayStr = new Date().toISOString().split("T")[0];
@@ -833,14 +824,9 @@ export function ScanFlow({ chrome = "standalone", target, onComplete }: ScanFlow
     if (targetJourneyId) {
       const target = await getJourney(targetJourneyId);
       if (!target) throw new Error("指定の Journey が見つかりません");
-      const appendedPayload = [...target.steps, ...stepsToRegister];
-      console.log(
-        "[scan/createStep] append payload:",
-        "existing=", target.steps.length,
-        "new=", stepsToRegister.length,
-        "newImageIds=", stepsToRegister.filter((s) => s.sourceImageUrl || s.sourceImageUrls).map((s) => s.id),
-      );
-      await updateJourney(target.id, { steps: appendedPayload });
+      await updateJourney(target.id, {
+        steps: [...target.steps, ...stepsToRegister],
+      });
       journeyId = target.id;
     } else {
     // 2) 通常導線: 同日 Journey に追加 or 新規作成
