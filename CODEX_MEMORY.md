@@ -1,6 +1,6 @@
 # CODEX Memory
 
-最終更新: 2026-04-18（Design System v2 全面適用）
+最終更新: 2026-04-19（予定追加フローを Bottom Sheet 化 + 周辺回帰修正）
 
 ## 目的
 このファイルは、Codex がこのリポジトリで継続作業するための簡易メモリです。
@@ -108,3 +108,20 @@ JSON.parse(localStorage.getItem("toritavi_journeys") ?? "[]")
 - GuestBanner を削除（ユーザー指示）
 - 21 ルートビルド成功 / 生 Mantine 色参照 0 件 / HTTP スモーク全緑 で main に push（`0e64e03`）
 - **現在の DS 参照先は `mock/design-system-v2.html`**（旧 `design-system-mantine.html` より優先）
+
+## 2026-04-19 予定追加フロー刷新セッション（追記）
+- 「+予定を追加」導線を `/scan` 遷移から **Bottom Sheet モーダル** へ変更（DS §10.6）
+- `ScanFlow` をコンポーネント化し、`/scan` と `AddStepDrawer` の両方で再利用
+  - 新規: `app/src/components/ScanFlow.tsx`（~1300 行）
+  - 新規: `app/src/components/AddStepDrawer.tsx`
+  - `/scan/page.tsx` は薄 wrapper に縮小
+- Ticket 強調ゾーンを飛行機カテゴリのみ 4-cell（出発時刻 / ターミナル / ゲート / 座席）に
+  - `extractTerminal()` / `splitPort()` を堅牢化、長大 bilingual 港名の見切れ防止
+  - ラベルは日本語、`data-cells` でフォント自動縮小
+- StepDetailDrawer: `zIndex=400` で TabBar を確実に覆う + drag-to-close の button ガード
+- AddStepDrawer: embedded 時はコンテキストカード非表示
+- 画像消失報告用の診断ログを一時投入（再発時の切り分け用、後日削除予定）
+  - `[scan/createStep]` / `[updateJourney]` / `[getStepImages]`
+- 自主検査 16 項目 PASS（build / lint / 論理テスト）
+- DS v2 §10.5（詳細画面 variant A = ⋮ + 下部 CTA）、§10.6（Bottom Sheet）、§13.11（4-cell）更新
+- コミット範囲: `4326718` 〜 `6ef8671`（12 commits, main へ push 済）
