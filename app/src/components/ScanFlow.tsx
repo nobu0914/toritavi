@@ -1162,27 +1162,24 @@ export function ScanFlow({ chrome = "standalone", target, onComplete }: ScanFlow
                 )}
 
                 {/* タイトル（目立つ単独カード） */}
-                {(() => {
-                  const titleField = getFixedFields(detectedCategory).find((f) => f.key === "title");
-                  if (!titleField) return null;
-                  return (
-                    <Box className={classes.titleCard}>
-                      <Box className={classes.titleCardLabelRow}>
-                        <Text className={classes.titleCardLabel}>タイトル</Text>
-                        {inferredFields.includes("title") && (
-                          <Text className={classes.inferredBadge}>推定</Text>
-                        )}
-                      </Box>
-                      <TextInput
-                        classNames={{ input: classes.titleCardInput }}
-                        variant="unstyled"
-                        placeholder={titleField.placeholder}
-                        value={fixedValues.title || ""}
-                        onChange={(e) => setFixedValues((prev) => ({ ...prev, title: e.currentTarget.value }))}
-                      />
-                    </Box>
-                  );
-                })()}
+                <Box className={classes.titleCard}>
+                  <Box className={classes.titleCardLabelRow}>
+                    <Text className={classes.titleCardLabel}>タイトル</Text>
+                    {inferredFields.includes("title") && (
+                      <Text className={classes.inferredBadge}>推定</Text>
+                    )}
+                  </Box>
+                  <input
+                    type="text"
+                    className={classes.titleCardInput}
+                    placeholder="タイトルを入力"
+                    value={fixedValues.title ?? ""}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setFixedValues((prev) => ({ ...prev, title: v }));
+                    }}
+                  />
+                </Box>
 
                 {/* カテゴリ別固定項目（title を除く） */}
                 <Box className={classes.formCard}>
