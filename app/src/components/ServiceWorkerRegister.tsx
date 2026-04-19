@@ -19,6 +19,18 @@ export function ServiceWorkerRegister() {
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
 
+    // Dev mode: don't register. Next.js HMR plus our SW reload-on-activate
+    // logic can fight each other, and a stale SW from a previous prod visit
+    // to the same origin can intercept localhost dev responses. If a SW is
+    // already registered from a previous session, unregister it so the dev
+    // server stays on the happy path.
+    if (process.env.NODE_ENV !== "production") {
+      navigator.serviceWorker.getRegistrations().then((regs) => {
+        regs.forEach((r) => r.unregister());
+      }).catch(() => undefined);
+      return;
+    }
+
     let reg: ServiceWorkerRegistration | null = null;
     let refreshing = false;
 
