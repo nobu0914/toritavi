@@ -8,7 +8,7 @@
  */
 
 import { Box, Text } from "@mantine/core";
-import { IconPlus, IconCheck, IconX } from "@tabler/icons-react";
+import { IconCheck, IconX } from "@tabler/icons-react";
 import type { Journey } from "@/lib/types";
 import classes from "./ConciergeToolCard.module.css";
 
@@ -42,6 +42,9 @@ export function ConciergeToolCard({ input, journeys, result, onConfirm, onDeclin
   if (result) {
     return (
       <Box className={classes.card} data-state={result.ok ? "confirmed" : "declined"}>
+        <Box className={classes.header}>
+          <Text className={classes.headerLabel}>{result.ok ? "CONFIRMED" : "DECLINED"}</Text>
+        </Box>
         <Box className={classes.resultRow}>
           {result.ok ? <IconCheck size={14} /> : <IconX size={14} />}
           <Text size="xs" fw={600}>{result.note ?? (result.ok ? "追加しました" : "キャンセルしました")}</Text>
@@ -53,8 +56,7 @@ export function ConciergeToolCard({ input, journeys, result, onConfirm, onDeclin
   return (
     <Box className={classes.card}>
       <Box className={classes.header}>
-        <IconPlus size={14} />
-        <Text className={classes.headerLabel}>操作の提案</Text>
+        <Text className={classes.headerLabel}>PROPOSAL</Text>
       </Box>
       <Text className={classes.title}>{input.title} を予定に追加しますか？</Text>
       <Box className={classes.meta}>

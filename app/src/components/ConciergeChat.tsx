@@ -12,8 +12,8 @@
  *   - エラー 3 種（rate_limit / daily / monthly_budget）をテロップ表示
  */
 
-import { Box, Text, Textarea, Loader } from "@mantine/core";
-import { IconMessage, IconSend, IconLock, IconAlertCircle } from "@tabler/icons-react";
+import { Box, Text, Textarea } from "@mantine/core";
+import { IconSend, IconLock, IconAlertCircle, IconChevronRight } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { TabBar } from "@/components/TabBar";
@@ -38,10 +38,10 @@ type Message = {
 };
 
 const SUGGESTED = [
-  { emoji: "🧳", text: "次の出張、準備は足りてる？" },
-  { emoji: "🗓", text: "来週の予定をまとめて" },
-  { emoji: "✈️", text: "乗継時間は十分？" },
-  { emoji: "📍", text: "到着後の動線を教えて" },
+  "次の出張、準備は足りてる？",
+  "来週の予定をまとめて",
+  "乗継時間は十分？",
+  "到着後の動線を教えて",
 ];
 
 export function ConciergeChat() {
@@ -150,29 +150,27 @@ export function ConciergeChat() {
           {isLanding ? (
             <Box className={classes.landing}>
               <Box className={classes.greeting}>
-                <Box className={classes.avatar}>
-                  <IconMessage size={22} />
-                </Box>
-                <Box>
+                <Text className={classes.greetingEyebrow}>CONCIERGE</Text>
+                <Box className={classes.greetingBody}>
                   <Text className={classes.greetingTitle}>
                     なにかお手伝いできることはありますか？
                   </Text>
-                  <Text className={classes.greetingBody}>
+                  <Text className={classes.greetingSub}>
                     登録済みの旅程から準備の抜けチェックや、当日の動線をご提案します。
                   </Text>
                 </Box>
               </Box>
-              <Text className={classes.suggestedLabel}>よく使う質問</Text>
+              <Text className={classes.suggestedLabel}>SUGGESTED</Text>
               <Box className={classes.suggestedList}>
-                {SUGGESTED.map((s) => (
+                {SUGGESTED.map((text) => (
                   <button
-                    key={s.text}
+                    key={text}
                     type="button"
                     className={classes.suggestedItem}
-                    onClick={() => send(s.text)}
+                    onClick={() => send(text)}
                   >
-                    <span>{s.emoji}</span>
-                    <span>{s.text}</span>
+                    <span>{text}</span>
+                    <IconChevronRight size={14} className={classes.suggestedChev} />
                   </button>
                 ))}
               </Box>
@@ -184,13 +182,18 @@ export function ConciergeChat() {
           ) : (
             <Box className={classes.thread}>
               {messages.map((m) => (
-                <Box key={m.id} className={classes.messageRow} data-role={m.role}>
+                <Box key={m.id} className={classes.messageRow}>
                   {m.content && (
-                    <Box className={classes.bubble} data-role={m.role}>
-                      {m.content.split("\n").map((line, i) => (
-                        <Text key={i} component="div" className={classes.bubbleText}>{line || "\u00A0"}</Text>
-                      ))}
-                    </Box>
+                    <>
+                      <Text className={classes.roleLabel} data-role={m.role}>
+                        {m.role === "user" ? "YOU" : "CONCIERGE"}
+                      </Text>
+                      <Box className={classes.bubble} data-role={m.role}>
+                        {m.content.split("\n").map((line, i) => (
+                          <Text key={i} component="div" className={classes.bubbleText}>{line || "\u00A0"}</Text>
+                        ))}
+                      </Box>
+                    </>
                   )}
                   {m.role === "assistant" && m.toolUse && m.toolUse.name === "add_step" && (
                     <ConciergeToolCard
@@ -204,10 +207,10 @@ export function ConciergeChat() {
                 </Box>
               ))}
               {sending && (
-                <Box className={classes.messageRow} data-role="assistant">
+                <Box className={classes.messageRow}>
+                  <Text className={classes.roleLabel} data-role="assistant">CONCIERGE</Text>
                   <Box className={classes.bubble} data-role="assistant" data-loading="true">
-                    <Loader size="xs" color="gray" />
-                    <Text size="xs" c="dimmed">考え中...</Text>
+                    考え中...
                   </Box>
                 </Box>
               )}
