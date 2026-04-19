@@ -6,11 +6,14 @@ import {
   IconBus,
   IconCamera,
   IconCar,
+  IconCheck,
   IconCircle,
   IconCopy,
   IconDownload,
+  IconExternalLink,
   IconFirstAidKit,
   IconMail,
+  IconMapPin,
   IconPlane,
   IconTicket,
   IconTrain,
@@ -19,8 +22,10 @@ import {
   IconWalk,
   IconToolsKitchen2,
 } from "@tabler/icons-react";
+import { notifications } from "@mantine/notifications";
 import type { Information, StepCategory, StepSource, StepStatus } from "@/lib/types";
 import { getFixedFields } from "@/lib/ocr-rules";
+import { getFieldLink, type StepLink } from "@/lib/step-links";
 import "./ticket.css";
 
 export type TicketData = {
@@ -195,6 +200,52 @@ function extractTerminal(value: string | undefined): string | undefined {
   const short = value.match(/(?:^|\s)T-?([0-9]+)(?:\s|$)/);
   if (short) return `T${short[1]}`;
   return undefined;
+}
+
+const LINK_ICON_SIZE = 14;
+
+function FieldLinkButton({ link }: { link: StepLink }) {
+  const handleClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (link.kind === "copy" && link.value) {
+      try {
+        await navigator.clipboard.writeText(link.value);
+        notifications.show({
+          message: "確認番号をコピーしました",
+          color: "teal",
+          icon: <IconCheck size={18} />,
+          autoClose: 2000,
+          withBorder: false,
+          style: { background: "var(--success-500)", color: "white" },
+          styles: { icon: { color: "white", background: "transparent" } },
+        });
+      } catch {
+        notifications.show({ message: "コピーできませんでした", color: "red", autoClose: 2500 });
+      }
+      return;
+    }
+    if (link.url) {
+      window.open(link.url, "_blank", "noopener,noreferrer");
+    }
+  };
+  const icon = link.kind === "maps"
+    ? <IconMapPin size={LINK_ICON_SIZE} />
+    : link.kind === "flight-status"
+      ? <IconExternalLink size={LINK_ICON_SIZE} />
+      : <IconCopy size={LINK_ICON_SIZE} />;
+  return (
+    <button
+      type="button"
+      className="ticket-info-link"
+      data-kind={link.kind}
+      aria-label={link.label}
+      title={link.label}
+      onClick={handleClick}
+    >
+      {icon}
+    </button>
+  );
 }
 
 export function Ticket({ data, status, needsReview, inferred, sourceImageUrl, sourceImageUrls, onCopyMailBody }: Props) {
@@ -404,15 +455,19 @@ export function Ticket({ data, status, needsReview, inferred, sourceImageUrl, so
             const cls = hasValue
               ? (f.inferred ? "inferred" : (f.fullRow ? "plain" : ""))
               : "empty";
+            const link = hasValue ? getFieldLink(data.category, f.key, f.value) : null;
             return (
               <div key={f.key} className={`ticket-info-cell ${f.fullRow ? "full-row" : ""}`.trim()}>
-                <div className="ticket-info-label">
-                  {f.label}
-                  {f.inferred && hasValue && <span className="ticket-meta-badge">推定</span>}
+                <div className="ticket-info-cell-body">
+                  <div className="ticket-info-label">
+                    {f.label}
+                    {f.inferred && hasValue && <span className="ticket-meta-badge">推定</span>}
+                  </div>
+                  <div className={`ticket-info-value ${cls}`.trim()}>
+                    {hasValue ? f.value : "未読取"}
+                  </div>
                 </div>
-                <div className={`ticket-info-value ${cls}`.trim()}>
-                  {hasValue ? f.value : "未読取"}
-                </div>
+                {link && <FieldLinkButton link={link} />}
               </div>
             );
           })}
