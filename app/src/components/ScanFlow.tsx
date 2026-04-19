@@ -1161,9 +1161,36 @@ export function ScanFlow({ chrome = "standalone", target, onComplete }: ScanFlow
                   </Box>
                 )}
 
-                {/* カテゴリ別固定項目 */}
+                {/* タイトル（目立つ単独カード） */}
+                {(() => {
+                  const titleField = getFixedFields(detectedCategory).find((f) => f.key === "title");
+                  if (!titleField) return null;
+                  return (
+                    <Box className={classes.titleCard}>
+                      <Box className={classes.titleCardLabelRow}>
+                        <Text className={classes.titleCardLabel}>タイトル</Text>
+                        <Text className={classes.titleCardSubLabel}>{titleField.label}</Text>
+                        {inferredFields.includes("title") && (
+                          <Text className={classes.inferredBadge}>推定</Text>
+                        )}
+                      </Box>
+                      <TextInput
+                        classNames={{ input: "" }}
+                        className={classes.titleCardInput}
+                        variant="unstyled"
+                        placeholder={titleField.placeholder}
+                        value={fixedValues.title || ""}
+                        onChange={(e) => setFixedValues((prev) => ({ ...prev, title: e.currentTarget.value }))}
+                      />
+                    </Box>
+                  );
+                })()}
+
+                {/* カテゴリ別固定項目（title を除く） */}
                 <Box className={classes.formCard}>
-                  {getFixedFields(detectedCategory).map((f) => {
+                  {getFixedFields(detectedCategory)
+                    .filter((f) => f.key !== "title")
+                    .map((f) => {
                     const isInferred = inferredFields.includes(f.key);
                     const isEmpty = !fixedValues[f.key];
                     return (
