@@ -23,11 +23,12 @@ export function TabBar() {
   const { navigating, navigate } = useNavigateWithLoading();
 
   const handleTab = (href: string) => {
-    const isCurrentTab =
-      href === "/"
-        ? pathname === "/" || pathname.startsWith("/trips")
-        : pathname.startsWith(href);
-    if (isCurrentTab) return;
+    // Only skip when we're *exactly* on this tab's root. Previously /trips/:id
+    // counted as "on the 旅程 tab" for click-suppression too, which silently
+    // broke the expected "tap 旅程 from a trip detail → back to the list" flow.
+    // The active-highlight logic below keeps using the broader startsWith so
+    // 旅程 still lights up while viewing a trip.
+    if (pathname === href) return;
     navigate(href);
   };
 
