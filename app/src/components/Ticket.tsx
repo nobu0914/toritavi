@@ -119,12 +119,13 @@ function splitPort(value: string | undefined): { code: string; name?: string } {
 
 type HighlightSpec = { label1: string; match1: RegExp; label2: string; match2: RegExp } | null;
 
+// Permissive contains-based matching so labels like "座席番号" / "ゲート番号" / "Gate No." も拾える
 function highlightSpec(category: StepCategory): HighlightSpec {
   switch (category) {
-    case "飛行機": return { label1: "Gate", match1: /^(ゲート|gate)$/i, label2: "Seat", match2: /^(座席|seat)$/i };
-    case "列車": return { label1: "Car", match1: /^(号車|car)$/i, label2: "Seat", match2: /^(座席|seat)$/i };
-    case "バス": return { label1: "Stop", match1: /^(のりば|乗り場|stop|platform)$/i, label2: "Seat", match2: /^(座席|seat)$/i };
-    case "観光": return { label1: "Block", match1: /^(ブロック|block)$/i, label2: "Seat", match2: /^(座席|seat|席番号)$/i };
+    case "飛行機": return { label1: "Gate", match1: /ゲート|gate/i,        label2: "Seat", match2: /座席|seat|シート/i };
+    case "列車":   return { label1: "Car",  match1: /号車|car/i,           label2: "Seat", match2: /座席|seat|シート/i };
+    case "バス":   return { label1: "Stop", match1: /のりば|乗り場|stop|platform/i, label2: "Seat", match2: /座席|seat|シート/i };
+    case "観光":   return { label1: "Block",match1: /ブロック|block/i,     label2: "Seat", match2: /座席|seat|シート|席番号/i };
     default: return null;
   }
 }

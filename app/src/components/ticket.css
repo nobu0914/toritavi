@@ -178,33 +178,38 @@
 /* ---------- Highlight zone (flight gate/seat, etc.) ---------- */
 .ticket-highlight {
   padding: 14px 22px 16px;
-  background: linear-gradient(180deg, var(--surface) 0%, var(--n-50) 100%);
-  border-top: 1px dashed var(--n-200);
+  background: var(--surface);
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
 }
 .ticket-highlight-cell {
-  padding: 10px 12px 11px;
-  background: var(--surface);
-  border: 1.5px solid var(--ink-800);
-  border-radius: 10px;
+  padding: 4px 0;
+  background: transparent;
+  border: none;
   min-width: 0;
+}
+.ticket-highlight-cell:first-child {
+  padding-right: 16px;
+  border-right: 1px solid var(--n-200);
+}
+.ticket-highlight-cell:last-child {
+  padding-left: 16px;
 }
 .ticket-highlight-label {
   font-size: 10px;
   font-weight: 700;
-  color: var(--ink-800);
+  color: var(--text-dim);
   text-transform: uppercase;
-  letter-spacing: 0.6px;
+  letter-spacing: 0.8px;
   margin-bottom: 4px;
 }
 .ticket-highlight-value {
   font-family: var(--font-mono);
-  font-size: 22px;
+  font-size: 26px;
   font-weight: 800;
   color: var(--ink-800);
-  letter-spacing: 1.5px;
+  letter-spacing: 1px;
   line-height: 1;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
@@ -213,7 +218,7 @@
   font-style: italic;
   font-family: var(--font-sans);
   font-weight: 500;
-  font-size: 13px;
+  font-size: 14px;
   letter-spacing: 0;
 }
 
