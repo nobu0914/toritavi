@@ -26,6 +26,7 @@ import { notifications } from "@mantine/notifications";
 import type { Information, StepCategory, StepSource, StepStatus } from "@/lib/types";
 import { getFixedFields } from "@/lib/ocr-rules";
 import { getFieldLink, resolveMapsUrl, resolveSearchUrl, type StepLink } from "@/lib/step-links";
+import { ImageZoomViewer } from "./ImageZoomViewer";
 import "./ticket.css";
 
 export type TicketData = {
@@ -254,6 +255,7 @@ function FieldLinkButton({ link }: { link: StepLink }) {
 
 export function Ticket({ data, status, needsReview, inferred, sourceImageUrl, sourceImageUrls, onCopyMailBody }: Props) {
   const [activePage, setActivePage] = useState(0);
+  const [zoomOpened, setZoomOpened] = useState(false);
 
   const images = sourceImageUrls && sourceImageUrls.length > 0
     ? sourceImageUrls
@@ -527,11 +529,21 @@ export function Ticket({ data, status, needsReview, inferred, sourceImageUrl, so
           ) : hasImages ? (
             <div className="ticket-scan-full">
               <div className="ticket-scan-image-wrap">
-                <div className={`ticket-scan-image ${images.length > 1 ? "tall" : ""}`.trim()}>
+                <button
+                  type="button"
+                  className={`ticket-scan-image ${images.length > 1 ? "tall" : ""}`.trim()}
+                  onClick={() => setZoomOpened(true)}
+                  aria-label="画像を拡大表示"
+                >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={images[activePage]} alt={`ページ ${activePage + 1}`} />
-                </div>
-                <button type="button" className="ticket-scan-dl-float" onClick={handleDownloadAll} aria-label="原本を保存">
+                  <img src={images[activePage]} alt={`ページ ${activePage + 1}`} draggable={false} />
+                </button>
+                <button
+                  type="button"
+                  className="ticket-scan-dl-float"
+                  onClick={(e) => { e.stopPropagation(); handleDownloadAll(); }}
+                  aria-label="原本を保存"
+                >
                   <IconDownload size={14} />{images.length > 1 ? "一括保存" : "保存"}
                 </button>
               </div>
@@ -556,6 +568,16 @@ export function Ticket({ data, status, needsReview, inferred, sourceImageUrl, so
             </div>
           )}
         </div>
+      )}
+
+      {hasImages && (
+        <ImageZoomViewer
+          opened={zoomOpened}
+          onClose={() => setZoomOpened(false)}
+          images={images}
+          initialIndex={activePage}
+          onDownload={(i) => downloadOne(images[i], i)}
+        />
       )}
     </div>
   );
