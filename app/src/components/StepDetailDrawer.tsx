@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   ActionIcon,
   Box,
@@ -184,6 +184,60 @@ export function StepDetailDrawer({
     });
   };
 
+  /*
+   * Drag-to-close gesture (iOS sheet convention).
+   * User starts a touch on the SheetHeader region and drags downward.
+   * We track the delta, apply a translateY on the Mantine Drawer content so
+   * the sheet follows the finger, and on release decide:
+   *   - past threshold (≥ 120px or strong flick) → call onClose; Mantine
+   *     then plays its normal exit animation from the current position.
+   *   - otherwise → snap back to 0 with a short easing.
+   */
+  const DRAG_CLOSE_THRESHOLD = 120;
+  const DRAG_FLICK_VELOCITY = 0.6; // px/ms
+  const [dragY, setDragY] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isSnappingBack, setIsSnappingBack] = useState(false);
+  const touchStartY = useRef<number | null>(null);
+  const touchStartT = useRef<number>(0);
+
+  const onDragStart = (e: React.TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY;
+    touchStartT.current = Date.now();
+  };
+  const onDragMove = (e: React.TouchEvent) => {
+    if (touchStartY.current == null) return;
+    const dy = e.touches[0].clientY - touchStartY.current;
+    if (dy <= 0) { if (dragY !== 0) setDragY(0); return; }
+    if (!isDragging) setIsDragging(true);
+    setDragY(dy);
+  };
+  const onDragEnd = () => {
+    if (touchStartY.current == null) return;
+    const dt = Math.max(1, Date.now() - touchStartT.current);
+    const velocity = dragY / dt;
+    touchStartY.current = null;
+    setIsDragging(false);
+    const shouldClose = dragY >= DRAG_CLOSE_THRESHOLD || velocity >= DRAG_FLICK_VELOCITY;
+    if (shouldClose) {
+      onClose();
+      // Keep dragY as-is so the Mantine exit transition picks up from the
+      // current translated position — avoids a visible jump back to 0.
+      return;
+    }
+    setIsSnappingBack(true);
+    setDragY(0);
+    window.setTimeout(() => setIsSnappingBack(false), 250);
+  };
+
+  const dragTransform =
+    dragY > 0 || isSnappingBack ? `translateY(${dragY}px)` : undefined;
+  const dragTransition = isDragging
+    ? "none"
+    : isSnappingBack
+      ? "transform 0.22s cubic-bezier(.2,.9,.2,1)"
+      : undefined;
+
   return (
     <Drawer
       opened={opened}
@@ -192,57 +246,61 @@ export function StepDetailDrawer({
       size="100%"
       withCloseButton={false}
       styles={{
-        content: { borderRadius: "16px 16px 0 0", display: "flex", flexDirection: "column" },
+        content: {
+          borderRadius: "16px 16px 0 0",
+          display: "flex",
+          flexDirection: "column",
+          transform: dragTransform,
+          transition: dragTransition,
+        },
         body: { padding: 0, flex: 1, display: "flex", flexDirection: "column", minHeight: 0 },
       }}
     >
+      <div
+        onTouchStart={onDragStart}
+        onTouchMove={onDragMove}
+        onTouchEnd={onDragEnd}
+        onTouchCancel={onDragEnd}
+        style={{ touchAction: "pan-y", flexShrink: 0 }}
+      >
       <SheetHeader
         title={isEdit ? editingTitle || draft.title || "予定" : "予定を追加"}
         onClose={onClose}
         leftIcon="down"
         actions={
           isEdit && mode === "view" ? (
-            <>
-              {/* DS v2 §10.5 ① variant C: edit icon uses var(--info-700) */}
-              <ActionIcon
-                variant="subtle"
-                radius="xl"
-                onClick={() => setMode("edit")}
-                aria-label="編集"
-                style={{ color: "var(--info-700)" }}
-              >
-                <IconEdit size={18} />
-              </ActionIcon>
-              <Menu position="bottom-end" shadow="md" width={220} withArrow>
-                <Menu.Target>
-                  <ActionIcon variant="subtle" color="gray" radius="xl" aria-label="その他">
-                    <IconDotsVertical size={18} />
-                  </ActionIcon>
-                </Menu.Target>
-                <Menu.Dropdown>
-                  {/* "編集" はヘッダーの ✎ アイコンに集約。More Menu 側では重複させない。 */}
-                  <Menu.Item leftSection={<IconShare size={16} />} onClick={handleShare}>共有する</Menu.Item>
-                  {onDuplicate && (
-                    <Menu.Item leftSection={<IconCopy size={16} />} onClick={onDuplicate}>複製する</Menu.Item>
-                  )}
-                  <Menu.Item leftSection={<IconCalendarPlus size={16} />} onClick={handleAddToCalendar}>カレンダーに追加</Menu.Item>
-                  {images.length > 0 && (
-                    <Menu.Item leftSection={<IconDownload size={16} />} onClick={handleDownloadAll}>
-                      {images.length > 1 ? `原本を保存 (${images.length}件)` : "原本を保存"}
-                    </Menu.Item>
-                  )}
-                  {onDelete && (
-                    <>
-                      <Menu.Divider />
-                      <Menu.Item color="red" leftSection={<IconTrash size={16} />} onClick={onDelete}>削除する</Menu.Item>
-                    </>
-                  )}
-                </Menu.Dropdown>
-              </Menu>
-            </>
+            // DS v2 §10.5 ① variant A: header has ⋮ のみ。編集は ⋮ メニュー or
+            // 下部 CTA から。ヘッダーに ✎ を置くと 3 経路になって重複するため。
+            <Menu position="bottom-end" shadow="md" width={220} withArrow>
+              <Menu.Target>
+                <ActionIcon variant="subtle" color="gray" radius="xl" aria-label="その他">
+                  <IconDotsVertical size={18} />
+                </ActionIcon>
+              </Menu.Target>
+              <Menu.Dropdown>
+                <Menu.Item leftSection={<IconEdit size={16} />} onClick={() => setMode("edit")}>編集する</Menu.Item>
+                <Menu.Item leftSection={<IconShare size={16} />} onClick={handleShare}>共有する</Menu.Item>
+                {onDuplicate && (
+                  <Menu.Item leftSection={<IconCopy size={16} />} onClick={onDuplicate}>複製する</Menu.Item>
+                )}
+                <Menu.Item leftSection={<IconCalendarPlus size={16} />} onClick={handleAddToCalendar}>カレンダーに追加</Menu.Item>
+                {images.length > 0 && (
+                  <Menu.Item leftSection={<IconDownload size={16} />} onClick={handleDownloadAll}>
+                    {images.length > 1 ? `原本を保存 (${images.length}件)` : "原本を保存"}
+                  </Menu.Item>
+                )}
+                {onDelete && (
+                  <>
+                    <Menu.Divider />
+                    <Menu.Item color="red" leftSection={<IconTrash size={16} />} onClick={onDelete}>削除する</Menu.Item>
+                  </>
+                )}
+              </Menu.Dropdown>
+            </Menu>
           ) : null
         }
       />
+      </div>
 
       {/* スクロール可能な本体 */}
       <Box className={classes.body}>

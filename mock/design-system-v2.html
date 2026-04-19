@@ -3734,11 +3734,11 @@ HND → ITM
           <div class="comp-label">① ヘッダー 3 variants</div>
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
             <div>
-              <div style="font-size:var(--fs-xs);color:var(--text-dim);margin-bottom:6px">A. Minimal（現状）</div>
-              <div class="modal-header">
+              <div style="font-size:var(--fs-xs);color:var(--text-dim);margin-bottom:6px">A. ↓ + ⋮ <span style="color:var(--accent-500);font-weight:var(--fw-bold)">← 推奨</span></div>
+              <div class="modal-header" style="border:1.5px solid var(--accent-500);border-radius:var(--r-md)">
                 <button class="btn-icon sm" aria-label="閉じる"><svg class="ic-svg"><use href="#i-down"/></svg></button>
                 <div class="modal-title">Delta DL2844</div>
-                <button class="btn-icon sm" aria-label="閉じる"><svg class="ic-svg"><use href="#i-close"/></svg></button>
+                <button class="btn-icon sm" aria-label="その他"><svg class="ic-svg"><use href="#i-more-v"/></svg></button>
               </div>
             </div>
             <div>
@@ -3750,8 +3750,8 @@ HND → ITM
               </div>
             </div>
             <div>
-              <div style="font-size:var(--fs-xs);color:var(--text-dim);margin-bottom:6px">C. ✎ + ⋮ <span style="color:var(--accent-500);font-weight:var(--fw-bold)">← 推奨</span></div>
-              <div class="modal-header" style="border:1.5px solid var(--accent-500);border-radius:var(--r-md)">
+              <div style="font-size:var(--fs-xs);color:var(--text-dim);margin-bottom:6px">C. ✎ + ⋮</div>
+              <div class="modal-header">
                 <button class="btn-icon sm" aria-label="閉じる"><svg class="ic-svg"><use href="#i-down"/></svg></button>
                 <div class="modal-title">Delta DL2844</div>
                 <div style="display:flex;gap:2px">
@@ -3761,7 +3761,10 @@ HND → ITM
               </div>
             </div>
           </div>
-          <p class="muted" style="font-size:var(--fs-xs);margin-top:10px">推奨: C案。編集は最頻用なので常時露出、それ以外を <code class="mono">⋮</code> に集約。閉じる (↓) は iOS Drawer 作法に準拠。</p>
+          <p class="muted" style="font-size:var(--fs-xs);margin-top:10px">
+            推奨: <strong style="color:var(--text)">A 案</strong>。編集経路は「⋮ メニューの『編集する』」+「下部 CTA ボタン」の 2 つに集約し、ヘッダーに ✎ を重ねない（3 経路にすると UI が賑やかになり意図がぼやける）。
+            閉じる (↓) は iOS Drawer 作法に準拠。C 案は項目が多いドキュメント系画面（編集頻度が異常に高い）専用の例外。
+          </p>
         </div>
 
         <!-- ② More Menu (⋮ タップで展開するシート) -->
@@ -3772,6 +3775,7 @@ HND → ITM
               <div class="sheet" style="max-width:340px;margin-left:auto;margin-right:auto">
                 <div class="sheet-handle"><div class="sheet-handle-bar"></div></div>
                 <div class="sheet-body" style="padding:8px 0 20px">
+                  <button class="menu-row"><span class="menu-row-ic"><svg class="ic-svg"><use href="#i-edit"/></svg></span><span class="menu-row-label">編集する</span></button>
                   <button class="menu-row"><span class="menu-row-ic"><svg class="ic-svg"><use href="#i-share"/></svg></span><span class="menu-row-label">共有する</span></button>
                   <button class="menu-row"><span class="menu-row-ic"><svg class="ic-svg"><use href="#i-copy"/></svg></span><span class="menu-row-label">複製する</span></button>
                   <button class="menu-row"><span class="menu-row-ic"><svg class="ic-svg"><use href="#i-calendar"/></svg></span><span class="menu-row-label">カレンダーに追加</span></button>
@@ -3784,13 +3788,14 @@ HND → ITM
             <div style="display:flex;flex-direction:column;justify-content:center;gap:10px">
               <div style="font-size:var(--fs-sm);font-weight:var(--fw-bold)">項目の順序</div>
               <ol style="font-size:var(--fs-sm);line-height:1.8;padding-left:20px;color:var(--text-dim);margin:0">
+                <li><strong style="color:var(--text)">編集する</strong> — 全項目のフォーム編集</li>
                 <li><strong style="color:var(--text)">共有する</strong> — Native Share Sheet を呼び出し</li>
                 <li><strong style="color:var(--text)">複製する</strong> — 同じ内容で新規 Step を作成</li>
                 <li><strong style="color:var(--text)">カレンダーに追加</strong> — <code class="mono">.ics</code> を生成</li>
                 <li><strong style="color:var(--text)">原本を保存</strong> — スキャン元画像を端末にダウンロード</li>
                 <li style="color:var(--danger-500)"><strong>削除する</strong> — 確認ダイアログ経由</li>
               </ol>
-              <p class="muted" style="font-size:var(--fs-xs);margin-top:4px">頻度順。破壊的操作は divider で視覚的に分離。<strong style="color:var(--text)">「編集する」はヘッダー ✎ に集約</strong>したので More Menu には含めない（variant C 前提の運用）。</p>
+              <p class="muted" style="font-size:var(--fs-xs);margin-top:4px">頻度順。破壊的操作は divider で視覚的に分離。ヘッダーに ✎ を置かない variant A 運用では、<strong style="color:var(--text)">編集の入口は「⋮ の先頭」と「下部 CTA ボタン」の 2 経路</strong>に集約する。</p>
             </div>
           </div>
         </div>
