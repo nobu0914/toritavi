@@ -96,13 +96,20 @@ export async function updateJourney(
   if (uErr) throw new Error(`Journey更新に失敗: ${uErr.message}`);
 
   if (steps) {
-    // Fetch existing step IDs so we can diff and preserve image columns.
-    // Using light select (id only) — avoids shipping image blobs we don't need.
+    // Fetch existing rows WITH their image columns so we can hydrate steps
+    // that were loaded via STEP_COLUMNS_LIGHT (which excludes images for perf).
+    // Without this, a batch upsert would unify the column list and wipe
+    // existing images to NULL on the ON CONFLICT UPDATE path.
     const { data: existingRows } = await sb
       .from("toritavi_steps")
-      .select("id")
+      .select("id, source_image_url, source_image_urls")
       .eq("journey_id", id);
-    const existingIds = new Set((existingRows ?? []).map((r: { id: string }) => r.id));
+    const imagesById = new Map<string, { url: string | null; urls: string[] | null }>();
+    (existingRows ?? []).forEach((r: { id: string; source_image_url: string | null; source_image_urls: string[] | null }) => {
+      imagesById.set(r.id, { url: r.source_image_url, urls: r.source_image_urls });
+    });
+
+    const existingIds = new Set(imagesById.keys());
     const nextIds = new Set(steps.map((s) => s.id));
     const removedIds = [...existingIds].filter((eid) => !nextIds.has(eid));
 
@@ -115,9 +122,21 @@ export async function updateJourney(
     }
 
     if (steps.length > 0) {
-      const { error: sErr } = await sb.from("toritavi_steps").upsert(
-        steps.map((s, i) => stepToRow(s, id, userId, i))
-      );
+      // Build rows with explicit (non-undefined) image columns on every row so
+      // the batch upsert payload has a uniform column list — avoiding the
+      // PostgREST pitfall where mixed keys across rows turn unspecified
+      // columns into NULL on ON CONFLICT UPDATE and wipe existing images.
+      const rows = steps.map((s, i) => {
+        const row = stepToRow(s, id, userId, i);
+        if (s.sourceImageUrl === undefined) {
+          row.source_image_url = imagesById.get(s.id)?.url ?? null;
+        }
+        if (s.sourceImageUrls === undefined) {
+          row.source_image_urls = imagesById.get(s.id)?.urls ?? null;
+        }
+        return row;
+      });
+      const { error: sErr } = await sb.from("toritavi_steps").upsert(rows);
       if (sErr) throw new Error(`ステップ更新に失敗: ${sErr.message}`);
     }
   }
