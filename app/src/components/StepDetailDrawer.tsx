@@ -200,14 +200,28 @@ export function StepDetailDrawer({
   const [isSnappingBack, setIsSnappingBack] = useState(false);
   const touchStartY = useRef<number | null>(null);
   const touchStartT = useRef<number>(0);
+  const bodyRef = useRef<HTMLDivElement>(null);
 
+  // grab bar 用: 常に drag を発動する。
   const onDragStart = (e: React.TouchEvent) => {
-    // ⋮ / ✕ など操作系の子要素に触れたときは drag を無効化する。
-    // 有効にしてしまうと iOS Safari で touchAction: pan-y の影響で
-    // 合成 click がキャンセルされ、Menu が開かず Drawer だけが閉じる挙動に
-    // 見える報告があった。操作ボタンの範囲では drag しない方針。
     const target = e.target as HTMLElement | null;
     if (target?.closest('button, [role="button"], [data-no-drag="true"]')) {
+      touchStartY.current = null;
+      return;
+    }
+    touchStartY.current = e.touches[0].clientY;
+    touchStartT.current = Date.now();
+  };
+  // body（スクロール領域）用: scrollTop が先頭のときだけ drag を armed にする。
+  // iOS 標準の Bottom Sheet 挙動 — スクロールし切った後に下スワイプで sheet が閉じる。
+  const onBodyDragStart = (e: React.TouchEvent) => {
+    const target = e.target as HTMLElement | null;
+    if (target?.closest('button, [role="button"], input, textarea, [contenteditable="true"], [data-no-drag="true"]')) {
+      touchStartY.current = null;
+      return;
+    }
+    const body = bodyRef.current;
+    if (body && body.scrollTop > 0) {
       touchStartY.current = null;
       return;
     }
@@ -344,7 +358,15 @@ export function StepDetailDrawer({
       />
 
       {/* スクロール可能な本体 */}
-      <Box className={classes.body}>
+      <Box
+        className={classes.body}
+        ref={bodyRef}
+        onTouchStart={onBodyDragStart}
+        onTouchMove={onDragMove}
+        onTouchEnd={onDragEnd}
+        onTouchCancel={onDragEnd}
+        style={{ touchAction: "pan-y" }}
+      >
         {mode === "view" ? (
           <>
             <Ticket
