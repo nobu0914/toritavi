@@ -100,6 +100,7 @@ export default function TripDetailClient({
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [stepImages, setStepImages] = useState<{ sourceImageUrl?: string; sourceImageUrls?: string[] }>({});
+  const [anchorStepId, setAnchorStepId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!modalOpened || editingIndex === null || !journey) {
@@ -180,7 +181,9 @@ export default function TripDetailClient({
 
   // DS v2 §10.6: +予定を追加 → Bottom Sheet (AddStepDrawer) を起動。
   // 画面遷移なしで OCR/撮影/メール貼付/手入力のフルフローに入る。
-  const openNewStep = () => {
+  // anchorId: 直前ステップの ID。未指定（null）は末尾に追加。
+  const openNewStep = (anchorId: string | null = null) => {
+    setAnchorStepId(anchorId);
     openAddSheet();
   };
 
@@ -506,7 +509,7 @@ export default function TripDetailClient({
                         className={classes.actionBtn}
                         onClick={(e) => {
                           e.stopPropagation();
-                          openNewStep();
+                          openNewStep(step.id);
                         }}
                       >
                         <IconPlus size={14} />
@@ -544,7 +547,7 @@ export default function TripDetailClient({
           <button
             type="button"
             className={classes.addScheduleButton}
-            onClick={openNewStep}
+            onClick={() => openNewStep()}
           >
             <IconPlus size={18} />
             予定を追加
@@ -558,9 +561,40 @@ export default function TripDetailClient({
         journey={{ id: journey.id, title: journey.title }}
         onCompleted={async () => {
           closeAddSheet();
-          // Sheet 閉じ後にタイムラインを最新化する
           const fresh = await getJourney(journey.id);
-          if (fresh) setJourney(fresh);
+          if (!fresh) return;
+
+          // anchor ステップが指定されている場合、追加直後の新ステップで
+          // time が空のものは anchor.time+offset を割り当て、タイムライン上で
+          // アンカー直後に並ぶようにする（sortStepsByTime は時刻で並ぶため）。
+          const anchor = anchorStepId
+            ? journey.steps.find((s) => s.id === anchorStepId)
+            : null;
+          const anchorTime = anchor?.time?.match(/(\d{1,2}):(\d{2})/);
+          if (anchor && anchorTime) {
+            const existingIds = new Set(journey.steps.map((s) => s.id));
+            const newSteps = fresh.steps.filter((s) => !existingIds.has(s.id));
+            const hasEmpty = newSteps.some((s) => !s.time?.match(/\d{1,2}:\d{2}/));
+            if (hasEmpty) {
+              const base = Number(anchorTime[1]) * 60 + Number(anchorTime[2]);
+              let offset = 1;
+              const patched = fresh.steps.map((s) => {
+                if (existingIds.has(s.id)) return s;
+                if (s.time?.match(/\d{1,2}:\d{2}/)) return s;
+                const mins = Math.min(base + offset, 23 * 60 + 59);
+                offset += 1;
+                const hh = String(Math.floor(mins / 60)).padStart(2, "0");
+                const mm = String(mins % 60).padStart(2, "0");
+                return { ...s, time: `${hh}:${mm}` };
+              });
+              await updateJourney(fresh.id, { steps: patched });
+              setJourney({ ...fresh, steps: patched });
+              setAnchorStepId(null);
+              return;
+            }
+          }
+          setJourney(fresh);
+          setAnchorStepId(null);
         }}
       />
 
