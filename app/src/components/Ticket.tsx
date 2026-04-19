@@ -104,29 +104,67 @@ function fileNameBase(title: string): string {
 }
 
 /**
- * Extract IATA/short code from values like:
- *   "クライストチャーチ（CHC）"          → { code: "CHC", name: "クライストチャーチ" }
- *   "San Jose (SJC)"                   → { code: "SJC", name: "San Jose" }
- *   "東京 成田 (NRT) ターミナル1"         → { code: "NRT", name: "東京 成田 ターミナル1" }
- *   "NRT"                              → { code: "NRT" }
- *   "東京駅"                            → { code: "東京駅" }
+ * Extract IATA-style code + friendly name from values like:
+ *   "クライストチャーチ（CHC）"                         → { code: "CHC", name: "クライストチャーチ" }
+ *   "San Jose (SJC)"                                 → { code: "SJC", name: "San Jose" }
+ *   "東京 成田 (NRT) ターミナル1"                      → { code: "NRT", name: "東京 成田" }
+ *   "オークランド AUCKLAND (AKL) - ターミナル1"         → { code: "AKL", name: "オークランド" }
+ *   "東京（成田）TOKYO (NARITA) - ターミナル1"          → { code: "東京", name: "成田" }
+ *   "NRT"                                            → { code: "NRT" }
+ *   "東京駅"                                          → { code: "東京駅" }
  *
- * The parenthesised IATA-style code can appear anywhere in the string; text
- * before and after it is kept as the friendly name so trailing qualifiers
- * like "ターミナル1" / "Terminal 2" / "空港第2" aren't dropped or shoved
- * into the big port-code slot (which would then truncate).
+ * Priority:
+ *   1) A real 3-letter IATA code in parens → big slot = code, small slot =
+ *      Japanese name (English transliteration dropped so it doesn't truncate).
+ *   2) No IATA → use the leading Japanese primary name as the big slot and,
+ *      if a Japanese sub-name appears in parens right after, use that as the
+ *      small slot. This keeps the verbose OCR string from being dumped into
+ *      the huge port-code letters.
+ *   3) Last resort → show the whole string in the big slot (may still
+ *      ellipsize on very long inputs but no layout is available for them).
  */
+const JP_CHAR = "\\u3040-\\u30FF\\u4E00-\\u9FFF";
+const JP_PHRASE = new RegExp(`[${JP_CHAR}][${JP_CHAR}・ー\\s]*`);
+
 function splitPort(value: string | undefined): { code: string; name?: string } {
   if (!value) return { code: "—" };
   const trimmed = value.trim();
-  const m = trimmed.match(/[（(]\s*([A-Za-z0-9]{2,5})\s*[）)]/);
-  if (m) {
-    const code = m[1].toUpperCase();
-    const name = (trimmed.slice(0, m.index) + " " + trimmed.slice((m.index ?? 0) + m[0].length))
+
+  // 1) Strict 3-letter uppercase IATA in parens (half- or full-width).
+  const iata = trimmed.match(/[（(]\s*([A-Z]{3})\s*[）)]/);
+  if (iata) {
+    const code = iata[1];
+    const raw = (
+      trimmed.slice(0, iata.index ?? 0) +
+      " " +
+      trimmed.slice((iata.index ?? 0) + iata[0].length)
+    );
+    // Strip other parenthesised annotations (「(NARITA)」「(成田)」) and any
+    // trailing " - ターミナル1" qualifier. Then prefer Japanese text if both
+    // Japanese and Latin names are present (OCR often doubles them up).
+    const cleaned = raw
+      .replace(/[（(][^)）]*[)）]/g, " ")
+      .replace(/\s*[-–—]\s*.+$/, "")
       .replace(/\s+/g, " ")
       .trim();
+    const jp = cleaned.match(JP_PHRASE);
+    const name = (jp ? jp[0] : cleaned).trim();
     return { code, name: name || undefined };
   }
+
+  // 2) No IATA — fall back to the leading Japanese primary.
+  const primaryJp = trimmed.match(JP_PHRASE);
+  if (primaryJp) {
+    const code = primaryJp[0].trim();
+    const after = trimmed.slice((primaryJp.index ?? 0) + primaryJp[0].length);
+    const parenInner = after.match(/^[（(]([^)）]+)[）)]/);
+    const innerJp = parenInner?.[1].trim();
+    return {
+      code,
+      name: innerJp && JP_PHRASE.test(innerJp) ? innerJp : undefined,
+    };
+  }
+
   return { code: trimmed };
 }
 
