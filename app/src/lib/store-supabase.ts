@@ -52,7 +52,16 @@ export async function getStepImages(
     console.error("[getStepImages] error for", stepId, error);
     return {};
   }
-  if (!data) return {};
+  if (!data) {
+    console.warn("[getStepImages] no row for", stepId);
+    return {};
+  }
+  console.log(
+    "[getStepImages]",
+    stepId,
+    "hasSingle=", !!data.source_image_url,
+    "hasMulti=", Array.isArray(data.source_image_urls) && data.source_image_urls.length > 0,
+  );
   return {
     sourceImageUrl: data.source_image_url || undefined,
     sourceImageUrls: data.source_image_urls || undefined,
@@ -143,11 +152,34 @@ export async function updateJourney(
         }
         return row;
       });
+      console.log(
+        "[updateJourney] upserting",
+        rows.length,
+        "rows. With image:",
+        rows.filter((r) => r.source_image_url || r.source_image_urls).map((r) => ({
+          id: r.id,
+          single: r.source_image_url ? `${Math.round(String(r.source_image_url).length / 1024)}KB` : null,
+          multi: r.source_image_urls ? (Array.isArray(r.source_image_urls) ? r.source_image_urls.length : "non-array") : null,
+        })),
+      );
       const { error: sErr } = await sb.from("toritavi_steps").upsert(rows);
       if (sErr) {
         console.error("[updateJourney] upsert error:", sErr);
         throw new Error(`ステップ更新に失敗: ${sErr.message}`);
       }
+      // Verify persistence for the new rows by re-reading image cols.
+      const { data: verifyRows } = await sb
+        .from("toritavi_steps")
+        .select("id, source_image_url, source_image_urls")
+        .eq("journey_id", id);
+      console.log(
+        "[updateJourney] post-upsert verify:",
+        (verifyRows ?? []).map((r: { id: string; source_image_url: string | null; source_image_urls: unknown }) => ({
+          id: r.id,
+          hasSingle: !!r.source_image_url,
+          hasMulti: Array.isArray(r.source_image_urls) && r.source_image_urls.length > 0,
+        })),
+      );
     }
   }
 }
