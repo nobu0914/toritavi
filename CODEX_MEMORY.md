@@ -1,6 +1,6 @@
 # CODEX Memory
 
-最終更新: 2026-04-19（予定追加フローを Bottom Sheet 化 + 周辺回帰修正）
+最終更新: 2026-04-20（公開面セキュリティ再チェック + 作業記録保存）
 
 ## 目的
 このファイルは、Codex がこのリポジトリで継続作業するための簡易メモリです。
@@ -27,6 +27,10 @@
 - `security.txt` は `/.well-known/security.txt`、`robots.txt` は `/robots.txt` で公開されている
 - `Google` ログインは現時点では実フロー未実装で、ボタンは disabled 想定
 - OCR は `/api/ocr` 経由で server-side の Claude API プロキシを使う構成
+- 2026-04-20 時点でも、匿名アクセスでは `/scan`、`/alerts`、`/account`、`/unfiled` は `/login` へリダイレクトされる
+- 2026-04-20 の公開面再チェックでは、主要ヘッダーは維持され、`/api/ocr` への cross-origin POST 403 も維持されていた
+- 公開HTMLの CSP には `script-src 'unsafe-inline' 'unsafe-eval'` が残っている
+- HTML応答の `Vary` は Next.js 系のみで、`Vary: Origin` は `/` の 307、`/robots.txt`、`/.well-known/security.txt`、`/api/ocr` で確認できた
 
 ## 今回の作業記録
 - ユーザー指示 `会話・作業の履歴を確認して` に従い、`CODEX_MEMORY.md` と `HANDOVER.md` を読み、現状を整理した
@@ -46,6 +50,11 @@
 - 続く再テストで、公開面の `access-control-allow-origin: *` が `https://toritavi.com` 固定値に置き換わったことを確認した
 - ただし `Vary: Origin` は `/robots.txt`、`/.well-known/security.txt`、`/` の 307 応答では確認できた一方、`/login`、`/signup`、`/forgot-password` の HTML 応答では確認できなかった
 - セキュリティ再テスト結果を Claude Code に渡しやすいコピペ形式で複数回整形した
+- 2026-04-20 に `toritavi.com` 公開面の非破壊セキュリティ再チェックを実施した
+- 今回の再チェックでは、HTTPS 308、HSTS、主要セキュリティヘッダー、`robots.txt`、`security.txt`、`/api/ocr` の cross-origin POST 403 を再確認した
+- 再チェックの結果、主な残課題は「公開HTMLの CSP に `unsafe-inline` / `unsafe-eval` が残っていること」と「Origin / Vary の扱いに一貫性がないこと」と整理した
+- セキュリティ再チェック結果を Claude Code に貼りやすい雛形へ整形した
+- ユーザー指示 `チャット履歴を保存。作業記録をして。` に従い、この `CODEX_MEMORY.md` と日付付きセッションログへ記録を残した
 
 ## 現在の到達点
 - `app/src/app/trips/new/page.tsx` はモックにかなり近いが、ユーザーは「まったく同じUI」を求めている
@@ -53,7 +62,8 @@
 - 差分詰め対象は、余白、ラベル位置、ボタン寸法、線色、バッジ余白、未登録ステップカードの密度
 - `trips/[id]` もタイムラインには戻したが、まだモック完全一致までは未確認
 - セキュリティ観点では、公開面の大きな改善は確認済み
-- 現時点の残課題は、HTML 応答で `Vary: Origin` を本当に付けたいかの整理、実ブラウザでの認証画面表示確認、preview deployment での CORS 挙動確認
+- 2026-04-20 時点でも公開面の基本防御は維持されており、重大な公開設定ミスは今回の範囲では未確認
+- 現時点の残課題は、HTML 応答で `Vary: Origin` を本当に付けたいかの整理、公開HTML CSP の `unsafe-inline` / `unsafe-eval` の削減、実ブラウザでの認証画面表示確認、preview deployment での CORS 挙動確認
 - 認可、RLS、パスワード再設定トークン再利用、メール認証リンク再利用、ゲストモードと本会員データ分離は次フェーズの検証対象
 
 ## 実データ確認時の制約
@@ -76,6 +86,7 @@ JSON.parse(localStorage.getItem("toritavi_journeys") ?? "[]")
 - 認証後ページの認可テスト（Supabase RLS 含む）
 - パスワード再設定 / メール認証トークンの安全性確認
 - `Vary: Origin` の HTML 応答での扱い整理
+- 公開HTML CSP の `unsafe-inline` / `unsafe-eval` の削減
 - preview deployment での CORS 確認
 - OCR / 撮影 / アップロード / メール取込は未実装
 - 下書き保存は実装済みだが UI/運用確認は未完
@@ -125,3 +136,29 @@ JSON.parse(localStorage.getItem("toritavi_journeys") ?? "[]")
 - 自主検査 16 項目 PASS（build / lint / 論理テスト）
 - DS v2 §10.5（詳細画面 variant A = ⋮ + 下部 CTA）、§10.6（Bottom Sheet）、§13.11（4-cell）更新
 - コミット範囲: `4326718` 〜 `6ef8671`（12 commits, main へ push 済）
+
+## 2026-04-20 セキュリティ再チェックセッション（追記）
+- `toritavi.com` 公開面の非破壊セキュリティ再チェックを実施
+- 対象:
+  - `/`
+  - `/login`
+  - `/signup`
+  - `/forgot-password`
+  - `/reset-password`
+  - `/verify-email`
+  - `/scan`
+  - `/alerts`
+  - `/account`
+  - `/unfiled`
+  - `/robots.txt`
+  - `/.well-known/security.txt`
+  - `/api/ocr`
+- 確認結果:
+  - `http://toritavi.com/` は HTTPS へ 308
+  - `/scan`、`/alerts`、`/account`、`/unfiled` は匿名時 `/login` へ 307
+  - 主要セキュリティヘッダーは維持
+  - `/api/ocr` への cross-origin POST は 403 を維持
+  - `robots.txt` と `security.txt` は公開継続
+  - 公開HTMLの CSP に `script-src 'unsafe-inline' 'unsafe-eval'` が残存
+  - `Vary: Origin` は HTML では未確認、307 / text / API では確認
+- セキュリティ再チェック結果をコピペ用の雛形に整形した
