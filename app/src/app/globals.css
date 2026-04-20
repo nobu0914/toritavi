@@ -32,13 +32,33 @@ a {
  * Mantine Drawer の強制中央寄せ。body(max-width:430) と揃えて、
  * iPad / PC で Drawer panel が viewport 全幅に広がってチケットが
  * 見切れる崩れを防ぐ。styles prop が効かない場合の CSS 側保険。
- *   m_31cd769a = Drawer.inner (flex container)
+ *   m_60c222c7 = ModalBase.inner (position:fixed; width:100%)
+ *   m_31cd769a = Drawer.inner   (flex container)
  *   m_b8a05bbd = Drawer.content (パネル本体)
+ *
+ * m_60c222c7 は Mantine 側で left/right が省略されているため、
+ * body が `margin: 0 auto` で中央寄せされていると static position が
+ * body.left にずれ、fixed 要素の基準が viewport 中央からずれる。
+ * left:0 を明示して viewport 左端に固定する。
  */
+.m_60c222c7 {
+  left: 0 !important;
+  right: 0 !important;
+}
 .m_31cd769a {
   justify-content: center !important;
 }
 .m_b8a05bbd {
   max-width: 430px !important;
   margin-inline: auto !important;
+}
+
+/*
+ * react-remove-scroll は scroll-lock 時に body へ `padding-right: <gap>px`
+ * を注入する。iOS Safari で gap が非 0 になる場合があり、body 右側に
+ * 余計な padding が付く。overflow:hidden による scroll-lock は維持したまま
+ * gap 補正だけ 0 に上書きする。
+ */
+body[data-scroll-locked] {
+  padding-right: 0 !important;
 }
