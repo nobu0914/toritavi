@@ -216,10 +216,15 @@ export function StepDetailDrawer({
       /* TabBar (z-index: 200) を確実に覆うため 400 に引き上げ。 */
       zIndex={400}
       styles={{
+        /* body(max-width:430px) に揃えて中央寄せ。
+           広い画面で Drawer が viewport 全幅に広がりチケットが見切れる崩れを防ぐ。 */
+        inner: { justifyContent: "center" },
         content: {
           borderRadius: "20px 20px 0 0",
           display: "flex",
           flexDirection: "column",
+          maxWidth: 430,
+          width: "100%",
         },
         body: { padding: 0, flex: 1, display: "flex", flexDirection: "column", minHeight: 0 },
       }}
