@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 import { buildOcrRulesPrompt } from "@/lib/ocr-rules";
+import { createClient } from "@/lib/supabase-server";
 
 const SYSTEM_PROMPT = `あなたは旅行・予約文書の情報抽出専門家です。
 画像から予約情報を読み取り、以下のJSON形式で返してください。
@@ -78,6 +79,15 @@ export async function POST(request: NextRequest) {
   const origin = request.headers.get("origin");
   if (origin && !ALLOWED_ORIGINS.has(origin)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  // Require an authenticated user. Origin can be forged by non-browser clients
+  // (curl / fetch with any header), so without this check an attacker could
+  // drive Anthropic spend unbounded.
+  const sb = await createClient();
+  const { data: userData } = await sb.auth.getUser();
+  if (!userData.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;

@@ -9,8 +9,14 @@ import { createClient } from "@/lib/supabase-server";
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
   const code = searchParams.get("code");
-  const next = searchParams.get("next") || "/";
   const type = searchParams.get("type"); // "recovery" for password reset
+
+  // Sanitize `next` to block open-redirect abuse.
+  //   - Must start with "/" (same-origin path)
+  //   - Must NOT start with "//" (protocol-relative URL like //evil.com)
+  //   - Reject other schemes (javascript:, data:, etc.)
+  const nextRaw = searchParams.get("next") || "/";
+  const next = /^\/(?!\/)/.test(nextRaw) ? nextRaw : "/";
 
   if (!code) {
     return NextResponse.redirect(`${origin}/login?error=missing_code`);
