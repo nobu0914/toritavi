@@ -30,7 +30,20 @@ export async function GET(request: NextRequest) {
   }
 
   if (type === "recovery") {
-    return NextResponse.redirect(`${origin}/reset-password`);
+    // Recovery links grant a full Supabase session (exchangeCodeForSession
+    // above). Without further restriction the user — or anyone who holds
+    // their email briefly — can navigate anywhere in the app without
+    // actually changing the password. We stamp a short-lived
+    // `toritavi_recovery` cookie here and let the proxy (middleware) pin
+    // the session to /reset-password until the password update completes.
+    const res = NextResponse.redirect(`${origin}/reset-password`);
+    res.cookies.set("toritavi_recovery", "1", {
+      path: "/",
+      secure: true,
+      sameSite: "lax",
+      maxAge: 60 * 60, // matches Supabase recovery token default lifetime
+    });
+    return res;
   }
 
   return NextResponse.redirect(`${origin}${next}`);

@@ -55,6 +55,10 @@ export default function ResetPasswordPage() {
         setLoading(false);
         return;
       }
+      // Clear the recovery-pin cookie set by /auth/callback so middleware
+      // stops forcing the user back to /reset-password. Non-HttpOnly for
+      // this purpose — it is only a navigation signal, not a credential.
+      document.cookie = "toritavi_recovery=; path=/; max-age=0; secure; samesite=lax";
       await sb.auth.signOut();
       setDone(true);
       setLoading(false);

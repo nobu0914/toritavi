@@ -118,8 +118,32 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Authenticated user hitting public auth pages → send to home
-  if (user && isPublicPath(pathname) && pathname !== "/auth/callback") {
+  // Recovery session guard: while a recovery session is active (cookie
+  // stamped by /auth/callback?type=recovery), the user must be on
+  // /reset-password. Otherwise anyone holding the email briefly can click
+  // the reset link and use the resulting full session without ever
+  // changing the password.
+  const isRecovery = request.cookies.get("toritavi_recovery")?.value === "1";
+  if (
+    isRecovery &&
+    user &&
+    pathname !== "/reset-password" &&
+    pathname !== "/auth/callback"
+  ) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/reset-password";
+    return withSecHeaders(NextResponse.redirect(url), csp);
+  }
+
+  // Authenticated user hitting public auth pages → send to home.
+  // /reset-password is excluded: a live recovery session needs to stay
+  // there to finish the password change.
+  if (
+    user &&
+    isPublicPath(pathname) &&
+    pathname !== "/auth/callback" &&
+    pathname !== "/reset-password"
+  ) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     return withSecHeaders(NextResponse.redirect(url), csp);
