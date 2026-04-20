@@ -79,3 +79,40 @@ export type JourneyDraft = {
   items: JourneyDraftItem[];
   savedAt: string;
 };
+
+/**
+ * Per-user notification opt-in flags. Nested by category so the settings
+ * page can render sections without hard-coding keys.
+ */
+export type NotificationPrefs = {
+  tripReminders?: {
+    dayBefore?: boolean;
+    hourBefore?: boolean;
+    checkIn?: boolean;
+  };
+  changes?: {
+    delayCancel?: boolean;
+    bookingChange?: boolean;
+  };
+  documents?: {
+    needsReview?: boolean;
+    ocrDone?: boolean;
+  };
+  announcements?: {
+    updates?: boolean;
+  };
+};
+
+/**
+ * Per-user profile + preferences. Stored in Supabase
+ * `toritavi_user_settings` for authenticated users, or in localStorage
+ * under `toritavi_user_settings_guest` for guests (fields restricted).
+ */
+export type UserSettings = {
+  displayName?: string;
+  timezone?: string;
+  defaultOrigin?: string;
+  emergencyContact?: string;
+  avatarUrl?: string;
+  notificationPrefs?: NotificationPrefs;
+};

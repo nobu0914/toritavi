@@ -1,7 +1,16 @@
 "use client";
 
 import { Box, Button, Loader, Stack, Text } from "@mantine/core";
-import { IconChevronRight, IconFlask, IconLogout, IconUser } from "@tabler/icons-react";
+import {
+  IconBell,
+  IconChevronRight,
+  IconDatabase,
+  IconFlask,
+  IconHelpCircle,
+  IconLogout,
+  IconUser,
+  IconUserCircle,
+} from "@tabler/icons-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -10,6 +19,21 @@ import { TabBar } from "@/components/TabBar";
 import { createClient } from "@/lib/supabase-browser";
 import { disableGuestMode, isGuestMode } from "@/lib/guest";
 import { clearGuestData } from "@/lib/store-guest";
+
+type MenuItem = {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ size?: number; color?: string }>;
+};
+
+// 親画面は DS v2 §15 の「状態確認 + 主要導線」ロール。
+// フォーム本体 / トグル大量表示 / 破壊的操作の確認 は下層に逃がす。
+const MENU: MenuItem[] = [
+  { href: "/account/profile", label: "プロフィール設定", icon: IconUserCircle },
+  { href: "/account/notifications", label: "通知設定", icon: IconBell },
+  { href: "/account/help", label: "ヘルプ・サポート", icon: IconHelpCircle },
+  { href: "/account/data", label: "アカウントとデータ", icon: IconDatabase },
+];
 
 export default function AccountPage() {
   const router = useRouter();
@@ -41,8 +65,6 @@ export default function AccountPage() {
     try {
       const sb = createClient();
       await sb.auth.signOut();
-      // Belt-and-suspenders: ensure nothing guest-flavored survives for the
-      // next user of this device.
       clearGuestData();
       router.replace("/login");
     } catch {
@@ -60,7 +82,7 @@ export default function AccountPage() {
     <>
       <AppHeader title="アカウント" />
       <Box pb={110}>
-        {/* Profile / status card */}
+        {/* Status card */}
         <Box
           style={{
             background: "white",
@@ -100,7 +122,12 @@ export default function AccountPage() {
             ) : (
               <>
                 <Text fw={700} size="16px">ログイン中</Text>
-                <Text size="12px" c="gray.6" mt={2} style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
+                <Text
+                  size="12px"
+                  c="gray.6"
+                  mt={2}
+                  style={{ overflow: "hidden", textOverflow: "ellipsis" }}
+                >
                   {email ?? "—"}
                 </Text>
               </>
@@ -125,7 +152,7 @@ export default function AccountPage() {
           </Box>
         )}
 
-        {/* Menu */}
+        {/* Primary navigation — 4 items to subpages */}
         <Text
           size="11px"
           fw={700}
@@ -145,26 +172,34 @@ export default function AccountPage() {
             overflow: "hidden",
           }}
         >
-          {["プロフィール設定", "通知設定", "ヘルプ・サポート"].map((item) => (
-            <Box
-              key={item}
-              style={{
-                padding: 14,
-                borderBottom: "1px solid var(--n-100)",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                fontSize: 15,
-                color: "var(--text-dim)",
-              }}
-            >
-              {item}
-              <IconChevronRight size={18} color="var(--n-300)" />
-            </Box>
-          ))}
+          {MENU.map((item, idx) => {
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  padding: 14,
+                  borderBottom:
+                    idx === MENU.length - 1 ? "none" : "1px solid var(--n-100)",
+                  fontSize: 15,
+                  color: "var(--text)",
+                  textDecoration: "none",
+                }}
+              >
+                <Icon size={20} color="var(--text-dim)" />
+                <span style={{ flex: 1 }}>{item.label}</span>
+                <IconChevronRight size={18} color="var(--n-300)" />
+              </Link>
+            );
+          })}
         </Box>
 
-        {/* Sign out / exit guest */}
+        {/* Sign-out stays on parent until /account/data is live; Phase 4
+            moves it under the "セッション" section there. */}
         <Box style={{ margin: "0 16px 16px" }}>
           {isGuest ? (
             <Button
