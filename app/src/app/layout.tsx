@@ -8,6 +8,12 @@ import "@mantine/notifications/styles.css";
 import "./design-tokens.css";
 import "./globals.css";
 
+// CSP nonces (set in src/proxy.ts) require every rendered page to pick up
+// the fresh per-request nonce, which is impossible if the page is
+// prerendered at build time. Force dynamic rendering app-wide so Next.js
+// injects the current request's nonce into its bootstrap scripts.
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "toritavi",
   description: "行動を、前に進める",

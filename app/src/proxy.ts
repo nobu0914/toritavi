@@ -1,6 +1,48 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+/**
+ * Generate a per-request CSP nonce and the full CSP header value.
+ *
+ *   - script-src uses 'nonce-xxx' + 'strict-dynamic'. Next.js automatically
+ *     applies the nonce to its bootstrap/hydration scripts when it's pulled
+ *     from the x-nonce request header (set below).
+ *   - style-src keeps 'unsafe-inline' because Mantine v7 injects SSR styles
+ *     as inline <style> tags. A separate migration path is needed to
+ *     nonce/hash those (tracked as follow-up).
+ *   - dev mode re-enables 'unsafe-eval' to let Next HMR work.
+ */
+function buildCsp(nonce: string): string {
+  const isProd = process.env.NODE_ENV === "production";
+  const scriptSrc = isProd
+    ? `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`
+    : `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'unsafe-eval'`;
+  return [
+    "default-src 'self'",
+    scriptSrc,
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob: https:",
+    "font-src 'self' data:",
+    "connect-src 'self' https://*.supabase.co wss://*.supabase.co blob:",
+    "worker-src 'self' blob:",
+    "frame-ancestors 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "object-src 'none'",
+    "upgrade-insecure-requests",
+  ].join("; ");
+}
+
+function generateNonce(): string {
+  // Web Crypto is available on the Edge Runtime.
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  // Base64 per the CSP spec. btoa over a binary string works on Edge.
+  let binary = "";
+  for (const b of bytes) binary += String.fromCharCode(b);
+  return btoa(binary);
+}
+
 const PUBLIC_PATHS = [
   "/login",
   "/signup",
@@ -22,21 +64,26 @@ function isProtectedPath(pathname: string): boolean {
 }
 
 /**
- * Ensure HTML responses advertise Origin as a Vary key. We return an
- * Origin-restricted Access-Control-Allow-Origin via next.config, so caches
- * must split by Origin — otherwise a cache populated by a cross-origin
- * request's 403 could be served to a legitimate same-origin browser.
- * Next.js adds its own Vary for RSC (`rsc, next-router-state-tree, ...`),
- * which was previously replacing the static header we set in next.config,
- * so we append here instead of set.
+ * Attach Vary: Origin (as append — Next.js adds its own RSC-related Vary
+ * which would otherwise clobber a static set) and the per-request CSP.
  */
-function withVary(res: NextResponse): NextResponse {
+function withSecHeaders(res: NextResponse, csp: string): NextResponse {
   res.headers.append("Vary", "Origin");
+  res.headers.set("Content-Security-Policy", csp);
   return res;
 }
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // Per-request CSP nonce. Forward it to the app via a request header so
+  // the root layout can pick it up (`headers().get('x-nonce')`) and Next.js
+  // automatically tags its own bootstrap scripts with it.
+  const nonce = generateNonce();
+  const csp = buildCsp(nonce);
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-nonce", nonce);
+  requestHeaders.set("Content-Security-Policy", csp);
 
   // Guest mode cookie: bypass auth for protected pages
   const guestCookie = request.cookies.get("toritavi_guest")?.value;
@@ -47,10 +94,10 @@ export async function proxy(request: NextRequest) {
 
   // If Supabase not configured, let everything through (dev convenience)
   if (!supabaseUrl || !supabaseKey) {
-    return withVary(NextResponse.next());
+    return withSecHeaders(NextResponse.next({ request: { headers: requestHeaders } }), csp);
   }
 
-  let response = NextResponse.next({ request });
+  let response = NextResponse.next({ request: { headers: requestHeaders } });
 
   const supabase = createServerClient(supabaseUrl, supabaseKey, {
     cookies: {
@@ -59,7 +106,7 @@ export async function proxy(request: NextRequest) {
       },
       setAll(cookiesToSet) {
         cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-        response = NextResponse.next({ request });
+        response = NextResponse.next({ request: { headers: requestHeaders } });
         cookiesToSet.forEach(({ name, value, options }) =>
           response.cookies.set(name, value, options)
         );
@@ -75,17 +122,17 @@ export async function proxy(request: NextRequest) {
   if (user && isPublicPath(pathname) && pathname !== "/auth/callback") {
     const url = request.nextUrl.clone();
     url.pathname = "/";
-    return withVary(NextResponse.redirect(url));
+    return withSecHeaders(NextResponse.redirect(url), csp);
   }
 
   // Unauth & non-guest hitting protected → send to login
   if (!user && !isGuest && isProtectedPath(pathname)) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    return withVary(NextResponse.redirect(url));
+    return withSecHeaders(NextResponse.redirect(url), csp);
   }
 
-  return withVary(response);
+  return withSecHeaders(response, csp);
 }
 
 export const config = {

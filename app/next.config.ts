@@ -1,31 +1,11 @@
 import type { NextConfig } from "next";
 
-// Security headers applied to every response.
-// CSP allows Supabase (auth + realtime) and blob/data URIs used by pdf.js and camera.
-// 'unsafe-inline' remains for Mantine v7 SSR'd style tags and Next.js hydration
-// scripts. 'unsafe-eval' is dev-only (HMR) and stripped from production builds.
-// Nonce migration is tracked separately.
-const isProd = process.env.NODE_ENV === "production";
-const scriptSrc = isProd
-  ? "script-src 'self' 'unsafe-inline'"
-  : "script-src 'self' 'unsafe-inline' 'unsafe-eval'";
-
-const CSP = [
-  "default-src 'self'",
-  scriptSrc,
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https:",
-  "font-src 'self' data:",
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co blob:",
-  "worker-src 'self' blob:",
-  "frame-ancestors 'none'",
-  "base-uri 'self'",
-  "form-action 'self'",
-  "object-src 'none'",
-].join("; ");
-
+// Non-CSP security headers (static).
+//
+// CSP is set per-request in src/proxy.ts so we can inject a fresh nonce
+// into script-src. Putting CSP here would either force 'unsafe-inline'
+// (what we're trying to remove) or leak stale config when routes differ.
 const securityHeaders = [
-  { key: "Content-Security-Policy", value: CSP },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
