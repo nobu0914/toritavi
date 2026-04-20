@@ -163,11 +163,14 @@ export async function deleteJourney(sb: SupabaseClient, id: string): Promise<voi
  */
 
 export async function getUnfiledSteps(sb: SupabaseClient): Promise<Step[]> {
+  // toritavi_steps に created_at カラムは無いので sort_order と id で
+  // 安定順序を作る。新しいものを先頭にしたいので両方 DESC。
   const { data, error } = await sb
     .from("toritavi_steps")
     .select(STEP_COLUMNS_LIGHT)
     .is("journey_id", null)
-    .order("created_at", { ascending: false });
+    .order("sort_order", { ascending: false })
+    .order("id", { ascending: false });
   if (error) {
     console.error("[getUnfiledSteps] error:", error);
     return [];

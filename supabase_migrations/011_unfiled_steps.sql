@@ -24,9 +24,10 @@ ALTER TABLE toritavi_steps
 
 -- 2. Partial index for unfiled lookups (per-user "give me my unfiled bucket")
 --    Note: RLS filters by auth.uid() = user_id, so the index is correct
---    to include user_id for cheap per-user scans.
+--    to include user_id for cheap per-user scans. toritavi_steps has no
+--    created_at column — order by sort_order + id at query time instead.
 CREATE INDEX IF NOT EXISTS idx_toritavi_steps_unfiled_by_user
-  ON toritavi_steps (user_id, created_at DESC)
+  ON toritavi_steps (user_id)
   WHERE journey_id IS NULL;
 
 -- 3. Sanity: make sure the existing per-user policy still covers
