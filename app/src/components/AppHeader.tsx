@@ -38,7 +38,11 @@ export function AppHeader({ title, back, backHref, action }: Props) {
           width: "100vw",
           marginLeft: "calc(50% - 50vw)",
           marginRight: "calc(50% - 50vw)",
+          // safe-area-inset-top を吸収して status bar 下までナビ背景を延長。
+          // iOS PWA の black-translucent status bar 越しに body コンテンツが
+          // 透けて見えるのを防ぐ。
           padding: "14px max(16px, calc((100vw - 430px) / 2 + 16px))",
+          paddingTop: "calc(14px + env(safe-area-inset-top, 0px))",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
