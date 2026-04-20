@@ -21,6 +21,20 @@ function isProtectedPath(pathname: string): boolean {
   return PROTECTED_PATHS.some((p) => p !== "/" && (pathname === p || pathname.startsWith(`${p}/`)));
 }
 
+/**
+ * Ensure HTML responses advertise Origin as a Vary key. We return an
+ * Origin-restricted Access-Control-Allow-Origin via next.config, so caches
+ * must split by Origin — otherwise a cache populated by a cross-origin
+ * request's 403 could be served to a legitimate same-origin browser.
+ * Next.js adds its own Vary for RSC (`rsc, next-router-state-tree, ...`),
+ * which was previously replacing the static header we set in next.config,
+ * so we append here instead of set.
+ */
+function withVary(res: NextResponse): NextResponse {
+  res.headers.append("Vary", "Origin");
+  return res;
+}
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -33,7 +47,7 @@ export async function proxy(request: NextRequest) {
 
   // If Supabase not configured, let everything through (dev convenience)
   if (!supabaseUrl || !supabaseKey) {
-    return NextResponse.next();
+    return withVary(NextResponse.next());
   }
 
   let response = NextResponse.next({ request });
@@ -61,17 +75,17 @@ export async function proxy(request: NextRequest) {
   if (user && isPublicPath(pathname) && pathname !== "/auth/callback") {
     const url = request.nextUrl.clone();
     url.pathname = "/";
-    return NextResponse.redirect(url);
+    return withVary(NextResponse.redirect(url));
   }
 
   // Unauth & non-guest hitting protected → send to login
   if (!user && !isGuest && isProtectedPath(pathname)) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    return NextResponse.redirect(url);
+    return withVary(NextResponse.redirect(url));
   }
 
-  return response;
+  return withVary(response);
 }
 
 export const config = {

@@ -2,11 +2,17 @@ import type { NextConfig } from "next";
 
 // Security headers applied to every response.
 // CSP allows Supabase (auth + realtime) and blob/data URIs used by pdf.js and camera.
-// 'unsafe-inline' / 'unsafe-eval' are tolerated because Mantine v7 and Next.js 16
-// hydration rely on them; revisit with nonces when we need to tighten further.
+// 'unsafe-inline' remains for Mantine v7 SSR'd style tags and Next.js hydration
+// scripts. 'unsafe-eval' is dev-only (HMR) and stripped from production builds.
+// Nonce migration is tracked separately.
+const isProd = process.env.NODE_ENV === "production";
+const scriptSrc = isProd
+  ? "script-src 'self' 'unsafe-inline'"
+  : "script-src 'self' 'unsafe-inline' 'unsafe-eval'";
+
 const CSP = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+  scriptSrc,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
