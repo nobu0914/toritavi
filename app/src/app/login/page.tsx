@@ -8,6 +8,7 @@ import { useState } from "react";
 import { AuthShell } from "@/components/AuthShell";
 import { createClient } from "@/lib/supabase-browser";
 import { disableGuestMode, enableGuestMode } from "@/lib/guest";
+import { clearGuestData } from "@/lib/store-guest";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -32,7 +33,12 @@ export default function LoginPage() {
         setLoading(false);
         return;
       }
+      // Clear any leftover guest localStorage so the newly-logged-in user
+      // doesn't see the previous occupant's sample / draft data on a shared
+      // device. The cookie and the localStorage flag are both cleared by
+      // disableGuestMode; clearGuestData removes the actual journey data.
       disableGuestMode();
+      clearGuestData();
       router.replace("/");
     } catch (err) {
       setError(err instanceof Error ? err.message : "ログインに失敗しました");
@@ -41,6 +47,9 @@ export default function LoginPage() {
   };
 
   const handleGuest = () => {
+    // Start the guest preview from a clean slate so the current visitor
+    // doesn't inherit sample data edited by a previous guest on this device.
+    clearGuestData();
     enableGuestMode();
     router.replace("/");
   };

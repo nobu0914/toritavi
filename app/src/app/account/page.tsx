@@ -41,6 +41,9 @@ export default function AccountPage() {
     try {
       const sb = createClient();
       await sb.auth.signOut();
+      // Belt-and-suspenders: ensure nothing guest-flavored survives for the
+      // next user of this device.
+      clearGuestData();
       router.replace("/login");
     } catch {
       setSigningOut(false);

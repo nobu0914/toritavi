@@ -3,59 +3,88 @@
 import { createClient } from "./supabase-browser";
 import * as core from "./store-supabase";
 import * as guestStore from "./store-guest";
-import { isGuestMode } from "./guest";
+import { disableGuestMode, isGuestMode } from "./guest";
 import type { Journey } from "./types";
 
-async function getUserId(): Promise<string | null> {
+/**
+ * Authenticated user が localStorage に残ったゲストフラグを持ち越している場合
+ * （/auth/callback 経由のサインアップ → 共有端末の旧ユーザーの残留 guest 等）に
+ * ゲストモードを無効化してゲストの localStorage データを掃除する。
+ * 認証チェックを先に通すことで、ログイン済みユーザーが誤ってゲストデータを
+ * 参照しないことを保証する。
+ */
+function reconcileGuestMode(): void {
+  if (isGuestMode()) {
+    disableGuestMode();
+    guestStore.clearGuestData();
+  }
+}
+
+async function getAuthContext(): Promise<{ sb: ReturnType<typeof createClient>; userId: string | null }> {
   const sb = createClient();
   const { data: { user } } = await sb.auth.getUser();
-  return user?.id ?? null;
+  return { sb, userId: user?.id ?? null };
 }
 
 export async function getJourneys(): Promise<Journey[]> {
+  const { sb, userId } = await getAuthContext();
+  if (userId) {
+    reconcileGuestMode();
+    return core.getJourneys(sb);
+  }
   if (isGuestMode()) return guestStore.getJourneys();
-  const sb = createClient();
-  const { data: { user } } = await sb.auth.getUser();
-  if (!user) return [];
-  return core.getJourneys(sb);
+  return [];
 }
 
 export async function getJourney(id: string): Promise<Journey | undefined> {
+  const { sb, userId } = await getAuthContext();
+  if (userId) {
+    reconcileGuestMode();
+    return core.getJourney(sb, id);
+  }
   if (isGuestMode()) return guestStore.getJourney(id);
-  const sb = createClient();
-  const { data: { user } } = await sb.auth.getUser();
-  if (!user) return undefined;
-  return core.getJourney(sb, id);
+  return undefined;
 }
 
 export async function addJourney(journey: Journey): Promise<void> {
+  const { sb, userId } = await getAuthContext();
+  if (userId) {
+    reconcileGuestMode();
+    return core.addJourney(sb, userId, journey);
+  }
   if (isGuestMode()) return guestStore.addJourney(journey);
-  const sb = createClient();
-  const userId = await getUserId();
-  if (!userId) throw new Error("ログインが必要です");
-  return core.addJourney(sb, userId, journey);
+  throw new Error("ログインが必要です");
 }
 
 export async function updateJourney(id: string, updates: Partial<Journey>): Promise<void> {
+  const { sb, userId } = await getAuthContext();
+  if (userId) {
+    reconcileGuestMode();
+    return core.updateJourney(sb, userId, id, updates);
+  }
   if (isGuestMode()) return guestStore.updateJourney(id, updates);
-  const sb = createClient();
-  const userId = await getUserId();
-  if (!userId) throw new Error("ログインが必要です");
-  return core.updateJourney(sb, userId, id, updates);
+  throw new Error("ログインが必要です");
 }
 
 export async function deleteJourney(id: string): Promise<void> {
+  const { sb, userId } = await getAuthContext();
+  if (userId) {
+    reconcileGuestMode();
+    return core.deleteJourney(sb, id);
+  }
   if (isGuestMode()) return guestStore.deleteJourney(id);
-  const sb = createClient();
-  return core.deleteJourney(sb, id);
+  throw new Error("ログインが必要です");
 }
 
 export async function getStepImages(
   stepId: string,
 ): Promise<{ sourceImageUrl?: string; sourceImageUrls?: string[] }> {
-  if (isGuestMode()) return {};
-  const sb = createClient();
-  return core.getStepImages(sb, stepId);
+  const { sb, userId } = await getAuthContext();
+  if (userId) {
+    reconcileGuestMode();
+    return core.getStepImages(sb, stepId);
+  }
+  return {};
 }
 
 export function generateId(): string {
