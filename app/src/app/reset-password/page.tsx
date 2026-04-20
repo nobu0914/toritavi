@@ -76,7 +76,21 @@ export default function ResetPasswordPage() {
       >
         <Stack gap="md" align="center" py="md">
           <IconCircleCheck size={48} color="var(--success-500)" />
-          <Button component={Link} href="/login" fullWidth>
+          {/*
+            Use a native anchor (full page load) instead of Mantine Button +
+            Link. After signOut we want a clean navigation — client-side
+            routing was silently failing on iOS Safari post-CSP-nonce.
+          */}
+          <Button
+            component="a"
+            href="/login"
+            fullWidth
+            onClick={() => {
+              // Belt-and-suspenders: if the anchor is swallowed by some
+              // event handler, force the navigation ourselves.
+              window.location.href = "/login";
+            }}
+          >
             ログイン画面へ
           </Button>
         </Stack>
