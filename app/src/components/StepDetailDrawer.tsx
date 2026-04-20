@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import {
-  ActionIcon,
   Box,
   Drawer,
   Menu,
@@ -13,7 +12,6 @@ import {
 import {
   IconCalendarPlus,
   IconCopy,
-  IconDotsVertical,
   IconDownload,
   IconEdit,
   IconShare,
@@ -226,27 +224,15 @@ export function StepDetailDrawer({
         body: { padding: 0, flex: 1, display: "flex", flexDirection: "column", minHeight: 0 },
       }}
     >
-      <SheetHeader
-        title={isEdit ? editingTitle || draft.title || "予定" : "予定を追加"}
-        onClose={onClose}
-        leftIcon="down"
-        actions={
-          isEdit && mode === "view" ? (
-            // DS v2 §10.5 ① variant A: header has ⋮ のみ。編集は ⋮ メニュー or
-            // 下部 CTA から。ヘッダーに ✎ を置くと 3 経路になって重複するため。
-            // Drawer を zIndex=400 に上げているため、Menu の dropdown portal も
-            // 500 まで持ち上げないと背後に潜って無反応に見える。
-            <Menu position="bottom-end" shadow="md" width={220} withArrow zIndex={500}>
-              <Menu.Target>
-                <ActionIcon variant="subtle" color="gray" radius="xl" aria-label="その他">
-                  <IconDotsVertical size={18} />
-                </ActionIcon>
-              </Menu.Target>
-              <Menu.Dropdown>{actionMenuItems}</Menu.Dropdown>
-            </Menu>
-          ) : null
-        }
-      />
+      {/* View モードはヘッダーを廃止（Ticket が浮き出てくるカード UI）。
+          閉じる → 下部「閉じる」、メニュー → 下部「操作する」で代替。 */}
+      {mode === "view" ? null : (
+        <SheetHeader
+          title={isEdit ? editingTitle || draft.title || "予定" : "予定を追加"}
+          onClose={onClose}
+          leftIcon="down"
+        />
+      )}
 
       {/* スクロール可能な本体 */}
       <Box className={classes.body} data-mode={mode}>

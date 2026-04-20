@@ -11,11 +11,15 @@
    Drawer 上辺の 20px 角と Ticket 上辺を揃え、Ticket の max-width / shadow は削除。 */
 .body[data-mode="view"] {
   padding: 0 0 28px;
+  overflow-x: hidden;
+  width: 100%;
+  box-sizing: border-box;
 }
 .body[data-mode="view"] :global(.ticket) {
   border-radius: 20px 20px 0 0;
   max-width: none;
   margin: 0;
+  width: 100%;
   box-shadow: none;
 }
 
