@@ -7,18 +7,15 @@ import {
   IconDatabase,
   IconFlask,
   IconHelpCircle,
-  IconLogout,
   IconUser,
   IconUserCircle,
 } from "@tabler/icons-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { TabBar } from "@/components/TabBar";
 import { createClient } from "@/lib/supabase-browser";
-import { disableGuestMode, isGuestMode } from "@/lib/guest";
-import { clearGuestData } from "@/lib/store-guest";
+import { isGuestMode } from "@/lib/guest";
 
 type MenuItem = {
   href: string;
@@ -36,11 +33,9 @@ const MENU: MenuItem[] = [
 ];
 
 export default function AccountPage() {
-  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState<string | null>(null);
   const [isGuest, setIsGuest] = useState(false);
-  const [signingOut, setSigningOut] = useState(false);
 
   useEffect(() => {
     const guest = isGuestMode();
@@ -59,24 +54,6 @@ export default function AccountPage() {
       }
     })();
   }, []);
-
-  const handleSignOut = async () => {
-    setSigningOut(true);
-    try {
-      const sb = createClient();
-      await sb.auth.signOut();
-      clearGuestData();
-      router.replace("/login");
-    } catch {
-      setSigningOut(false);
-    }
-  };
-
-  const handleExitGuest = () => {
-    disableGuestMode();
-    clearGuestData();
-    router.replace("/login");
-  };
 
   return (
     <>
@@ -198,32 +175,6 @@ export default function AccountPage() {
           })}
         </Box>
 
-        {/* Sign-out stays on parent until /account/data is live; Phase 4
-            moves it under the "セッション" section there. */}
-        <Box style={{ margin: "0 16px 16px" }}>
-          {isGuest ? (
-            <Button
-              leftSection={<IconLogout size={16} />}
-              color="red"
-              variant="light"
-              fullWidth
-              onClick={handleExitGuest}
-            >
-              ゲストモードを終了（データ削除）
-            </Button>
-          ) : (
-            <Button
-              leftSection={<IconLogout size={16} />}
-              color="red"
-              variant="light"
-              fullWidth
-              loading={signingOut}
-              onClick={handleSignOut}
-            >
-              ログアウト
-            </Button>
-          )}
-        </Box>
       </Box>
       <TabBar />
     </>
