@@ -219,7 +219,7 @@ export function StepDetailDrawer({
       zIndex={400}
       styles={{
         content: {
-          borderRadius: "16px 16px 0 0",
+          borderRadius: "20px 20px 0 0",
           display: "flex",
           flexDirection: "column",
         },
@@ -249,7 +249,7 @@ export function StepDetailDrawer({
       />
 
       {/* スクロール可能な本体 */}
-      <Box className={classes.body}>
+      <Box className={classes.body} data-mode={mode}>
         {mode === "view" ? (
           <>
             <Ticket

@@ -7,6 +7,18 @@
   -webkit-overflow-scrolling: touch;
 }
 
+/* View モード: Drawer の白い枠を廃止し、Ticket 自体が「浮き出てくるカード」になる。
+   Drawer 上辺の 20px 角と Ticket 上辺を揃え、Ticket の max-width / shadow は削除。 */
+.body[data-mode="view"] {
+  padding: 0 0 28px;
+}
+.body[data-mode="view"] :global(.ticket) {
+  border-radius: 20px 20px 0 0;
+  max-width: none;
+  margin: 0;
+  box-shadow: none;
+}
+
 .summary {
   background: var(--info-50);
   border: 1px solid #C6D8F0;
