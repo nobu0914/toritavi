@@ -32,7 +32,9 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
 import { TabBar } from "@/components/TabBar";
-import { addJourney, getJourney, getJourneys, updateJourney, generateId } from "@/lib/store-client";
+import { DestinationSelector } from "./DestinationSelector";
+import { JourneyPicker } from "./JourneyPicker";
+import { addJourney, getJourney, getJourneys, updateJourney, generateId, addUnfiledSteps } from "@/lib/store-client";
 import type { Step, StepCategory } from "@/lib/types";
 import { getFixedFields } from "@/lib/ocr-rules";
 import classes from "@/app/scan/page.module.css";
@@ -450,6 +452,16 @@ export function ScanFlow({ chrome = "standalone", target, onComplete }: ScanFlow
     stepsToRegister: Step[];
   } | null>(null);
 
+  // Flow A: OCR 完了後に「新規 / 既存 / 未整理」を選ばせるために保留する
+  // stepsToRegister。target 指定が無い通常導線でのみ使用する。
+  const [pendingCommit, setPendingCommit] = useState<{
+    stepsToRegister: Step[];
+    now: string;
+    todayStr: string;
+  } | null>(null);
+  const [selectorOpen, setSelectorOpen] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+
   const pdfToImages = async (file: File): Promise<Blob[]> => {
     const pdfjsLib = await import("pdfjs-dist");
     pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
@@ -827,18 +839,14 @@ export function ScanFlow({ chrome = "standalone", target, onComplete }: ScanFlow
       });
     }
 
-    // §16 マージ候補チェック: 通常導線 (targetJourneyId なし) かつ先頭 Step に
-    // マッチする既存があればダイアログを出して判断を仰ぐ。判断結果を受けたら
-    // finishRegister を呼んで保存を再開する。
+    // Flow A: target 指定無し (通常導線) のときは、自動で Journey を作らず
+    // 「新規 / 既存 / 未整理」を Selector で選ばせる。target 指定あり
+    // (AddStepDrawer / ?target=) はこれまで通り直行する。
     if (!targetJourneyId && stepsToRegister.length > 0) {
-      const allJourneys = await getJourneys();
-      const primary = stepsToRegister[0];
-      const candidates = findMergeCandidates(primary, allJourneys, { max: 3 });
-      if (candidates.length > 0) {
-        setMergeCtx({ candidates, primaryDraft: primary, stepsToRegister });
-        // registering は true のまま（UI ロック継続）。ダイアログ側で解除する。
-        return;
-      }
+      setPendingCommit({ stepsToRegister, now, todayStr });
+      setSelectorOpen(true);
+      // registering は true のまま — Selector が閉じる/確定するまで UI ロック。
+      return;
     }
 
     await finishRegister(stepsToRegister, now, todayStr);
@@ -909,6 +917,105 @@ export function ScanFlow({ chrome = "standalone", target, onComplete }: ScanFlow
       onComplete(journeyId);
     } else {
       router.push(`/trips/${journeyId}`);
+    }
+  };
+
+  /* ===================================================================
+   * Flow A bucket handlers
+   * =================================================================== */
+
+  /** Selector を閉じる共通処理。state を完全にリセット。 */
+  const closeSelector = () => {
+    setSelectorOpen(false);
+    setPendingCommit(null);
+    setRegistering(false);
+  };
+
+  /** DestinationSelector から「3 択のどれか」を受け取った時のハンドラ。 */
+  const handleSelectorChoose = async (mode: "new" | "existing" | "unfiled") => {
+    if (!pendingCommit) {
+      closeSelector();
+      return;
+    }
+    if (mode === "new") {
+      // OCR 結果を sessionStorage に載せて /trips/new へ。/trips/new 側で
+      // タイトル chip と期間プリセットを復元する。
+      try {
+        sessionStorage.setItem(
+          "toritavi_scan_seed",
+          JSON.stringify({ steps: pendingCommit.stepsToRegister, at: Date.now() })
+        );
+      } catch (e) {
+        console.warn("[scan] seed stash failed", e);
+      }
+      setSelectorOpen(false);
+      router.push("/trips/new?from=scan");
+      return;
+    }
+    if (mode === "existing") {
+      setSelectorOpen(false);
+      setPickerOpen(true);
+      return;
+    }
+    if (mode === "unfiled") {
+      try {
+        await addUnfiledSteps(pendingCommit.stepsToRegister);
+      } catch (err) {
+        console.error("[scan] unfiled save failed", err);
+        notifications.show({
+          message: "未整理への保存に失敗しました",
+          color: "red",
+          icon: <IconAlertCircle size={18} />,
+          autoClose: 4000,
+        });
+        setRegistering(false);
+        return;
+      }
+      setSelectorOpen(false);
+      setPendingCommit(null);
+      setRegistering(false);
+      notifications.show({
+        message: "未整理に保存しました",
+        icon: <IconCheck size={18} />,
+        autoClose: 4000,
+        withBorder: false,
+        style: { background: "var(--success-500)", color: "white" },
+        styles: { icon: { color: "white", background: "transparent" } },
+      });
+      if (onComplete) onComplete("");
+      else router.push("/unfiled");
+    }
+  };
+
+  /** JourneyPicker で既存旅程を選んだ時。選ばれた journey に append する。 */
+  const handlePickerPick = async (journeyId: string) => {
+    if (!pendingCommit) {
+      setPickerOpen(false);
+      setRegistering(false);
+      return;
+    }
+    try {
+      const target = await getJourney(journeyId);
+      if (!target) throw new Error("指定の Journey が見つかりません");
+      await updateJourney(target.id, {
+        steps: [...target.steps, ...pendingCommit.stepsToRegister],
+      });
+      sessionStorage.setItem("toritavi_toast", "journey_created");
+      setPickerOpen(false);
+      setPendingCommit(null);
+      setRegistering(false);
+      if (onComplete) onComplete(target.id);
+      else router.push(`/trips/${target.id}`);
+    } catch (err) {
+      console.error("[scan] append to existing failed", err);
+      notifications.show({
+        message: err instanceof Error ? err.message : "追加に失敗しました",
+        color: "red",
+        icon: <IconAlertCircle size={18} />,
+        autoClose: 4000,
+      });
+      setPickerOpen(false);
+      setRegistering(false);
     }
   };
 
@@ -1442,7 +1549,7 @@ export function ScanFlow({ chrome = "standalone", target, onComplete }: ScanFlow
 
       {!isEmbedded && <TabBar />}
 
-      {/* §16 Step マージ確認ダイアログ */}
+      {/* §16 Step マージ確認ダイアログ — Flow A 導入後は自動トリガーしない */}
       {mergeCtx && (
         <StepMergeDialog
           opened={true}
@@ -1452,6 +1559,30 @@ export function ScanFlow({ chrome = "standalone", target, onComplete }: ScanFlow
           onDecline={handleMergeDecline}
         />
       )}
+
+      {/* Flow A: 登録先の 3 分岐 */}
+      <DestinationSelector
+        opened={selectorOpen}
+        primary={pendingCommit?.stepsToRegister[0] ?? null}
+        onCancel={closeSelector}
+        onChoose={handleSelectorChoose}
+      />
+
+      {/* Flow A: 既存旅程のピッカー */}
+      <JourneyPicker
+        opened={pickerOpen}
+        primary={pendingCommit?.stepsToRegister[0] ?? null}
+        onBack={() => {
+          setPickerOpen(false);
+          setSelectorOpen(true);
+        }}
+        onCancel={() => {
+          setPickerOpen(false);
+          setPendingCommit(null);
+          setRegistering(false);
+        }}
+        onPick={handlePickerPick}
+      />
     </>
   );
 }

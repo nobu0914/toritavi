@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>toritavi — Journey 起点フロー v2 比較</title>
+<style>
+  /* ===================================================================
+   * Tokens (subset of design-system-v2.html — keep in sync when DS v2
+   * values change. Copy pasted here so this mock renders standalone.)
+   * =================================================================== */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --ink-700: #17233A; --ink-800: #0F1B2D; --ink-900: #0A1322;
+    --accent-50: #FFF0EC; --accent-100: #FFDBCF; --accent-500: #FF5722; --accent-700: #C93A14;
+    --n-0: #FFFFFF; --n-50: #F7F8FA; --n-100: #EEF0F4; --n-200: #E2E6EC; --n-300: #C9CFD9; --n-500: #8891A1; --n-700: #4A5364; --n-900: #1C2230;
+    --success-50: #E9F8EF; --success-500: #2BB673; --success-700: #1E8A57;
+    --warn-50: #FFF5E0; --warn-500: #F5B041; --warn-700: #C48012;
+    --info-50: #E6F0FF; --info-500: #3B82F6; --info-700: #1D4ED8;
+    --danger-50: #FEE8EA; --danger-700: #B33425;
+    --tint-plane: #D6E4FF; --tint-train: #D4EDDA; --tint-lodging: #FFE5B4; --tint-meeting: #E0F2F1; --tint-other: #EAE4DB;
+    --infer-bg: var(--accent-50); --infer-fg: var(--accent-700); --infer-border: var(--accent-100);
+    --font-sans: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Yu Gothic UI', 'Segoe UI', Roboto, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+    --bg: var(--n-50); --surface: var(--n-0); --text: var(--ink-800); --text-dim: var(--n-500); --border: var(--n-200); --primary: var(--ink-800); --accent: var(--accent-500);
+    --r-sm: 8px; --r-md: 14px; --r-lg: 20px; --r-pill: 999px;
+    --shadow-xs: 0 1px 2px rgba(15,27,45,0.05); --shadow-sm: 0 2px 8px rgba(15,27,45,0.06); --shadow-md: 0 6px 18px rgba(15,27,45,0.08);
+  }
+
+  body { font-family: var(--font-sans); background: #FAFBFD; color: var(--text); -webkit-font-smoothing: antialiased; padding: 48px 24px 96px; }
+
+  /* ===================================================================
+   * Page chrome
+   * =================================================================== */
+  .page { max-width: 1480px; margin: 0 auto; }
+  .hero { margin-bottom: 32px; }
+  .hero-tag { display: inline-block; background: var(--accent-50); color: var(--accent-700); font-size: 11px; font-weight: 800; letter-spacing: 0.5px; padding: 4px 10px; border-radius: var(--r-pill); margin-bottom: 12px; }
+  .hero h1 { font-size: 28px; font-weight: 800; letter-spacing: -0.3px; }
+  .hero .lead { color: var(--text-dim); margin-top: 8px; font-size: 15px; max-width: 880px; line-height: 1.7; }
+  .pill-row { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+  .pill-note { background: var(--n-100); color: var(--n-700); padding: 6px 12px; border-radius: var(--r-pill); font-size: 12px; font-weight: 600; }
+
+  /* Three-column compare rail */
+  .compare { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; margin-top: 40px; }
+  @media (max-width: 1200px) { .compare { grid-template-columns: 1fr; } }
+
+  .col { display: flex; flex-direction: column; gap: 20px; }
+  .col-head {
+    position: sticky; top: 0; background: #FAFBFD; z-index: 2;
+    padding: 12px 0 16px; border-bottom: 1px solid var(--border);
+  }
+  .col-head .col-tag { font-size: 11px; font-weight: 800; color: var(--accent-700); letter-spacing: 1px; text-transform: uppercase; }
+  .col-head h2 { font-size: 20px; font-weight: 800; margin-top: 4px; }
+  .col-head p { font-size: 13px; color: var(--text-dim); margin-top: 6px; line-height: 1.6; }
+
+  .screen-cap { font-size: 11px; color: var(--text-dim); font-family: var(--font-mono); margin-bottom: 8px; }
+  .screen-title { font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+
+  /* ===================================================================
+   * Device frame (scaled down from DS v2: 380x800 -> 300x600)
+   * =================================================================== */
+  .device {
+    width: 300px; margin: 0 auto;
+    border-radius: 32px; border: 8px solid #111;
+    background: var(--bg);
+    overflow: hidden; height: 580px;
+    display: flex; flex-direction: column;
+    box-shadow: var(--shadow-md);
+    position: relative;
+  }
+  .device-statusbar {
+    flex-shrink: 0; height: 18px; background: var(--bg);
+    font-size: 9px; color: var(--text); font-family: var(--font-mono);
+    display: flex; justify-content: space-between; align-items: center; padding: 0 14px;
+  }
+  .device-appbar {
+    flex-shrink: 0; display: flex; align-items: center; gap: 8px;
+    padding: 10px 14px 10px; background: var(--surface);
+    border-bottom: 1px solid var(--border); font-size: 13px; font-weight: 700;
+  }
+  .device-appbar .back { width: 22px; height: 22px; display: grid; place-items: center; color: var(--ink-800); }
+  .device-appbar .title { flex: 1; text-align: center; margin-right: 22px; }
+  .device-body { flex: 1; overflow-y: auto; padding: 12px; }
+  .device-cta {
+    flex-shrink: 0; padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+    background: var(--surface); border-top: 1px solid var(--border);
+  }
+  .device-tabbar {
+    flex-shrink: 0; display: flex; background: var(--ink-800); color: #fff;
+    padding: 6px 0 8px;
+  }
+  .device-tabbar .tb-item {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
+    font-size: 9px; color: rgba(255,255,255,0.55);
+  }
+  .device-tabbar .tb-item.active { color: #fff; }
+  .device-tabbar .tb-item.primary {
+    color: #fff;
+  }
+  .device-tabbar .tb-item.primary .dot {
+    width: 32px; height: 32px; background: var(--accent-500);
+    border-radius: 50%; display: grid; place-items: center;
+    margin-bottom: 2px; box-shadow: var(--shadow-sm);
+  }
+  .device-tabbar .tb-item .dot { width: 20px; height: 20px; background: transparent; display: grid; place-items: center; }
+
+  /* ===================================================================
+   * Content primitives (subset)
+   * =================================================================== */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    font-size: 13px; font-weight: 700; border-radius: var(--r-pill);
+    padding: 10px 18px; border: none; cursor: pointer;
+  }
+  .btn-primary { background: var(--ink-800); color: #fff; }
+  .btn-accent { background: var(--accent-500); color: #fff; }
+  .btn-outline { background: transparent; color: var(--ink-800); border: 1.5px solid var(--ink-800); }
+  .btn-ghost { background: var(--n-100); color: var(--ink-800); }
+  .btn-block { width: 100%; }
+  .btn-sm { padding: 6px 12px; font-size: 11px; }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); padding: 12px; }
+  .card + .card { margin-top: 10px; }
+
+  .chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 5px 10px; border-radius: var(--r-pill);
+    font-size: 11px; font-weight: 700; background: var(--n-100); color: var(--ink-800);
+    border: 1px solid transparent; cursor: pointer;
+  }
+  .chip.accent { background: var(--accent-50); color: var(--accent-700); border-color: var(--accent-100); }
+  .chip.selected { background: var(--ink-800); color: #fff; }
+
+  .badge { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: var(--r-pill); font-size: 10px; font-weight: 700; }
+  .badge-infer { background: var(--infer-bg); color: var(--infer-fg); border: 1px solid var(--infer-border); }
+  .badge-success { background: var(--success-50); color: var(--success-700); }
+  .badge-warn { background: var(--warn-50); color: var(--warn-700); }
+
+  .thumb {
+    width: 40px; height: 40px; border-radius: var(--r-sm);
+    display: grid; place-items: center; flex-shrink: 0;
+  }
+  .t-plane { background: var(--tint-plane); }
+  .t-train { background: var(--tint-train); }
+  .t-lodge { background: var(--tint-lodging); }
+  .t-meet  { background: var(--tint-meeting); }
+  .t-other { background: var(--tint-other); }
+
+  .input {
+    width: 100%; padding: 10px 12px;
+    border: 1.5px solid var(--border); border-radius: var(--r-sm);
+    font-size: 13px; background: var(--surface); outline: none;
+    font-family: inherit;
+  }
+
+  .row { display: flex; align-items: center; gap: 10px; }
+  .row + .row { margin-top: 10px; }
+  .grow { flex: 1; min-width: 0; }
+
+  .muted { color: var(--text-dim); font-size: 11px; }
+  .kv { font-size: 11px; }
+  .kv-k { color: var(--text-dim); }
+  .kv-v { font-weight: 600; }
+
+  .section-label { font-size: 10px; font-weight: 800; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; padding: 10px 2px 6px; }
+
+  .hero-card {
+    background: linear-gradient(135deg, var(--accent-500) 0%, var(--accent-700) 100%);
+    color: #fff; border-radius: var(--r-md); padding: 14px;
+  }
+  .hero-card .kicker { font-size: 10px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; opacity: 0.8; }
+  .hero-card .ttl { font-size: 16px; font-weight: 800; margin-top: 4px; }
+  .hero-card .sub { font-size: 11px; margin-top: 4px; opacity: 0.85; }
+
+  .context-card {
+    background: var(--n-100); border-radius: var(--r-md); padding: 12px;
+    border: 1px solid var(--border);
+  }
+  .context-card .kicker { font-size: 9px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--text-dim); }
+  .context-card .ttl { font-size: 14px; font-weight: 700; margin-top: 3px; }
+  .context-card .meta { font-size: 11px; color: var(--text-dim); margin-top: 4px; }
+
+  /* Mini timeline */
+  .mini-tl { display: flex; gap: 4px; margin-top: 8px; align-items: stretch; }
+  .mini-tl .step {
+    flex: 1; min-width: 0; background: var(--surface); border-radius: 6px; padding: 4px 5px;
+    font-size: 9px; color: var(--text-dim); border: 1px solid var(--border); line-height: 1.3;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .mini-tl .step.done { background: var(--success-50); color: var(--success-700); border-color: transparent; }
+  .mini-tl .step.next { background: var(--info-50); color: var(--info-700); border-color: transparent; }
+
+  /* Choice list (3-way branch) */
+  .choice {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--r-md); cursor: pointer;
+  }
+  .choice + .choice { margin-top: 8px; }
+  .choice.recommended { border-color: var(--ink-800); box-shadow: 0 0 0 2px rgba(15,27,45,0.06); }
+  .choice-ico {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: var(--n-100); color: var(--ink-800);
+    display: grid; place-items: center; flex-shrink: 0;
+  }
+  .choice-ico.accent { background: var(--accent-50); color: var(--accent-700); }
+  .choice-ico.ink { background: var(--ink-800); color: #fff; }
+  .choice-body .t { font-size: 13px; font-weight: 700; }
+  .choice-body .s { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+
+  /* OCR result card */
+  .ocr-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--r-md); padding: 12px; position: relative;
+  }
+  .ocr-card .ocr-head { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+  .ocr-card .ocr-title { font-size: 13px; font-weight: 700; flex: 1; }
+  .ocr-card .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; margin-top: 6px; font-size: 11px; }
+  .ocr-card .fields .k { color: var(--text-dim); font-size: 10px; }
+  .ocr-card .fields .v { font-weight: 600; }
+
+  /* Recommendation / comparison grid at bottom */
+  .recommend {
+    margin-top: 72px; padding: 32px; background: #fff;
+    border: 1px solid var(--border); border-radius: var(--r-lg);
+  }
+  .recommend h2 { font-size: 22px; font-weight: 800; }
+  .recommend h3 { font-size: 15px; font-weight: 800; margin: 18px 0 8px; }
+  .recommend p { font-size: 14px; color: var(--text); line-height: 1.8; }
+  .recommend ul { margin-left: 20px; font-size: 14px; line-height: 1.9; }
+  .recommend code { font-family: var(--font-mono); font-size: 12px; background: var(--n-100); padding: 2px 6px; border-radius: 4px; }
+  .callout { background: var(--accent-50); border: 1px solid var(--accent-100); border-radius: var(--r-md); padding: 16px; margin: 20px 0; }
+  .callout .k { font-size: 11px; font-weight: 800; color: var(--accent-700); letter-spacing: 1px; text-transform: uppercase; }
+  .callout p { margin-top: 4px; color: var(--text); }
+
+  .matrix { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 13px; }
+  .matrix th, .matrix td { padding: 10px 12px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+  .matrix th { background: var(--n-50); font-weight: 800; font-size: 12px; color: var(--text-dim); }
+  .matrix td strong { font-weight: 700; }
+  .matrix .g { color: var(--success-700); font-weight: 700; }
+  .matrix .r { color: var(--danger-700); font-weight: 700; }
+  .matrix .o { color: var(--warn-700); font-weight: 700; }
+
+  /* Tiny SVG icons (14px default; inherit color) */
+  .ic { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; display: inline-block; }
+  .ic-lg { width: 18px; height: 18px; }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <!-- reusable icons -->
+  <defs>
+    <symbol id="i-scan" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 12h10"/></symbol>
+    <symbol id="i-plane" viewBox="0 0 24 24"><path d="M17.8 19.2 16 11l3.5-3.5a2.121 2.121 0 0 0-3-3L13 8 4.8 6.2c-.5-.1-.9.2-1 .7l-.3 1.1c-.1.4.1.8.4 1L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.1 5.1c.2.3.6.5 1 .4l1.1-.3c.5-.1.8-.5.7-1Z"/></symbol>
+    <symbol id="i-train" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="16" rx="2"/><path d="M8 19v2M16 19v2M4 15h16M8 7h8"/></symbol>
+    <symbol id="i-lodge" viewBox="0 0 24 24"><path d="M3 10V5h18v5M3 10h18l-1 10H4L3 10ZM8 14h2M14 14h2"/></symbol>
+    <symbol id="i-meet" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2v11Z"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-chevL" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></symbol>
+    <symbol id="i-chevR" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3Z"/></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2h-4v-7H9v7H5a2 2 0 0 1-2-2V9Z"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M13.73 21a2 2 0 0 1-3.46 0"/></symbol>
+    <symbol id="i-inbox" viewBox="0 0 24 24"><path d="M22 12h-6l-2 3h-4l-2-3H2M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11Z"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+    <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
+    <symbol id="i-sparkle" viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8"/></symbol>
+  </defs>
+</svg>
+
+<div class="page">
+
+  <header class="hero">
+    <div class="hero-tag">Toritavi · Design Exploration · 2026-04-20</div>
+    <h1>Journey 起点フロー 比較 — 案 A / B / C</h1>
+    <p class="lead">
+      現状は OCR → Step 編集に直行しているため、ユーザーが「旅程全体」ではなく「1 枚のチケット」に視点を
+      縛られがち。この mock では <b>入口を変えずに意識を Journey 側へ寄せる</b> ための 3 つの方針を並べ、
+      比較してから採用案を 1 つ選ぶ。
+    </p>
+    <div class="pill-row">
+      <span class="pill-note">入口: OCR / 写真 / PDF</span>
+      <span class="pill-note">分岐: 新規 / 既存 / 未整理</span>
+      <span class="pill-note">タイトル: 仮提案 → 後編集可</span>
+      <span class="pill-note">Mobile-first · 380×800 (mock は ×0.79 縮尺)</span>
+    </div>
+  </header>
+
+  <!-- ============================================================
+       3-column comparison rail
+       ============================================================ -->
+  <section class="compare">
+
+    <!-- ============================================================
+         COLUMN A
+         ============================================================ -->
+    <div class="col">
+      <div class="col-head">
+        <div class="col-tag">CASE A · 推奨</div>
+        <h2>OCR → 受け皿を聞く</h2>
+        <p>入口は現行のまま。OCR 直後に「新規 / 既存 / 未整理」の 3 分岐を挟む。
+        移行コスト最小で、Step 視点から Journey 視点に引き戻せる。</p>
+      </div>
+
+      <!-- A-1: entry -->
+      <div>
+        <div class="screen-cap">A-1</div>
+        <div class="screen-title">ホーム — 予定登録 CTA は据え置き</div>
+        <div class="device">
+          <div class="device-statusbar"><span>9:41</span><span>▮▮▮ 􀛨</span></div>
+          <div class="device-appbar"><div class="back"></div><div class="title">toritavi</div><svg class="ic"><use href="#i-bell"/></svg></div>
+          <div class="device-body">
+            <div class="section-label">直近の旅程</div>
+            <div class="card">
+              <div class="row">
+                <div class="thumb t-plane"><svg class="ic ic-lg" style="color:#17233A"><use href="#i-plane"/></svg></div>
+                <div class="grow">
+                  <div style="font-size:13px;font-weight:700">大阪出張</div>
+                  <div class="muted">4/22 – 4/23 · 5 step</div>
+                  <div class="mini-tl">
+                    <div class="step done">HND 19:10</div>
+                    <div class="step done">KIX 着</div>
+                    <div class="step next">ホテル</div>
+                    <div class="step">商談</div>
+                    <div class="step">帰路</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="row">
+                <div class="thumb t-meet"><svg class="ic ic-lg" style="color:#17233A"><use href="#i-meet"/></svg></div>
+                <div class="grow">
+                  <div style="font-size:13px;font-weight:700">通院 (内科)</div>
+                  <div class="muted">4/24 · 1 step</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="device-tabbar">
+            <div class="tb-item active"><div class="dot"><svg class="ic" style="color:currentColor"><use href="#i-home"/></svg></div>旅程</div>
+            <div class="tb-item primary"><div class="dot"><svg class="ic" style="color:#fff"><use href="#i-plus"/></svg></div>予定登録</div>
+            <div class="tb-item"><div class="dot"><svg class="ic" style="color:currentColor"><use href="#i-bell"/></svg></div>通知</div>
+            <div class="tb-item"><div class="dot"><svg class="ic" style="color:currentColor"><use href="#i-inbox"/></svg></div>未整理</div>
+            <div class="tb-item"><div class="dot"><svg class="ic" style="color:currentColor"><use href="#i-user"/></svg></div>アカウント</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- A-2: OCR processing -->
+      <div>
+        <div class="screen-cap">A-2</div>
+        <div class="screen-title">OCR 読み取り中 — 現状と同じ挙動</div>
+        <div class="device">
+          <div class="device-statusbar"><span>9:41</span><span>▮▮▮ 􀛨</span></div>
+          <div class="device-appbar"><div class="back"><svg class="ic"><use href="#i-chevL"/></svg></div><div class="title">予定登録</div></div>
+          <div class="device-body">
+            <div style="padding: 40px 10px; display: grid; place-items: center; gap: 12px;">
+              <div class="thumb t-plane" style="width:60px;height:60px;border-radius:16px"><svg class="ic ic-lg" style="color:#17233A;width:28px;height:28px"><use href="#i-plane"/></svg></div>
+              <div style="font-size:14px;font-weight:700">チケットを読み取り中…</div>
+              <div class="muted" style="text-align:center;max-width:220px">
+                航空券・ホテル・医療系などを自動認識して候補を作ります
+              </div>
+              <div style="width:180px;height:4px;background:var(--n-100);border-radius:999px;overflow:hidden;margin-top:8px">
+                <div style="width:65%;height:100%;background:var(--accent-500);border-radius:999px"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- A-3: branching screen -->
+      <div>
+        <div class="screen-cap">A-3 · ★キー画面</div>
+        <div class="screen-title">OCR 完了 — どこに入れる？</div>
+        <div class="device">
+          <div class="device-statusbar"><span>9:41</span><span>▮▮▮ 􀛨</span></div>
+          <div class="device-appbar"><div class="back"><svg class="ic"><use href="#i-chevL"/></svg></div><div class="title">登録先の選択</div></div>
+          <div class="device-body">
+            <div class="ocr-card" style="margin-bottom:12px">
+              <div class="ocr-head">
+                <div class="thumb t-plane" style="width:32px;height:32px"><svg class="ic" style="color:#17233A"><use href="#i-plane"/></svg></div>
+                <div class="ocr-title">ANA 1234 羽田 → 福岡</div>
+                <span class="badge badge-infer">OCR</span>
+              </div>
+              <div class="fields">
+                <div><div class="k">出発</div><div class="v">4/22 19:10 HND</div></div>
+                <div><div class="k">到着</div><div class="v">4/22 20:55 FUK</div></div>
+              </div>
+            </div>
+
+            <div class="section-label">どこに入れますか？</div>
+
+            <div class="choice recommended">
+              <div class="choice-ico ink"><svg class="ic ic-lg"><use href="#i-plus"/></svg></div>
+              <div class="choice-body grow">
+                <div class="t">新しい旅程を作る</div>
+                <div class="s">仮タイトル付きで下書き開始</div>
+              </div>
+              <svg class="ic" style="color:var(--text-dim)"><use href="#i-chevR"/></svg>
+            </div>
+
+            <div class="choice">
+              <div class="choice-ico accent"><svg class="ic ic-lg"><use href="#i-calendar"/></svg></div>
+              <div class="choice-body grow">
+                <div class="t">既存の旅程に追加</div>
+                <div class="s">4/22 の日付に近い候補 1 件</div>
+              </div>
+              <svg class="ic" style="color:var(--text-dim)"><use href="#i-chevR"/></svg>
+            </div>
+
+            <div class="choice">
+              <div class="choice-ico"><svg class="ic ic-lg"><use href="#i-inbox"/></svg></div>
+              <div class="choice-body grow">
+                <div class="t">未整理に保存</div>
+                <div class="s">あとで旅程に振り分け</div>
+              </div>
+              <svg class="ic" style="color:var(--text-dim)"><use href="#i-chevR"/></svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- A-4: new journey draft (with title suggestions) -->
+      <div>
+        <div class="screen-cap">A-4</div>
+        <div class="screen-title">新規 — 仮タイトルを chip で提案</div>
+        <div class="device">
+          <div class="device-statusbar"><span>9:41</span><span>▮▮▮ 􀛨</span></div>
+          <div class="device-appbar"><div class="back"><svg class="ic"><use href="#i-chevL"/></svg></div><div class="title">新しい旅程</div></div>
+          <div class="device-body">
+            <div class="section-label"><svg class="ic" style="color:var(--accent-700);vertical-align:-2px"><use href="#i-sparkle"/></svg> タイトル候補</div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">
+              <span class="chip accent selected">羽田 → 福岡</span>
+              <span class="chip">福岡出張</span>
+              <span class="chip">2026/4/22 の予定</span>
+              <span class="chip"><svg class="ic" style="color:inherit"><use href="#i-edit"/></svg> 手入力</span>
+            </div>
+            <input class="input" value="羽田 → 福岡" style="margin-bottom:12px">
+
+            <div class="section-label">期間</div>
+            <div class="row" style="gap:6px;margin-bottom:12px">
+              <input class="input" value="2026-04-22" style="flex:1">
+              <span class="muted">〜</span>
+              <input class="input" value="2026-04-22" style="flex:1">
+            </div>
+
+            <div class="section-label">取り込む予定</div>
+            <div class="card">
+              <div class="row">
+                <div class="thumb t-plane"><svg class="ic ic-lg" style="color:#17233A"><use href="#i-plane"/></svg></div>
+                <div class="grow">
+                  <div style="font-size:12px;font-weight:700">ANA 1234 · HND → FUK</div>
+                  <div class="muted">4/22 19:10 → 20:55</div>
+                </div>
+                <span class="badge badge-infer">OCR</span>
+              </div>
+            </div>
+          </div>
+          <div class="device-cta">
+            <button class="btn btn-accent btn-block">この内容で作成</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- A-5: add to existing -->
+      <div>
+        <div class="screen-cap">A-5</div>
+        <div class="screen-title">既存に追加 — Journey 文脈を見せる</div>
+        <div class="device">
+          <div class="device-statusbar"><span>9:41</span><span>▮▮▮ 􀛨</span></div>
+          <div class="device-appbar"><div class="back"><svg class="ic"><use href="#i-chevL"/></svg></div><div class="title">追加先の旅程</div></div>
+          <div class="device-body">
+            <div class="section-label">日付が近い候補</div>
+            <div class="card" style="border-color:var(--ink-800);box-shadow:0 0 0 2px rgba(15,27,45,0.06)">
+              <div class="row" style="align-items:flex-start">
+                <div class="thumb t-plane"><svg class="ic ic-lg" style="color:#17233A"><use href="#i-plane"/></svg></div>
+                <div class="grow">
+                  <div style="font-size:13px;font-weight:700">大阪出張</div>
+                  <div class="muted">4/22 – 4/23 · 5 step · 次: ホテル チェックイン</div>
+                  <div class="mini-tl">
+                    <div class="step done">HND 19:10</div>
+                    <div class="step done">KIX 着</div>
+                    <div class="step next">ホテル</div>
+                    <div class="step">商談</div>
+                    <div class="step">帰路</div>
+                  </div>
+                </div>
+                <svg class="ic" style="color:var(--ink-800)"><use href="#i-check"/></svg>
+              </div>
+            </div>
+
+            <div class="section-label">その他</div>
+            <div class="card">
+              <div class="row">
+                <div class="thumb t-meet"><svg class="ic ic-lg" style="color:#17233A"><use href="#i-meet"/></svg></div>
+                <div class="grow">
+                  <div style="font-size:12px;font-weight:700">通院 (内科)</div>
+                  <div class="muted">4/24 · 1 step</div>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="row">
+                <div class="thumb t-lodge"><svg class="ic ic-lg" style="color:#17233A"><use href="#i-lodge"/></svg></div>
+                <div class="grow">
+                  <div style="font-size:12px;font-weight:700">沖縄 GW</div>
+                  <div class="muted">5/3 – 5/6 · 12 step</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="device-cta">
+            <button class="btn btn-primary btn-block">大阪出張 に追加</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <!-- / COLUMN A -->
+
+    <!-- ============================================================
+         COLUMN B
+         ============================================================ -->
+    <div class="col">
+      <div class="col-head">
+        <div class="col-tag">CASE B</div>
+        <h2>先に Journey を作る</h2>
+        <p>入口を「新しい旅程を作る」に寄せる。タイトル・期間を決めた後で Step 追加に入る。
+        最も旅程中心の体験だが、既存 OCR 起点のユーザーには 1 クリック増える。</p>
+      </div>
+
+      <!-- B-1: entry -->
+      <div>
+        <div class="screen-cap">B-1</div>
+        <div class="screen-title">ホーム — 大きな CTA に切替</div>
+        <div class="device">
+          <div class="device-statusbar"><span>9:41</span><span>▮▮▮ 􀛨</span></div>
+          <div class="device-appbar"><div class="back"></div><div class="title">toritavi</div><svg class="ic"><use href="#i-bell"/></svg></div>
+          <div class="device-body">
+            <div class="hero-card" style="margin-bottom:12px">
+              <div class="kicker">NEW</div>
+              <div class="ttl">新しい旅程を作る</div>
+              <div class="sub">タイトルを決めて、予定を順に足していきます</div>
+              <button class="btn btn-outline btn-sm" style="background:#fff;border-color:#fff;color:var(--accent-700);margin-top:8px">作成をはじめる</button>
+            </div>
+            <div class="section-label">直近の旅程</div>
+            <div class="card">
+              <div class="row">
+                <div class="thumb t-plane"><svg class="ic ic-lg" style="color:#17233A"><use href="#i-plane"/></svg></div>
+                <div class="grow">
+                  <div style="font-size:13px;font-weight:700">大阪出張</div>
+                  <div class="muted">4/22 – 4/23 · 5 step</div>
+                </div>
+              </div>
+            </div>
+            <div style="text-align:center;padding:10px 0">
+              <button class="btn btn-ghost btn-sm"><svg class="ic" style="color:inherit"><use href="#i-scan"/></svg> チケット読み取りだけ行う</button>
+            </div>
+          </div>
+          <div class="device-tabbar">
+            <div class="tb-item active"><div class="dot"><svg class="ic" style="color:currentColor"><use href="#i-home"/></svg></div>旅程</div>
+            <div class="tb-item primary"><div class="dot"><svg class="ic" style="color:#fff"><use href="#i-plus"/></svg></div>旅程を作る</div>
+            <div class="tb-item"><div class="dot"><svg class="ic" style="color:currentColor"><use href="#i-bell"/></svg></div>通知</div>
+            <div class="tb-item"><div class="dot"><svg class="ic" style="color:currentColor"><use href="#i-inbox"/></svg></div>未整理</div>
+            <div class="tb-item"><div class="dot"><svg class="ic" style="color:currentColor"><use href="#i-user"/></svg></div>アカウント</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- B-2: journey shell first -->
+      <div>
+        <div class="screen-cap">B-2</div>
+        <div class="screen-title">タイトル・期間を決める</div>
+        <div class="device">
+          <div class="device-statusbar"><span>9:41</span><span>▮▮▮ 􀛨</span></div>
+          <div class="device-appbar"><div class="back"><svg class="ic"><use href="#i-chevL"/></svg></div><div class="title">新しい旅程</div></div>
+          <div class="device-body">
+            <div class="section-label">タイトル</div>
+            <input class="input" placeholder="例: 大阪出張 / 通院 / 週末の京都" style="margin-bottom:10px">
+            <div class="muted" style="margin-bottom:14px;line-height:1.6">後から直せます。空欄でも日付で仮タイトルになります。</div>
+
+            <div class="section-label">期間</div>
+            <div class="row" style="gap:6px;margin-bottom:14px">
+              <input class="input" value="2026-04-22" style="flex:1">
+              <span class="muted">〜</span>
+              <input class="input" value="2026-04-23" style="flex:1">
+            </div>
+
+            <div class="section-label">メモ (任意)</div>
+            <input class="input" placeholder="同行者 / 目的など">
+          </div>
+          <div class="device-cta">
+            <button class="btn btn-primary btn-block">次へ — 予定を追加</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- B-3: empty step list -->
+      <div>
+        <div class="screen-cap">B-3</div>
+        <div class="screen-title">旅程シェル → 予定を追加</div>
+        <div class="device">
+          <div class="device-statusbar"><span>9:41</span><span>▮▮▮ 􀛨</span></div>
+          <div class="device-appbar"><div class="back"><svg class="ic"><use href="#i-chevL"/></svg></div><div class="title">大阪出張</div></div>
+          <div class="device-body">
+            <div class="context-card" style="margin-bottom:12px">
+              <div class="kicker">今回の旅程</div>
+              <div class="ttl">大阪出張</div>
+              <div class="meta">4/22 – 4/23 · まだ予定がありません</div>
+            </div>
+            <div style="background:#fff;border:1px dashed var(--border);border-radius:var(--r-md);padding:28px 14px;text-align:center;margin-bottom:12px">
+              <div class="muted" style="line-height:1.8">
+                予定を追加してください。<br>
+                チケット写真・PDF・手入力のいずれか。
+              </div>
+            </div>
+            <button class="btn btn-accent btn-block"><svg class="ic" style="color:#fff"><use href="#i-scan"/></svg> チケットを読み取る</button>
+            <div style="height:8px"></div>
+            <button class="btn btn-ghost btn-block"><svg class="ic" style="color:inherit"><use href="#i-plus"/></svg> 手入力で追加</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- B-4: OCR inside journey -->
+      <div>
+        <div class="screen-cap">B-4</div>
+        <div class="screen-title">旅程の中で OCR — 文脈が確定済み</div>
+        <div class="device">
+          <div class="device-statusbar"><span>9:41</span><span>▮▮▮ 􀛨</span></div>
+          <div class="device-appbar"><div class="back"><svg class="ic"><use href="#i-chevL"/></svg></div><div class="title">予定を追加</div></div>
+          <div class="device-body">
+            <div class="context-card" style="margin-bottom:12px">
+              <div class="kicker">追加先</div>
+              <div class="ttl">大阪出張</div>
+              <div class="meta">4/22 – 4/23</div>
+            </div>
+            <div class="ocr-card">
+              <div class="ocr-head">
+                <div class="thumb t-plane" style="width:32px;height:32px"><svg class="ic" style="color:#17233A"><use href="#i-plane"/></svg></div>
+                <div class="ocr-title">ANA 1234 HND → FUK</div>
+                <span class="badge badge-infer">OCR</span>
+              </div>
+              <div class="fields">
+                <div><div class="k">出発</div><div class="v">4/22 19:10 HND</div></div>
+                <div><div class="k">到着</div><div class="v">4/22 20:55 FUK</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="device-cta">
+            <button class="btn btn-accent btn-block">この予定を追加</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- B-5: quick path (scan-only) -->
+      <div>
+        <div class="screen-cap">B-5</div>
+        <div class="screen-title">"読み取りだけ" の逃げ道 — 未整理へ</div>
+        <div class="device">
+          <div class="device-statusbar"><span>9:41</span><span>▮▮▮ 􀛨</span></div>
+          <div class="device-appbar"><div class="back"><svg class="ic"><use href="#i-chevL"/></svg></div><div class="title">読み取り結果</div></div>
+          <div class="device-body">
+            <div class="ocr-card" style="margin-bottom:12px">
+              <div class="ocr-head">
+                <div class="thumb t-plane" style="width:32px;height:32px"><svg class="ic" style="color:#17233A"><use href="#i-plane"/></svg></div>
+                <div class="ocr-title">ANA 1234 HND → FUK</div>
+                <span class="badge badge-infer">OCR</span>
+              </div>
+              <div class="muted" style="margin-top:6px">まだどの旅程にも紐づいていません</div>
+            </div>
+            <button class="btn btn-primary btn-block" style="margin-bottom:8px">いま旅程を作って入れる</button>
+            <button class="btn btn-ghost btn-block">未整理に保存</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <!-- / COLUMN B -->
+
+    <!-- ============================================================
+         COLUMN C
+         ============================================================ -->
+    <div class="col">
+      <div class="col-head">
+        <div class="col-tag">CASE C</div>
+        <h2>OCR 結果を Journey 下書きに見せる</h2>
+        <p>1 枚の書類から自動で Journey 下書きを生成し、Step 編集ではなく
+        「旅程の下書きの確認」として提示する。最も洗練されるが推論の精度依存が高い。</p>
+      </div>
+
+      <!-- C-1: OCR result reframed -->
+      <div>
+        <div class="screen-cap">C-1</div>
+        <div class="screen-title">読み取り直後 — Step 編集ではない</div>
+        <div class="device">
+          <div class="device-statusbar"><span>9:41</span><span>▮▮▮ 􀛨</span></div>
+          <div class="device-appbar"><div class="back"><svg class="ic"><use href="#i-chevL"/></svg></div><div class="title">旅程の下書き</div></div>
+          <div class="device-body">
+            <div class="hero-card" style="margin-bottom:12px;background:linear-gradient(135deg,var(--ink-700),var(--ink-900))">
+              <div class="kicker">AUTO-GENERATED DRAFT</div>
+              <div class="ttl">羽田 → 福岡</div>
+              <div class="sub">2026-04-22 · 1 step · OCR 1 件から推定</div>
+            </div>
+            <div class="section-label">タイトルを確認</div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">
+              <span class="chip accent selected">羽田 → 福岡</span>
+              <span class="chip">福岡出張</span>
+              <span class="chip">2026-04-22 の予定</span>
+              <span class="chip"><svg class="ic" style="color:inherit"><use href="#i-edit"/></svg> 編集</span>
+            </div>
+            <div class="section-label">含まれる予定</div>
+            <div class="card">
+              <div class="row">
+                <div class="thumb t-plane"><svg class="ic ic-lg" style="color:#17233A"><use href="#i-plane"/></svg></div>
+                <div class="grow">
+                  <div style="font-size:12px;font-weight:700">ANA 1234 · HND → FUK</div>
+                  <div class="muted">4/22 19:10 → 20:55</div>
+                </div>
+                <span class="badge badge-infer">OCR</span>
+              </div>
+            </div>
+          </div>
+          <div class="device-cta">
+            <button class="btn btn-accent btn-block" style="margin-bottom:8px">この旅程で作成</button>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-ghost" style="flex:1">既存に入れる</button>
+              <button class="btn btn-ghost" style="flex:1">未整理に</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- C-2: join existing with merge preview -->
+      <div>
+        <div class="screen-cap">C-2</div>
+        <div class="screen-title">既存に寄せると判断されたとき</div>
+        <div class="device">
+          <div class="device-statusbar"><span>9:41</span><span>▮▮▮ 􀛨</span></div>
+          <div class="device-appbar"><div class="back"><svg class="ic"><use href="#i-chevL"/></svg></div><div class="title">旅程の下書き</div></div>
+          <div class="device-body">
+            <div class="context-card" style="margin-bottom:12px;background:var(--info-50);border-color:transparent">
+              <div class="kicker" style="color:var(--info-700)">自動マッチ</div>
+              <div class="ttl">大阪出張 に繋がりそう</div>
+              <div class="meta">4/22 の予定 · 同じ日程で既存旅程あり</div>
+            </div>
+            <div class="section-label">合体プレビュー</div>
+            <div class="mini-tl" style="margin-bottom:10px">
+              <div class="step done">HND 19:10</div>
+              <div class="step next" style="outline:2px solid var(--accent-500);outline-offset:-2px">NEW 羽田→福岡</div>
+              <div class="step">KIX 着</div>
+              <div class="step">ホテル</div>
+              <div class="step">…</div>
+            </div>
+            <div class="muted" style="line-height:1.7">同じ日に既存の KIX 着 step がある。統合するか、別旅程として扱うかを選べる。</div>
+          </div>
+          <div class="device-cta">
+            <button class="btn btn-primary btn-block" style="margin-bottom:8px">既存に統合</button>
+            <button class="btn btn-outline btn-block">別の旅程として作る</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- C-3: multi-step draft from bundled PDF -->
+      <div>
+        <div class="screen-cap">C-3</div>
+        <div class="screen-title">PDF に複数便 → まとめて下書き</div>
+        <div class="device">
+          <div class="device-statusbar"><span>9:41</span><span>▮▮▮ 􀛨</span></div>
+          <div class="device-appbar"><div class="back"><svg class="ic"><use href="#i-chevL"/></svg></div><div class="title">旅程の下書き</div></div>
+          <div class="device-body">
+            <div class="hero-card" style="margin-bottom:10px;background:linear-gradient(135deg,var(--ink-700),var(--ink-900))">
+              <div class="kicker">DETECTED: 3 STEPS · 2 DAYS</div>
+              <div class="ttl">大阪 往復 4/22 – 4/23</div>
+              <div class="sub">航空券 2 件 + 宿泊 1 件を抽出</div>
+            </div>
+            <div class="card">
+              <div class="row">
+                <div class="thumb t-plane"><svg class="ic ic-lg" style="color:#17233A"><use href="#i-plane"/></svg></div>
+                <div class="grow">
+                  <div style="font-size:12px;font-weight:700">往路 HND → ITM</div>
+                  <div class="muted">4/22 19:10</div>
+                </div>
+                <span class="badge badge-infer">OCR</span>
+              </div>
+            </div>
+            <div class="card">
+              <div class="row">
+                <div class="thumb t-lodge"><svg class="ic ic-lg" style="color:#17233A"><use href="#i-lodge"/></svg></div>
+                <div class="grow">
+                  <div style="font-size:12px;font-weight:700">ホテル 大阪</div>
+                  <div class="muted">4/22 チェックイン</div>
+                </div>
+                <span class="badge badge-infer">OCR</span>
+              </div>
+            </div>
+            <div class="card">
+              <div class="row">
+                <div class="thumb t-plane"><svg class="ic ic-lg" style="color:#17233A"><use href="#i-plane"/></svg></div>
+                <div class="grow">
+                  <div style="font-size:12px;font-weight:700">復路 ITM → HND</div>
+                  <div class="muted">4/23 19:30</div>
+                </div>
+                <span class="badge badge-infer">OCR</span>
+              </div>
+            </div>
+          </div>
+          <div class="device-cta">
+            <button class="btn btn-accent btn-block">この旅程で作成</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- C-4: low-confidence fallback -->
+      <div>
+        <div class="screen-cap">C-4</div>
+        <div class="screen-title">推定が弱い時 — 案 A の分岐にフォールバック</div>
+        <div class="device">
+          <div class="device-statusbar"><span>9:41</span><span>▮▮▮ 􀛨</span></div>
+          <div class="device-appbar"><div class="back"><svg class="ic"><use href="#i-chevL"/></svg></div><div class="title">読み取り結果</div></div>
+          <div class="device-body">
+            <div class="card" style="background:var(--warn-50);border-color:transparent;margin-bottom:12px">
+              <div style="font-size:12px;font-weight:700;color:var(--warn-700)">推定が曖昧でした</div>
+              <div class="muted" style="color:var(--warn-700);margin-top:4px;line-height:1.6">日付・場所が抽出できなかったため、下書きの自動生成を中止し手動で選んでもらいます</div>
+            </div>
+            <div class="section-label">どこに入れますか？</div>
+            <div class="choice"><div class="choice-ico ink"><svg class="ic ic-lg"><use href="#i-plus"/></svg></div><div class="choice-body grow"><div class="t">新しい旅程を作る</div><div class="s">手入力でタイトル</div></div><svg class="ic" style="color:var(--text-dim)"><use href="#i-chevR"/></svg></div>
+            <div class="choice"><div class="choice-ico accent"><svg class="ic ic-lg"><use href="#i-calendar"/></svg></div><div class="choice-body grow"><div class="t">既存の旅程に追加</div><div class="s">候補を一覧から選ぶ</div></div><svg class="ic" style="color:var(--text-dim)"><use href="#i-chevR"/></svg></div>
+            <div class="choice"><div class="choice-ico"><svg class="ic ic-lg"><use href="#i-inbox"/></svg></div><div class="choice-body grow"><div class="t">未整理に保存</div><div class="s">あとで振り分け</div></div><svg class="ic" style="color:var(--text-dim)"><use href="#i-chevR"/></svg></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <!-- / COLUMN C -->
+
+  </section>
+
+  <!-- ============================================================
+       Comparison matrix + recommendation
+       ============================================================ -->
+  <section class="recommend">
+    <h2>比較と推奨</h2>
+
+    <table class="matrix">
+      <thead>
+        <tr>
+          <th style="width:160px">観点</th>
+          <th>案 A：OCR 後に受け皿を聞く</th>
+          <th>案 B：先に Journey を作る</th>
+          <th>案 C：Journey 下書きに見せる</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Journey 意識</strong></td>
+          <td class="o">中 — OCR 直後に「どこに入れる？」で意識が戻る</td>
+          <td class="g">高 — 入口からタイトルが必要になる</td>
+          <td class="g">高 — 結果が Journey 下書きとして現れる</td>
+        </tr>
+        <tr>
+          <td><strong>既存ユーザー移行コスト</strong></td>
+          <td class="g">低 — 今の OCR 起点が残る</td>
+          <td class="r">高 — 入口の既定動線が変わる</td>
+          <td class="o">中 — 挙動が大きく変わる</td>
+        </tr>
+        <tr>
+          <td><strong>速い追加の体験</strong></td>
+          <td class="g">軽い — 「新規」1 タップで作成</td>
+          <td class="r">重い — タイトル入力の強制感</td>
+          <td class="o">軽い — ただし推定に左右される</td>
+        </tr>
+        <tr>
+          <td><strong>既存 Journey への追加</strong></td>
+          <td class="g">明示的 — 必ず分岐で選ぶ</td>
+          <td class="o">Journey 内から追加 — 直感的</td>
+          <td class="o">自動マッチ — 精度次第でミス発生</td>
+        </tr>
+        <tr>
+          <td><strong>未整理導線</strong></td>
+          <td class="g">3 分岐で常に選べる</td>
+          <td class="o">quick path に逃がす</td>
+          <td class="o">低信頼時のフォールバック扱い</td>
+        </tr>
+        <tr>
+          <td><strong>タイトル提案</strong></td>
+          <td class="g">新規作成時に chip で提案</td>
+          <td class="o">テンプレあるが手打ち寄り</td>
+          <td class="g">常に OCR ベースで chip 提案</td>
+        </tr>
+        <tr>
+          <td><strong>実装スコープ</strong></td>
+          <td class="g">中 — 分岐画面 + タイトル提案を追加</td>
+          <td class="o">大 — 入口フロー + /trips/new 強化</td>
+          <td class="r">大 — 推論ロジック + UI 再構成</td>
+        </tr>
+        <tr>
+          <td><strong>不確実性</strong></td>
+          <td class="g">低 — 既存のパーツで組める</td>
+          <td class="g">低 — 伝統的な UI</td>
+          <td class="r">高 — OCR 品質に依存する</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout">
+      <div class="k">RECOMMENDATION</div>
+      <h3 style="margin-top:6px">案 A を採用</h3>
+      <p>
+        Toritavi の価値仮説は「チケットを撮れば旅程ができる」体験にある。
+        案 B は入口を変えすぎて「頻度が高い素早い追加」を重くする。
+        案 C は理想形に近いが OCR 品質に体験が人質にされる。
+        案 A は <b>最短で Journey 意識を取り戻し、既存導線を壊さず、未整理への逃げ道も自然に持てる</b>。
+        案 C の "自動統合プレビュー" は将来 case A の上に増築する拡張として追える。
+      </p>
+    </div>
+
+    <h3>採用時の実装方針メモ（レビュー用）</h3>
+    <ul>
+      <li>既存の <code>ScanFlow.tsx</code> の最後で「Step を保存して遷移」するパスを止め、<strong>登録先の選択画面</strong>（案 A-3）をブロッキングで表示する</li>
+      <li>選択は <code>"new" | "existing" | "unfiled"</code> の 3 種。内部状態として OCR 結果は未保存で持ち、選択時に書き込みへ進む</li>
+      <li>"new" 分岐は <code>/trips/new</code> に OCR draft を流し込み、タイトル chip（地名 / 目的 / 日付 / 手入力）を <strong>デフォルト選択付き</strong> で表示する。ロジックは <code>buildTitleSuggestions(ocr)</code> を lib に新設</li>
+      <li>"existing" 分岐は <strong>日付が近い Journey を 1 件ハイライト</strong> し、その他は通常一覧。Journey context card（タイトル / 日付 / step 数 / 次の予定 / mini timeline）をリストに出す</li>
+      <li>"unfiled" 分岐は既存の placeholder ページに実データを保持する仕組みを追加する必要あり（<code>toritavi_unfiled_items</code> テーブル？ 既存 Step を journey_id = NULL で持つ？ — 別途設計）</li>
+      <li>タイトル提案の候補生成: 出発・到着地 / 宿泊先 / 医療機関名 / 日付の組合せ。候補 3〜4 件 + "手入力"。最も信頼度が高いものを default selected</li>
+      <li>Journey 作成後の Step merge チェック（現行の <code>StepMergeDialog</code>）は A-4 以降で既存ロジックを流用</li>
+      <li>デザイン tokens は DS v2 のまま再利用。新規 UI（choice tile / title chip / context card / mini timeline）は既存 <code>.card</code>, <code>.chip</code>, <code>.badge</code> の派生で組めるので追加は最小</li>
+    </ul>
+
+    <h3>次フェーズ（MVP 以降 · 案 C から取り込む候補）</h3>
+    <ul>
+      <li>複数便 / 往復 / PDF まとめ読み込みからの <strong>multi-step draft</strong>（C-3）</li>
+      <li>同日既存 Journey の <strong>自動合体プレビュー</strong>（C-2）— 現状の StepMergeDialog を Journey 粒度へ拡張</li>
+      <li>未整理に貯めた item を一括で Journey 化する flow（unfiled → journey promotion）</li>
+    </ul>
+
+    <h3>スコープ外（今回やらない）</h3>
+    <ul>
+      <li>OCR 抽出精度の改善（モデル入替 / プロンプト変更）</li>
+      <li>Journey テンプレート（出張 / 通院 / 旅行 などのプリセット）</li>
+      <li>共有・エクスポート周り</li>
+    </ul>
+  </section>
+
+</div>
+</body>
+</html>

@@ -21,8 +21,9 @@ import {
   IconTypography,
   IconUpload,
 } from "@tabler/icons-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { buildTitleSuggestions, type TitleSuggestion } from "@/lib/journey-title-suggestions";
 import { useDisclosure } from "@mantine/hooks";
 import { AppHeader } from "@/components/AppHeader";
 import { TabBar } from "@/components/TabBar";
@@ -113,10 +114,61 @@ type FormState = {
   startDate: string;
   endDate: string;
   items: JourneyDraftItem[];
+  /**
+   * OCR 起点 (Flow A, 新規分岐) で入ってきた時のみ非 null。
+   * タイトル chip を表示し、空の defaultItems ではなく seed した step を描画する。
+   */
+  seededSteps: Step[] | null;
 };
+
+/**
+ * Pull one-shot OCR seed stashed by ScanFlow when the user picked
+ * "新しい旅程を作る". Consumed and cleared on first read.
+ */
+function consumeScanSeed(): Step[] | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem("toritavi_scan_seed");
+    if (!raw) return null;
+    sessionStorage.removeItem("toritavi_scan_seed");
+    const parsed = JSON.parse(raw) as { steps?: Step[]; at?: number };
+    if (!Array.isArray(parsed.steps) || parsed.steps.length === 0) return null;
+    return parsed.steps;
+  } catch (e) {
+    console.warn("[trips/new] scan seed parse failed", e);
+    return null;
+  }
+}
+
+function stepsToItems(steps: Step[]): JourneyDraftItem[] {
+  return steps.map((s) => ({
+    id: s.id,
+    registered: true,
+    source: s.source,
+    step: s,
+  }));
+}
 
 function loadInitialForm(today: string): FormState {
   if (typeof window !== "undefined") {
+    // 1) OCR seed (Flow A 新規分岐) が最優先。
+    const seed = consumeScanSeed();
+    if (seed) {
+      const firstDate = seed.find((s) => s.date)?.date || today;
+      const lastDate =
+        seed.reduceRight<string | undefined>((acc, s) => acc ?? s.endDate ?? s.date, undefined) ||
+        firstDate;
+      const suggestions = buildTitleSuggestions(seed);
+      return {
+        title: suggestions[0]?.label ?? "",
+        memo: "",
+        startDate: firstDate,
+        endDate: lastDate || firstDate,
+        items: stepsToItems(seed),
+        seededSteps: seed,
+      };
+    }
+    // 2) 下書き復元
     const saved = getJourneyDraft();
     if (saved?.title) {
       return {
@@ -125,21 +177,35 @@ function loadInitialForm(today: string): FormState {
         startDate: saved.startDate || today,
         endDate: saved.endDate || saved.startDate || today,
         items: saved.items.length ? saved.items : defaultItems,
+        seededSteps: null,
       };
     }
     // 古い空の下書きをクリア
     clearJourneyDraft();
   }
-  return { title: "", memo: "", startDate: today, endDate: today, items: defaultItems };
+  return {
+    title: "",
+    memo: "",
+    startDate: today,
+    endDate: today,
+    items: defaultItems,
+    seededSteps: null,
+  };
 }
 
 export default function NewTripPage() {
   const router = useRouter();
   const today = getTodayDateString();
   const [form, setForm] = useState<FormState>(() => loadInitialForm(today));
-  const { title, memo, startDate, endDate, items } = form;
+  const { title, memo, startDate, endDate, items, seededSteps } = form;
   const setTitle = (v: string) => setForm((f) => ({ ...f, title: v }));
   const setMemo = (v: string) => setForm((f) => ({ ...f, memo: v }));
+
+  // タイトル候補: OCR seed 経由で入ってきた時のみ描画する。
+  const titleSuggestions = useMemo<TitleSuggestion[]>(() => {
+    if (!seededSteps || seededSteps.length === 0) return [];
+    return buildTitleSuggestions(seededSteps);
+  }, [seededSteps]);
   const setItems = (fn: JourneyDraftItem[] | ((prev: JourneyDraftItem[]) => JourneyDraftItem[])) =>
     setForm((f) => ({ ...f, items: typeof fn === "function" ? fn(f.items) : fn }));
   const [modalOpened, { open: openModal, close: closeModal }] = useDisclosure(false);
@@ -319,6 +385,60 @@ export default function NewTripPage() {
       <AppHeader title="新規作成" back backHref="/" />
 
       <Box className={classes.screen} pt="xs" pb={110}>
+        {titleSuggestions.length > 0 && (
+          <Box
+            style={{
+              margin: "0 16px 8px",
+              padding: "10px 12px",
+              background: "var(--accent-50)",
+              border: "1px solid var(--accent-100, #FFDBCF)",
+              borderRadius: 12,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 10,
+                fontWeight: 800,
+                letterSpacing: 1,
+                color: "var(--accent-700)",
+                textTransform: "uppercase",
+              }}
+            >
+              タイトル候補（読み取り結果から）
+            </Text>
+            <Box style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+              {titleSuggestions.map((s) => {
+                const selected = title === s.label;
+                return (
+                  <button
+                    key={s.key}
+                    type="button"
+                    onClick={() => setTitle(s.label)}
+                    style={{
+                      padding: "5px 12px",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      borderRadius: 999,
+                      background: selected ? "var(--ink-800)" : "#fff",
+                      color: selected ? "#fff" : "var(--ink-800)",
+                      border: selected
+                        ? "1px solid var(--ink-800)"
+                        : "1px solid var(--accent-100, #FFDBCF)",
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                    }}
+                  >
+                    {s.label}
+                  </button>
+                );
+              })}
+            </Box>
+            <Text style={{ fontSize: 10, color: "var(--text-dim)", marginTop: 6 }}>
+              タップで反映。自由に書き換えも可能。
+            </Text>
+          </Box>
+        )}
+
         <Box className={classes.formSection}>
           <Box className={classes.formRow}>
             <Text className={classes.formLabel}>タイトル</Text>

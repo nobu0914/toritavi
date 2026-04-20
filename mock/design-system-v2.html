@@ -1424,9 +1424,109 @@
     font-style: italic;
   }
 
+  /* ============================================================
+   * DS tab nav — 採用済み / 検討中 の切替
+   * 上部 sticky で常に見える。ページ本体側の position:sticky などは
+   * body 直下なので top:0 は維持できる。
+   * ============================================================ */
+  .ds-tabnav {
+    position: sticky; top: 0; z-index: 900;
+    background: #fff; border-bottom: 1px solid var(--border);
+    padding: 10px 24px; display: flex; gap: 8px; align-items: center;
+    box-shadow: var(--shadow-xs);
+  }
+  .ds-tabnav .ds-tabnav-label {
+    font-size: 11px; font-weight: 800; letter-spacing: 1px;
+    text-transform: uppercase; color: var(--text-dim);
+    margin-right: 6px;
+  }
+  .ds-tabnav button {
+    font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+    padding: 7px 16px; border-radius: var(--r-pill);
+    border: 1.5px solid var(--border);
+    background: #fff; color: var(--ink-800);
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .ds-tabnav button:hover { border-color: var(--ink-500); }
+  .ds-tabnav button.active {
+    background: var(--ink-800); color: #fff; border-color: var(--ink-800);
+  }
+  .ds-tabnav button .ds-tab-count {
+    display: inline-block; margin-left: 6px;
+    padding: 1px 7px; border-radius: var(--r-pill);
+    font-size: 10px; font-weight: 800;
+    background: var(--n-100); color: var(--text-dim);
+  }
+  .ds-tabnav button.active .ds-tab-count {
+    background: rgba(255,255,255,0.22); color: #fff;
+  }
+  .ds-tab-panel { display: none; }
+  .ds-tab-panel.active { display: block; }
+
+  /* 検討中タブ用のイントロ帯 + iframe 埋め込み */
+  .ds-review-intro {
+    max-width: 1040px; margin: 32px auto 16px; padding: 0 32px;
+  }
+  .ds-review-intro .kicker {
+    display: inline-block; background: var(--warn-50); color: var(--warn-700);
+    font-size: 11px; font-weight: 800; letter-spacing: 0.8px; text-transform: uppercase;
+    padding: 4px 10px; border-radius: var(--r-pill); margin-bottom: 10px;
+  }
+  .ds-review-intro h2 { font-size: 24px; font-weight: 800; letter-spacing: -0.3px; }
+  .ds-review-intro p { color: var(--text-dim); margin-top: 8px; font-size: 14px; line-height: 1.7; }
+  .ds-review-intro .ds-review-meta {
+    margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; font-size: 12px;
+  }
+  .ds-review-intro .ds-review-meta .chip {
+    background: var(--n-100); color: var(--n-700);
+    padding: 4px 10px; border-radius: var(--r-pill); font-weight: 600;
+  }
+  .ds-review-list {
+    max-width: 1040px; margin: 0 auto 16px; padding: 0 32px;
+  }
+  .ds-review-item {
+    background: #fff; border: 1px solid var(--border); border-radius: var(--r-lg);
+    padding: 16px; margin-bottom: 12px;
+    display: flex; gap: 14px; align-items: center;
+  }
+  .ds-review-item .ds-review-num {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--ink-800); color: #fff;
+    display: grid; place-items: center;
+    font-size: 12px; font-weight: 800; flex-shrink: 0;
+  }
+  .ds-review-item .grow { flex: 1; min-width: 0; }
+  .ds-review-item h3 { font-size: 15px; font-weight: 800; }
+  .ds-review-item p { font-size: 12px; color: var(--text-dim); margin-top: 3px; line-height: 1.5; }
+  .ds-review-item a.open-btn {
+    font-size: 12px; font-weight: 700; color: var(--accent-700);
+    text-decoration: none; padding: 6px 14px;
+    border: 1.5px solid var(--accent-500); border-radius: var(--r-pill);
+    white-space: nowrap;
+  }
+  .ds-review-item a.open-btn:hover { background: var(--accent-500); color: #fff; }
+
+  .ds-review-frame {
+    max-width: 1600px; margin: 0 auto; padding: 8px 24px 32px;
+  }
+  .ds-review-frame iframe {
+    width: 100%; height: calc(100vh - 160px); min-height: 900px;
+    border: 1px solid var(--border); border-radius: var(--r-lg);
+    background: #FAFBFD; display: block;
+  }
+
 </style>
 </head>
 <body class="lang-ja">
+
+<!-- ===== TOP TABNAV: 採用済み / 検討中 ===== -->
+<nav class="ds-tabnav" role="tablist" aria-label="DS セクション切替">
+  <span class="ds-tabnav-label">Design System v2</span>
+  <button type="button" class="ds-tab-btn active" data-target="ds-tab-adopted" role="tab" aria-selected="true">採用済み</button>
+  <button type="button" class="ds-tab-btn" data-target="ds-tab-review" role="tab" aria-selected="false">検討中<span class="ds-tab-count">1</span></button>
+</nav>
+
+<div id="ds-tab-adopted" class="ds-tab-panel active" role="tabpanel">
 
 <!-- ===== FLAT ICON SPRITE ===== -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -7088,6 +7188,71 @@ HND → ITM
     if (saved === 'en' || saved === 'ja') setLang(saved);
   } catch (e) {}
 })();
+</script>
+
+</div><!-- /#ds-tab-adopted -->
+
+<!-- ===== 検討中 パネル ===== -->
+<div id="ds-tab-review" class="ds-tab-panel" role="tabpanel">
+  <section class="ds-review-intro">
+    <span class="kicker">Under Review · 2026-04-20</span>
+    <h2>検討中の UI / フロー提案</h2>
+    <p>
+      採用前のフロー探索 mock を集めるエリア。採用済みセクション（DS v2 本体）とは CSS が干渉する可能性があるため、
+      各案は独立ファイルとして保持し、ここでは iframe で埋め込んでレビューしやすくしている。
+      採用が決まったものは DS v2 本体の該当セクションへ昇格させる。
+    </p>
+    <div class="ds-review-meta">
+      <span class="chip">iframe 埋め込み</span>
+      <span class="chip">独立 HTML</span>
+      <span class="chip">採用決定時に本体へ昇格</span>
+    </div>
+  </section>
+
+  <section class="ds-review-list">
+    <div class="ds-review-item">
+      <div class="ds-review-num">1</div>
+      <div class="grow">
+        <h3>Journey 起点フロー 比較 (A/B/C)</h3>
+        <p>OCR → Step 直行を止め、Journey 意識に引き戻す 3 案を比較。推奨: 案 A（OCR 後に受け皿を聞く 3 分岐）</p>
+      </div>
+      <a class="open-btn" href="journey-flow-v2.html" target="_blank" rel="noopener">別タブで開く ↗</a>
+    </div>
+  </section>
+
+  <section class="ds-review-frame">
+    <iframe
+      src="journey-flow-v2.html"
+      title="Journey 起点フロー 比較 (A/B/C)"
+      loading="lazy">
+    </iframe>
+  </section>
+</div><!-- /#ds-tab-review -->
+
+<script>
+  /* DS tab switcher */
+  (function(){
+    var btns = document.querySelectorAll('.ds-tab-btn');
+    var panels = document.querySelectorAll('.ds-tab-panel');
+    function activate(target) {
+      btns.forEach(function(b){
+        var on = b.getAttribute('data-target') === target;
+        b.classList.toggle('active', on);
+        b.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      panels.forEach(function(p){
+        p.classList.toggle('active', p.id === target);
+      });
+      try { history.replaceState(null, '', '#' + target); } catch(e){}
+      window.scrollTo({ top: 0, behavior: 'instant' in window ? 'instant' : 'auto' });
+    }
+    btns.forEach(function(b){
+      b.addEventListener('click', function(){ activate(b.getAttribute('data-target')); });
+    });
+    /* Deep link: #ds-tab-review をサポート */
+    var hash = (location.hash || '').replace('#','');
+    if (hash === 'ds-tab-review') activate('ds-tab-review');
+  })();
 </script>
 </body>
 </html>

@@ -4,7 +4,7 @@ import { createClient } from "./supabase-browser";
 import * as core from "./store-supabase";
 import * as guestStore from "./store-guest";
 import { disableGuestMode, isGuestMode } from "./guest";
-import type { Journey } from "./types";
+import type { Journey, Step } from "./types";
 
 /**
  * Authenticated user が localStorage に残ったゲストフラグを持ち越している場合
@@ -89,6 +89,51 @@ export async function getStepImages(
 
 export function generateId(): string {
   return core.generateId();
+}
+
+/* ====== Unfiled (Flow A: NULL-journey bucket) ====== */
+
+export async function getUnfiledSteps(): Promise<Step[]> {
+  const { sb, userId } = await getAuthContext();
+  if (userId) {
+    reconcileGuestMode();
+    return core.getUnfiledSteps(sb);
+  }
+  if (isGuestMode()) return guestStore.getUnfiledSteps();
+  return [];
+}
+
+export async function addUnfiledSteps(steps: Step[]): Promise<void> {
+  const { sb, userId } = await getAuthContext();
+  if (userId) {
+    reconcileGuestMode();
+    return core.addUnfiledSteps(sb, userId, steps);
+  }
+  if (isGuestMode()) return guestStore.addUnfiledSteps(steps);
+  throw new Error("ログインが必要です");
+}
+
+export async function promoteUnfiledSteps(
+  stepIds: string[],
+  journeyId: string
+): Promise<void> {
+  const { sb, userId } = await getAuthContext();
+  if (userId) {
+    reconcileGuestMode();
+    return core.promoteUnfiledSteps(sb, stepIds, journeyId);
+  }
+  if (isGuestMode()) return guestStore.promoteUnfiledSteps(stepIds, journeyId);
+  throw new Error("ログインが必要です");
+}
+
+export async function deleteUnfiledStep(stepId: string): Promise<void> {
+  const { sb, userId } = await getAuthContext();
+  if (userId) {
+    reconcileGuestMode();
+    return core.deleteUnfiledStep(sb, stepId);
+  }
+  if (isGuestMode()) return guestStore.deleteUnfiledStep(stepId);
+  throw new Error("ログインが必要です");
 }
 
 /* ====== Draft: local only (同じキーを使うので mode 問わず共通) ====== */

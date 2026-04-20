@@ -156,6 +156,80 @@ export async function deleteJourney(sb: SupabaseClient, id: string): Promise<voi
   await sb.from("toritavi_journeys").delete().eq("id", id);
 }
 
+/* ====== Unfiled steps (journey_id IS NULL) ======
+ * Flow A "未整理" bucket. Steps live in toritavi_steps with a NULL
+ * journey_id; RLS still pins by user_id so privacy is unchanged.
+ * Promotion (unfiled → real journey) is a simple journey_id update.
+ */
+
+export async function getUnfiledSteps(sb: SupabaseClient): Promise<Step[]> {
+  const { data, error } = await sb
+    .from("toritavi_steps")
+    .select(STEP_COLUMNS_LIGHT)
+    .is("journey_id", null)
+    .order("created_at", { ascending: false });
+  if (error) {
+    console.error("[getUnfiledSteps] error:", error);
+    return [];
+  }
+  return (data ?? []).map(rowToStep);
+}
+
+export async function addUnfiledSteps(
+  sb: SupabaseClient,
+  userId: string,
+  steps: Step[]
+): Promise<void> {
+  if (steps.length === 0) return;
+  const rows = steps.map((s, i) => stepToRowNullable(s, null, userId, i));
+  const { error } = await sb.from("toritavi_steps").upsert(rows);
+  if (error) {
+    console.error("[addUnfiledSteps] error:", error);
+    throw new Error(`未整理への保存に失敗: ${error.message}`);
+  }
+}
+
+export async function promoteUnfiledSteps(
+  sb: SupabaseClient,
+  stepIds: string[],
+  journeyId: string
+): Promise<void> {
+  if (stepIds.length === 0) return;
+  const { error } = await sb
+    .from("toritavi_steps")
+    .update({ journey_id: journeyId })
+    .in("id", stepIds)
+    .is("journey_id", null);
+  if (error) {
+    console.error("[promoteUnfiledSteps] error:", error);
+    throw new Error(`旅程への移動に失敗: ${error.message}`);
+  }
+}
+
+export async function deleteUnfiledStep(sb: SupabaseClient, stepId: string): Promise<void> {
+  const { error } = await sb
+    .from("toritavi_steps")
+    .delete()
+    .eq("id", stepId)
+    .is("journey_id", null);
+  if (error) {
+    console.error("[deleteUnfiledStep] error:", error);
+    throw new Error(`未整理アイテムの削除に失敗: ${error.message}`);
+  }
+}
+
+/* stepToRow variant that accepts a nullable journey_id. */
+function stepToRowNullable(
+  step: Step,
+  journeyId: string | null,
+  userId: string,
+  sortOrder: number
+): Record<string, unknown> {
+  const row = stepToRow(step, journeyId ?? "", userId, sortOrder);
+  row.journey_id = journeyId;
+  return row;
+}
+
 export function generateId(): string {
   return crypto.randomUUID();
 }

@@ -52,6 +52,62 @@ export async function deleteJourney(id: string): Promise<void> {
   write(read().filter((j) => j.id !== id));
 }
 
+/* ====== Unfiled (guest mode) ======
+ * Guest-mode unfiled lives in a separate localStorage key so it's
+ * independent of the sample journeys bucket. Promotion simply moves
+ * the step into a chosen journey's steps array.
+ */
+const UNFILED_KEY = "toritavi_guest_unfiled";
+
+function readUnfiled(): import("./types").Step[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(UNFILED_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch { /* ignore */ }
+  return [];
+}
+
+function writeUnfiled(steps: import("./types").Step[]): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(UNFILED_KEY, JSON.stringify(steps));
+}
+
+export async function getUnfiledSteps(): Promise<import("./types").Step[]> {
+  return readUnfiled();
+}
+
+export async function addUnfiledSteps(
+  steps: import("./types").Step[]
+): Promise<void> {
+  const existing = readUnfiled();
+  writeUnfiled([...steps, ...existing]);
+}
+
+export async function promoteUnfiledSteps(
+  stepIds: string[],
+  journeyId: string
+): Promise<void> {
+  const unfiled = readUnfiled();
+  const moving = unfiled.filter((s) => stepIds.includes(s.id));
+  const staying = unfiled.filter((s) => !stepIds.includes(s.id));
+  writeUnfiled(staying);
+
+  const journeys = read();
+  const idx = journeys.findIndex((j) => j.id === journeyId);
+  if (idx < 0) return;
+  journeys[idx] = {
+    ...journeys[idx],
+    steps: [...(journeys[idx].steps ?? []), ...moving],
+    updatedAt: new Date().toISOString(),
+  };
+  write(journeys);
+}
+
+export async function deleteUnfiledStep(stepId: string): Promise<void> {
+  writeUnfiled(readUnfiled().filter((s) => s.id !== stepId));
+}
+
 export function generateId(): string {
   return crypto.randomUUID();
 }
@@ -59,6 +115,7 @@ export function generateId(): string {
 export function clearGuestData(): void {
   if (typeof window === "undefined") return;
   localStorage.removeItem(KEY);
+  localStorage.removeItem(UNFILED_KEY);
 }
 
 /* ====== Draft ====== */
