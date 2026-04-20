@@ -30,11 +30,21 @@ export function AddStepDrawer({ opened, onClose, journey, onCompleted }: Props) 
          同値だと DOM 順で TabBar が勝ってしまい、Drawer を開いても
          下部ナビが透けて見える不具合を回避する。 */
       zIndex={400}
+      /* 既定 gapMode='margin' は body の margin を padding に変換し、
+         max-width:430 + margin:0 auto + border-box と噛み合うと content
+         領域を潰す。padding モードで回避。 */
+      removeScrollProps={{ gapMode: "padding" }}
       styles={{
+        /* iPad / PC で Drawer パネルが viewport 全幅に広がらないよう
+           inner.justify-content:center + content.max-width:430 で中央寄せ。 */
+        inner: { justifyContent: "center" },
         content: {
           borderRadius: "16px 16px 0 0",
           display: "flex",
           flexDirection: "column",
+          flex: "0 0 auto",
+          width: "100%",
+          maxWidth: 430,
         },
         body: {
           padding: 0,

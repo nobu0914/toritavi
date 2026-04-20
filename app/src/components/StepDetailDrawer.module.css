@@ -4,16 +4,20 @@
   flex: 1;
   overflow-y: auto;
   padding: 16px 16px 28px;
+  /* iPad / PC で Drawer が viewport 全幅に広がっても本文は body と同じ
+     430px 列に収まるように内側で中央寄せ。 */
+  max-width: 430px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
   -webkit-overflow-scrolling: touch;
 }
 
 /* View モード: Drawer の白い枠を廃止し、Ticket 自体が「浮き出てくるカード」になる。
-   Drawer 上辺の 20px 角と Ticket 上辺を揃え、Ticket の max-width / shadow は削除。 */
+   Drawer 上辺の 20px 角と Ticket 上辺を揃え、ticket は body 幅に追従させる。 */
 .body[data-mode="view"] {
   padding: 0 0 28px;
   overflow-x: hidden;
-  width: 100%;
-  box-sizing: border-box;
 }
 .body[data-mode="view"] :global(.ticket) {
   border-radius: 20px 20px 0 0;

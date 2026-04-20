@@ -27,3 +27,18 @@ a {
   color: inherit;
   text-decoration: none;
 }
+
+/*
+ * Mantine Drawer の強制中央寄せ。body(max-width:430) と揃えて、
+ * iPad / PC で Drawer panel が viewport 全幅に広がってチケットが
+ * 見切れる崩れを防ぐ。styles prop が効かない場合の CSS 側保険。
+ *   m_31cd769a = Drawer.inner (flex container)
+ *   m_b8a05bbd = Drawer.content (パネル本体)
+ */
+.m_31cd769a {
+  justify-content: center !important;
+}
+.m_b8a05bbd {
+  max-width: 430px !important;
+  margin-inline: auto !important;
+}

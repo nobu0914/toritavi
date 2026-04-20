@@ -215,11 +215,25 @@ export function StepDetailDrawer({
       withCloseButton={false}
       /* TabBar (z-index: 200) を確実に覆うため 400 に引き上げ。 */
       zIndex={400}
+      /* react-remove-scroll の既定 gapMode='margin' は body の margin を
+         padding に変換する。body が max-width:430 + margin:0 auto + border-box
+         だと padding-left/right で content 領域が極端に潰れて、underlying の
+         timeline が縦 1 文字になる。padding モードなら body の margin は
+         変更されず、単に padding-right でスクロールバー分を補うだけ。 */
+      removeScrollProps={{ gapMode: "padding" }}
       styles={{
+        /* iPad / PC で Drawer パネルが viewport 全幅に広がって
+           ticket が右端まで引き伸ばされる崩れを防ぐ。
+           inner の justify-content:center + content の max-width:430 で
+           確実に 430 中央寄せ。flex-basis は auto に下ろして max-width を効かせる。 */
+        inner: { justifyContent: "center" },
         content: {
           borderRadius: "20px 20px 0 0",
           display: "flex",
           flexDirection: "column",
+          flex: "0 0 auto",
+          width: "100%",
+          maxWidth: 430,
         },
         body: { padding: 0, flex: 1, display: "flex", flexDirection: "column", minHeight: 0 },
       }}

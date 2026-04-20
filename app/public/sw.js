@@ -16,7 +16,7 @@
  * CACHE_VERSION is bumped per notable deploy so activation cleans up old
  * caches that may contain the previous deploy's stale HTML.
  */
-const CACHE_VERSION = "toritavi-v8";
+const CACHE_VERSION = "toritavi-v9";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const HTML_FALLBACK = `${CACHE_VERSION}-html`;
 
