@@ -91,3 +91,37 @@
 - Next.js 16 docs: `node_modules/next/dist/docs/01-app/02-guides/content-security-policy.md`
 - 監査クエリ: `supabase_migrations/_security_audit_queries.sql`
 - RLS 修正: `supabase_migrations/006_drop_anon_policies.sql`
+
+---
+
+## 追記：実機検証ラウンド 2（2026-04-20 夕方）
+
+修正コミットを本番反映後、2 アカウント（User A = kijiatora.works@gmail.com / User B = kijiatora.regi@gmail.com）を用いた iPhone Safari 実機テストを実施。
+
+### パスワードリカバリ回帰（8380d99 / 3d42b2c）
+- ログイン画面「パスワードを忘れた方」経由のフローを 2 回実施
+- 再設定メール → リンクタップ → `/reset-password` に固定されることを確認
+- ログイン画面に直接戻る誘導だけでは iOS Safari で遷移しないことが判明 → 3d42b2c で native `<a>` + `window.location.href` 強制ナビに変更
+- その結果、パスワード更新後「ログイン画面へ」ボタンから通常ログインに戻れることを確認
+
+### ユーザー間データ分離（57d5d8e / ba7d2f0 の二重ガード）
+- User A でログイン → `大阪出張` 旅程（id: 4be5efb8-2ef6-4759-b47b-cb78e6eaa62b）の URL を取得
+- サインアウト → User B でログイン
+- 期待通り TOP は空、直接 URL を踏んでも `/` にリダイレクトされて閲覧不可だった ✅
+- RLS が `auth.uid() = user_id` で機能している証左。`ba7d2f0` 適用前は User B から User A 行が見えていたはず
+
+### XSS 耐性（Test 1）
+- ゲストモードでサンプル旅程の `列車` 編集画面を開く
+- `列車名` 欄（内部キー `title`）に `<script>alert('XSS test')</script>` を注入 → 更新
+- step カードに **文字列としてそのまま表示**、alert は非発火 ✅
+- React のデフォルトエスケープ + CSP nonce の二層防御が機能
+
+### OCR レート制限（Test 2）
+- `ScanFlow` の「やり直す」ボタンは `reset()` 呼び出しでローカル状態クリアのみ、OCR API を再呼び出ししないことをコードで確認
+- 実機でレート制限を発火させるには、画像選択 → 解析 を 6 回回す必要があり、実機検証は断念
+- ロジック自体は `toritavi_ocr_events` の count が 60s 窓で 5 を超えたら 429 を返す単純な実装なので、コードレビューで PASS 扱い
+
+### 判定
+主要な外部監査指摘 + 自己発見（RLS 穴 / 再設定リンク過権限）は全てフィックス完了。
+実機 2 アカウント分離テストで behaviour レベルでも漏れなしを確認。
+残課題は `style-src unsafe-inline` 撤去（工数大 / 緊急性低）、`Vary: Origin` HTML 反映（影響なし）、OCR 月予算/日予算のフル検証（未実施）。
