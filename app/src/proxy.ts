@@ -52,7 +52,7 @@ const PUBLIC_PATHS = [
   "/auth/callback",
 ];
 
-const PROTECTED_PATHS = ["/", "/scan", "/alerts", "/unfiled", "/account", "/trips", "/concierge"];
+const PROTECTED_PATHS = ["/", "/scan", "/alerts", "/unfiled", "/account", "/trips", "/concierge", "/admin"];
 
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
@@ -146,6 +146,16 @@ export async function proxy(request: NextRequest) {
   ) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
+    return withSecHeaders(NextResponse.redirect(url), csp);
+  }
+
+  // /admin is never accessible in guest mode — force a real session,
+  // even if the guest cookie is set. The admin layout does a second
+  // role check with requireAdmin().
+  const isAdminPath = pathname === "/admin" || pathname.startsWith("/admin/");
+  if (!user && isAdminPath) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
     return withSecHeaders(NextResponse.redirect(url), csp);
   }
 
