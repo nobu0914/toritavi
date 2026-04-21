@@ -1,6 +1,6 @@
 # CODEX Memory
 
-最終更新: 2026-04-20（公開面セキュリティ再チェック + 作業記録保存）
+最終更新: 2026-04-21（Journey 起点フロー検討 + 管理者画面設計 + 記録保存）
 
 ## 目的
 このファイルは、Codex がこのリポジトリで継続作業するための簡易メモリです。
@@ -27,6 +27,9 @@
 - `security.txt` は `/.well-known/security.txt`、`robots.txt` は `/robots.txt` で公開されている
 - `Google` ログインは現時点では実フロー未実装で、ボタンは disabled 想定
 - OCR は `/api/ocr` 経由で server-side の Claude API プロキシを使う構成
+- 管理者画面は `/account` 配下ではなく `/admin` 配下の独立コンソールとして切る方針が適切
+- Journey 起点フローの比較モックは `mock/journey-flow-v2.html` にあり、`mock/design-system-v2.html#ds-tab-review` から参照できる
+- Journey 起点フロー比較では、現状の OCR 起点を維持しつつ `新規 / 既存 / 未整理` を選ばせる案Aが最も現実的、という整理になった
 - 2026-04-20 時点でも、匿名アクセスでは `/scan`、`/alerts`、`/account`、`/unfiled` は `/login` へリダイレクトされる
 - 2026-04-20 の公開面再チェックでは、主要ヘッダーは維持され、`/api/ocr` への cross-origin POST 403 も維持されていた
 - 公開HTMLの CSP には `script-src 'unsafe-inline' 'unsafe-eval'` が残っている
@@ -55,6 +58,12 @@
 - 再チェックの結果、主な残課題は「公開HTMLの CSP に `unsafe-inline` / `unsafe-eval` が残っていること」と「Origin / Vary の扱いに一貫性がないこと」と整理した
 - セキュリティ再チェック結果を Claude Code に貼りやすい雛形へ整形した
 - ユーザー指示 `チャット履歴を保存。作業記録をして。` に従い、この `CODEX_MEMORY.md` と日付付きセッションログへ記録を残した
+- 2026-04-21 の会話では、Toritavi のサービス仕様、アカウント下層ページ仕様、管理者画面設計、Journey 起点フロー比較について整理した
+- アカウント下層ページ仕様と管理者画面設計、Journey 起点フロー改善案を Claude Code に渡せるコピペ形式に整形した
+- 提供されたテストアカウントを使い、`toritavi.com` の非破壊認証後セキュリティ検査を実施した
+- 非破壊検査では、保護ルートの未ログイン時 `307 -> /login`、ログイン時 `200`、recovery session の `/reset-password` 固定、`GET /api/account/delete` の `405` を確認した
+- `mock/design-system-v2.html#ds-tab-review` にある review タブ運用は、正式DSと検討中フローを分離できていて妥当、という評価に整理した
+- ユーザー指示 `チャット履歴を保存。作業記録をして。ドロップボックスへのバックアップも行って。` に従い、記録ファイルを更新し Dropbox へのバックアップを作成する
 
 ## 現在の到達点
 - `app/src/app/trips/new/page.tsx` はモックにかなり近いが、ユーザーは「まったく同じUI」を求めている
@@ -63,8 +72,11 @@
 - `trips/[id]` もタイムラインには戻したが、まだモック完全一致までは未確認
 - セキュリティ観点では、公開面の大きな改善は確認済み
 - 2026-04-20 時点でも公開面の基本防御は維持されており、重大な公開設定ミスは今回の範囲では未確認
+- 2026-04-21 時点では Journey 起点フローの比較モックと、その実装差分がワークツリーに残っている
 - 現時点の残課題は、HTML 応答で `Vary: Origin` を本当に付けたいかの整理、公開HTML CSP の `unsafe-inline` / `unsafe-eval` の削減、実ブラウザでの認証画面表示確認、preview deployment での CORS 挙動確認
 - 認可、RLS、パスワード再設定トークン再利用、メール認証リンク再利用、ゲストモードと本会員データ分離は次フェーズの検証対象
+- プロダクト体験面では、OCR 直後に Step 編集へ直行せず、Journey 文脈へ引き戻す案Aを軸に詰めるのが次アクション
+- 運用面では、`/admin` 配下の独立した管理コンソールを read-heavy / ops-light で設計し、まず Dashboard / Users / Security から入るのが妥当
 
 ## 実データ確認時の制約
 - この環境からブラウザの `localStorage` を自動取得しようとしたが失敗した
@@ -82,6 +94,8 @@ JSON.parse(localStorage.getItem("toritavi_journeys") ?? "[]")
 ## 現在の重要課題
 - 新規作成 `/trips/new` をモックと完全一致まで詰める
 - Journey 詳細 `/trips/[id]` をモックと完全一致まで詰める
+- Journey 起点フロー（A/B/C比較）の採用判断とアプリ実装
+- `/admin` 配下の管理者画面 MVP 設計・実装
 - 認証画面導線の実装と UI 整備
 - 認証後ページの認可テスト（Supabase RLS 含む）
 - パスワード再設定 / メール認証トークンの安全性確認
@@ -104,6 +118,7 @@ JSON.parse(localStorage.getItem("toritavi_journeys") ?? "[]")
 - Design System v2 文脈なら `SESSION_LOG_20260418_DESIGN_SYSTEM_V2.md` も読む
 - 必要に応じて `CLAUDE.md`、`app/CLAUDE.md`、`app/AGENTS.md` も確認する
 - 画面修正に入る前は、必ず `mock/design-system-v2.html`（最新）と必要なモック HTML を再確認する
+- Journey 起点フロー文脈なら `mock/design-system-v2.html#ds-tab-review` と `mock/journey-flow-v2.html` も確認する
 - 読み込み後は、把握した前提と現在の未完了事項を短く要約してから作業を再開する
 
 ## 2026-04-18 Design System v2 全面適用セッション（追記）
