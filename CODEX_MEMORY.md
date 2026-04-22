@@ -152,6 +152,22 @@ JSON.parse(localStorage.getItem("toritavi_journeys") ?? "[]")
 - DS v2 §10.5（詳細画面 variant A = ⋮ + 下部 CTA）、§10.6（Bottom Sheet）、§13.11（4-cell）更新
 - コミット範囲: `4326718` 〜 `6ef8671`（12 commits, main へ push 済）
 
+## 2026-04-22 Coyote and Powell LLC コーポレートサイト構築セッション（追記）
+- 新規プロジェクト: `/Users/mbneo512gb/Dev/company-site`（Toritavi とは完全別管理）
+- 構成: 静的 HTML/CSS/JS のみ、依存なし、ビルド不要
+- デザイン経緯: ダークセリフ基調 → visitors.now 準拠のライト基調に全面刷新 → ブランド teal 適用 → メインビジュアル (Canyon) 導入 → 公式ロゴ導入 → ナビを teal 背景に
+- 採用フォント: **Open Runde**（Apache 2.0、`/fonts/` に自己ホスト）+ Noto Sans JP
+- ブランドカラー: **Figma Teal** `#069494` を基点とする 7 段階スケール
+- メインビジュアル: キャニオン + teal arc 画像（Hero 背景、`object-position: 72% center`、左フェード overlay）
+- ロゴ: 1230×175 横長 lockup、**Python PIL で白背景を透過化**（閾値 235）
+- ナビレイアウト: `.topbar` flex コンテナで `align-items: center`、ロゴ左 / ピル右
+- モバイル: ロゴは `object-fit: cover` で C モノグラムのみ表示
+- デプロイ: Vercel プロジェクト `cap-site` を新規作成（同一アカウント `kijiatoraregi-3833s-projects`）
+- 最新 URL: `https://cap-site-fvkj2d2hp-kijiatoraregi-3833s-projects.vercel.app`（Deployment Protection 有効）
+- 参照サイト群: visitors.now（デザイン言語）/ Figma Teal（配色）/ John Pawson, Nendo, Kengo Kuma 等（企画段階）
+- 撤回したアプローチ: グレイン・ホライズン SVG・ゴースト章番号・corner marks 等のグラフィック追加は「ダサい」として全撤回（teal × visitors.now 骨格のみ維持）
+- 詳細: `SESSION_LOG_20260422_COMPANY_SITE.md` 参照
+
 ## 2026-04-20 セキュリティ再チェックセッション（追記）
 - `toritavi.com` 公開面の非破壊セキュリティ再チェックを実施
 - 対象:
