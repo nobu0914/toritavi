@@ -80,6 +80,13 @@ const SONNET_INPUT_CENTS_PER_MTOK = 300;
 const SONNET_OUTPUT_CENTS_PER_MTOK = 1500;
 // レート/コストの上限は @/lib/ai-guard (OCR_GUARD) に統一・env 化。
 
+// 1 リクエストの入力上限（コスト/DoS ガード）。日次/月次ガードは「前回までの状態」を
+// 見るため、単発の巨大リクエストはここで bound する必要がある。
+export const maxDuration = 60; // 関数の最大実行秒数
+const MAX_IMAGES = 10;
+const MAX_IMAGE_CHARS = 14_000_000; // data URL 文字長 ≈ base64。約 10MB 原本相当。
+const MAX_TOTAL_CHARS = 28_000_000; // 1 リクエスト合計。
+
 export async function POST(request: NextRequest) {
   // Reject cross-site callers. Origin is absent on same-origin requests from our UI
   // but present on any browser-initiated cross-site call. Skip when absent.
@@ -107,10 +114,27 @@ export async function POST(request: NextRequest) {
   if (blocked) return blocked;
 
   try {
-    const { images } = await request.json() as { images: string[] };
+    const { images } = (await request.json()) as { images: string[] };
 
-    if (!images || images.length === 0) {
+    if (!Array.isArray(images) || images.length === 0) {
       return NextResponse.json({ error: "No images provided" }, { status: 400 });
+    }
+    if (images.length > MAX_IMAGES) {
+      return NextResponse.json(
+        { error: "too_many_images", message: `画像は一度に最大 ${MAX_IMAGES} 枚までです。` },
+        { status: 413 },
+      );
+    }
+    let totalChars = 0;
+    for (const img of images) {
+      const len = typeof img === "string" ? img.length : 0;
+      totalChars += len;
+      if (len === 0 || len > MAX_IMAGE_CHARS || totalChars > MAX_TOTAL_CHARS) {
+        return NextResponse.json(
+          { error: "payload_too_large", message: "画像が大きすぎます。圧縮してお試しください。" },
+          { status: 413 },
+        );
+      }
     }
 
     const client = new Anthropic({ apiKey });
@@ -171,12 +195,13 @@ export async function POST(request: NextRequest) {
 
     const textBlock = response.content.find((b) => b.type === "text");
     const raw = textBlock?.type === "text" ? textBlock.text : "";
-    console.log("[OCR] Claude response:", raw.substring(0, 500));
+    // 抽出結果は予約 PII（氏名/便名/確認番号）を含むため本文はログに出さない。
+    console.log("[OCR] parsed response chars:", raw.length);
 
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
-      console.error("[OCR] Failed to parse JSON from:", raw);
-      return NextResponse.json({ error: "Failed to parse response", raw }, { status: 500 });
+      console.error("[OCR] JSON parse failed (chars:", raw.length, ")");
+      return NextResponse.json({ error: "Failed to parse response" }, { status: 500 });
     }
 
     const result = JSON.parse(jsonMatch[0]);
