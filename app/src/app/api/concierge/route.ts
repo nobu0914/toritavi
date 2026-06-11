@@ -13,7 +13,8 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase-server";
+import { authenticateRequest } from "@/lib/supabase-server";
+import { enforceAiLimits, CONCIERGE_GUARD } from "@/lib/ai-guard";
 import { buildConciergeContext } from "@/lib/concierge-context";
 import type { Journey, Step } from "@/lib/types";
 
@@ -26,11 +27,7 @@ const ALLOWED_ORIGINS = new Set([
 const MODEL = "claude-haiku-4-5-20251001";
 const MAX_TOKENS = 1024;
 
-// 流量上限（DS v2 §15.6）
-const RATE_LIMIT_PER_MIN = 5;
-const DAILY_REQUEST_LIMIT = 100;
-const DAILY_TOKEN_LIMIT = 200_000;
-const MONTHLY_BUDGET_CENTS = Number(process.env.CONCIERGE_BUDGET_MONTHLY_CENTS ?? 5000); // $50
+// 流量上限は @/lib/ai-guard (CONCIERGE_GUARD) に統一・env 化（DS v2 §15.6）。
 
 // Haiku 4.5 の 2026-04 時点概算: $1 / Mtok in, $5 / Mtok out
 function estimateCostCents(tokensIn: number, tokensOut: number): number {
@@ -84,12 +81,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "API key not configured" }, { status: 500 });
   }
 
-  const sb = await createClient();
-  const { data: userData } = await sb.auth.getUser();
-  if (!userData.user) {
+  const auth = await authenticateRequest(request);
+  if (!auth) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const userId = userData.user.id;
+  const { sb, userId } = auth;
 
   type Body = {
     threadId?: string;
@@ -107,56 +103,9 @@ export async function POST(request: NextRequest) {
   if (!text) return NextResponse.json({ error: "text required" }, { status: 400 });
   if (text.length > 2000) return NextResponse.json({ error: "text too long" }, { status: 400 });
 
-  /* ---- 1) Monthly budget check (global) ---- */
-  const { data: budget } = await sb
-    .from("toritavi_concierge_budget")
-    .select("spend_cents")
-    .eq("month", firstOfThisMonth())
-    .maybeSingle();
-  if (budget && budget.spend_cents >= MONTHLY_BUDGET_CENTS) {
-    return NextResponse.json({
-      error: "monthly_budget_exceeded",
-      message: "コンシェルジュを一時停止中です。今月の想定利用量を超えたため翌月 1 日に再開します。",
-    }, { status: 503 });
-  }
-
-  /* ---- 2) Daily limit (per user) ---- */
-  const today = new Date().toISOString().slice(0, 10);
-  const { data: usage } = await sb
-    .from("toritavi_concierge_usage")
-    .select("requests_count, tokens_total")
-    .eq("user_id", userId)
-    .eq("day", today)
-    .maybeSingle();
-  if (usage) {
-    if (usage.requests_count >= DAILY_REQUEST_LIMIT) {
-      return NextResponse.json({
-        error: "daily_request_limit",
-        message: "本日の利用上限に達しました。翌日 0:00 にリセットされます。",
-      }, { status: 429 });
-    }
-    if (usage.tokens_total >= DAILY_TOKEN_LIMIT) {
-      return NextResponse.json({
-        error: "daily_token_limit",
-        message: "本日の使用量が上限に達しました。翌日 0:00 にリセットされます。",
-      }, { status: 429 });
-    }
-  }
-
-  /* ---- 3) Per-minute rate limit (count recent messages) ---- */
-  const since = new Date(Date.now() - 60_000).toISOString();
-  const { count: recentCount } = await sb
-    .from("toritavi_concierge_messages")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", userId)
-    .eq("role", "user")
-    .gte("created_at", since);
-  if ((recentCount ?? 0) >= RATE_LIMIT_PER_MIN) {
-    return NextResponse.json({
-      error: "rate_limit",
-      message: "少しお待ちください。短時間に送信が多すぎます（1 分あたり 5 回まで）。",
-    }, { status: 429 });
-  }
+  /* ---- AI 利用制限（月予算 → 日次 → 分間。@/lib/ai-guard で共通化）---- */
+  const blocked = await enforceAiLimits(sb, userId, CONCIERGE_GUARD);
+  if (blocked) return blocked;
 
   /* ---- 4) Ensure thread ---- */
   let threadId = body.threadId;
@@ -288,11 +237,6 @@ const ADD_STEP_TOOL: Anthropic.Tool = {
 };
 
 /* ====== Helpers ====== */
-
-function firstOfThisMonth(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
-}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function rowToJourney(row: any): Journey {

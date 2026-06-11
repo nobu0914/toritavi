@@ -1,7 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 import { buildOcrRulesPrompt } from "@/lib/ocr-rules";
-import { createClient } from "@/lib/supabase-server";
+import { authenticateRequest } from "@/lib/supabase-server";
+import { enforceAiLimits, OCR_GUARD } from "@/lib/ai-guard";
 
 const SYSTEM_PROMPT = `あなたは旅行・予約文書の情報抽出専門家です。
 画像から予約情報を読み取り、以下のJSON形式で返してください。
@@ -73,20 +74,11 @@ const ALLOWED_ORIGINS = new Set([
   "http://localhost:3000",
 ]);
 
-// --- Rate / cost guards ---
 // Anthropic pricing for claude-sonnet-4-6 (vision):
 //   input  $3 / Mtok, output $15 / Mtok → 300/1500 cents per Mtok.
 const SONNET_INPUT_CENTS_PER_MTOK = 300;
 const SONNET_OUTPUT_CENTS_PER_MTOK = 1500;
-const MONTHLY_BUDGET_CENTS = Number(process.env.OCR_BUDGET_MONTHLY_CENTS ?? 2000); // $20
-const DAILY_REQUEST_LIMIT = Number(process.env.OCR_DAILY_REQUEST_LIMIT ?? 50);
-const DAILY_TOKEN_LIMIT = Number(process.env.OCR_DAILY_TOKEN_LIMIT ?? 500_000);
-const RATE_LIMIT_PER_MIN = Number(process.env.OCR_RATE_LIMIT_PER_MIN ?? 5);
-
-function firstOfThisMonth(): string {
-  const d = new Date();
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-01`;
-}
+// レート/コストの上限は @/lib/ai-guard (OCR_GUARD) に統一・env 化。
 
 export async function POST(request: NextRequest) {
   // Reject cross-site callers. Origin is absent on same-origin requests from our UI
@@ -99,67 +91,20 @@ export async function POST(request: NextRequest) {
   // Require an authenticated user. Origin can be forged by non-browser clients
   // (curl / fetch with any header), so without this check an attacker could
   // drive Anthropic spend unbounded.
-  const sb = await createClient();
-  const { data: userData } = await sb.auth.getUser();
-  if (!userData.user) {
+  const auth = await authenticateRequest(request);
+  if (!auth) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const userId = userData.user.id;
+  const { sb, userId } = auth;
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     return NextResponse.json({ error: "API key not configured" }, { status: 500 });
   }
 
-  // --- Monthly budget (global, shared across users) ---
-  const { data: budget } = await sb
-    .from("toritavi_ocr_budget")
-    .select("spend_cents")
-    .eq("month", firstOfThisMonth())
-    .maybeSingle();
-  if (budget && budget.spend_cents >= MONTHLY_BUDGET_CENTS) {
-    return NextResponse.json({
-      error: "monthly_budget_exceeded",
-      message: "画像解析を一時停止中です。今月の想定利用量を超えたため翌月 1 日に再開します。",
-    }, { status: 503 });
-  }
-
-  // --- Daily per-user limits ---
-  const today = new Date().toISOString().slice(0, 10);
-  const { data: usage } = await sb
-    .from("toritavi_ocr_usage")
-    .select("requests_count, tokens_total")
-    .eq("user_id", userId)
-    .eq("day", today)
-    .maybeSingle();
-  if (usage) {
-    if (usage.requests_count >= DAILY_REQUEST_LIMIT) {
-      return NextResponse.json({
-        error: "daily_request_limit",
-        message: "本日の解析回数上限に達しました。翌日 0:00 にリセットされます。",
-      }, { status: 429 });
-    }
-    if (usage.tokens_total >= DAILY_TOKEN_LIMIT) {
-      return NextResponse.json({
-        error: "daily_token_limit",
-        message: "本日の使用量が上限に達しました。翌日 0:00 にリセットされます。",
-      }, { status: 429 });
-    }
-  }
-
-  // --- Per-minute burst limit ---
-  const since = new Date(Date.now() - 60_000).toISOString();
-  const { count: recentCount } = await sb
-    .from("toritavi_ocr_events")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", userId)
-    .gte("created_at", since);
-  if ((recentCount ?? 0) >= RATE_LIMIT_PER_MIN) {
-    return NextResponse.json({
-      error: "rate_limit",
-      message: `少しお待ちください。短時間に解析が多すぎます（1 分あたり ${RATE_LIMIT_PER_MIN} 回まで）。`,
-    }, { status: 429 });
-  }
+  // --- AI 利用制限（月予算 → 日次 → 分間。@/lib/ai-guard で OCR/コンシェルジュ共通）---
+  const blocked = await enforceAiLimits(sb, userId, OCR_GUARD);
+  if (blocked) return blocked;
 
   try {
     const { images } = await request.json() as { images: string[] };
@@ -173,16 +118,30 @@ export async function POST(request: NextRequest) {
     const content: Anthropic.MessageCreateParams["messages"][0]["content"] = [];
 
     for (const img of images) {
-      const match = img.match(/^data:(image\/\w+);base64,(.+)$/);
-      if (!match) continue;
-      content.push({
-        type: "image",
-        source: {
-          type: "base64",
-          media_type: match[1] as "image/jpeg" | "image/png" | "image/gif" | "image/webp",
-          data: match[2],
-        },
-      });
+      const imgMatch = img.match(/^data:(image\/\w+);base64,(.+)$/);
+      if (imgMatch) {
+        content.push({
+          type: "image",
+          source: {
+            type: "base64",
+            media_type: imgMatch[1] as "image/jpeg" | "image/png" | "image/gif" | "image/webp",
+            data: imgMatch[2],
+          },
+        });
+        continue;
+      }
+      // PDF（eチケット等）は document ブロックで渡す（Claude はネイティブに読める）。
+      const pdfMatch = img.match(/^data:application\/pdf;base64,(.+)$/);
+      if (pdfMatch) {
+        content.push({
+          type: "document",
+          source: {
+            type: "base64",
+            media_type: "application/pdf",
+            data: pdfMatch[1],
+          },
+        });
+      }
     }
 
     content.push({ type: "text", text: "この文書から予約情報を抽出してください。" });
