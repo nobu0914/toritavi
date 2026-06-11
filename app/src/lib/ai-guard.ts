@@ -4,26 +4,32 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 /**
  * AI 利用制限（OCR / コンシェルジュ共通）。
  *
- * P0: 既存の 3 層ガード（月予算 → 日次 → 分間バースト）を 2 ルートから共通化し、
- * 全上限を env 化する。**既定値は現行挙動と完全一致**。旧 env 名も後方互換で読む。
+ * P0: 3 層ガード（月予算 → 日次 → 分間バースト）を共通化・全 env 化。
+ * P1: 利用者プラン（free / pro）別の日次・分間上限。free=現行と完全一致。
+ * P2: getAiUsage() で残量を可視化（/api/ai-usage）。
  *
  * 機能ごとの非対称（保持必須）:
- * - 月予算超過は 503 / 日次・分間は 429。
+ * - 月予算超過は 503 / 日次・分間は 429。月予算はプラン非依存（全体共有）。
  * - 分間カウントの対象テーブルと role 絞り込み（concierge は role='user'）。
  * - 月キーの算出 tz（OCR=UTC / concierge=local）。Vercel は UTC 実行なので本番では一致。
  * - エラーメッセージ文言（「解析」/「送信」など機能差）。
  */
 
 export type AiMonthTz = "utc" | "local";
+export type Plan = "free" | "pro";
+
+/** プラン別の日次・分間上限（月予算はプラン非依存なので含めない）。 */
+export type TierLimits = {
+  dailyRequests: number;
+  dailyTokens: number;
+  ratePerMin: number;
+};
 
 export type AiGuardConfig = {
   feature: string;
-  limits: {
-    budgetMonthlyCents: number;
-    dailyRequests: number;
-    dailyTokens: number;
-    ratePerMin: number;
-  };
+  /** 月予算（全体・共有・プラン非依存）。 */
+  budgetMonthlyCents: number;
+  tiers: { free: TierLimits; pro: TierLimits };
   tables: { budget: string; usage: string; events: string };
   /** 指定時は分間カウントの events を role=該当 で絞る（concierge='user'）。 */
   eventsRoleFilter?: string;
@@ -56,16 +62,28 @@ function firstOfThisMonth(tz: AiMonthTz): string {
   return `${year}-${String(month).padStart(2, "0")}-01`;
 }
 
+/** UTC の今日（YYYY-MM-DD）。日次のキー。 */
+function utcToday(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
 export const OCR_GUARD: AiGuardConfig = {
   feature: "ocr",
-  limits: {
-    budgetMonthlyCents: envNum(
-      ["AI_OCR_BUDGET_MONTHLY_CENTS", "OCR_BUDGET_MONTHLY_CENTS"],
-      2000,
-    ), // $20
-    dailyRequests: envNum(["AI_OCR_DAILY_REQUESTS", "OCR_DAILY_REQUEST_LIMIT"], 50),
-    dailyTokens: envNum(["AI_OCR_DAILY_TOKENS", "OCR_DAILY_TOKEN_LIMIT"], 500_000),
-    ratePerMin: envNum(["AI_OCR_RATE_PER_MIN", "OCR_RATE_LIMIT_PER_MIN"], 5),
+  budgetMonthlyCents: envNum(
+    ["AI_OCR_BUDGET_MONTHLY_CENTS", "OCR_BUDGET_MONTHLY_CENTS"],
+    2000,
+  ), // $20
+  tiers: {
+    free: {
+      dailyRequests: envNum(["AI_OCR_DAILY_REQUESTS", "OCR_DAILY_REQUEST_LIMIT"], 50),
+      dailyTokens: envNum(["AI_OCR_DAILY_TOKENS", "OCR_DAILY_TOKEN_LIMIT"], 500_000),
+      ratePerMin: envNum(["AI_OCR_RATE_PER_MIN", "OCR_RATE_LIMIT_PER_MIN"], 5),
+    },
+    pro: {
+      dailyRequests: envNum(["AI_OCR_PRO_DAILY_REQUESTS"], 200),
+      dailyTokens: envNum(["AI_OCR_PRO_DAILY_TOKENS"], 2_000_000),
+      ratePerMin: envNum(["AI_OCR_PRO_RATE_PER_MIN"], 10),
+    },
   },
   tables: {
     budget: "toritavi_ocr_budget",
@@ -85,14 +103,21 @@ export const OCR_GUARD: AiGuardConfig = {
 
 export const CONCIERGE_GUARD: AiGuardConfig = {
   feature: "concierge",
-  limits: {
-    budgetMonthlyCents: envNum(
-      ["AI_CONCIERGE_BUDGET_MONTHLY_CENTS", "CONCIERGE_BUDGET_MONTHLY_CENTS"],
-      5000,
-    ), // $50
-    dailyRequests: envNum(["AI_CONCIERGE_DAILY_REQUESTS"], 100),
-    dailyTokens: envNum(["AI_CONCIERGE_DAILY_TOKENS"], 200_000),
-    ratePerMin: envNum(["AI_CONCIERGE_RATE_PER_MIN"], 5),
+  budgetMonthlyCents: envNum(
+    ["AI_CONCIERGE_BUDGET_MONTHLY_CENTS", "CONCIERGE_BUDGET_MONTHLY_CENTS"],
+    5000,
+  ), // $50
+  tiers: {
+    free: {
+      dailyRequests: envNum(["AI_CONCIERGE_DAILY_REQUESTS"], 100),
+      dailyTokens: envNum(["AI_CONCIERGE_DAILY_TOKENS"], 200_000),
+      ratePerMin: envNum(["AI_CONCIERGE_RATE_PER_MIN"], 5),
+    },
+    pro: {
+      dailyRequests: envNum(["AI_CONCIERGE_PRO_DAILY_REQUESTS"], 500),
+      dailyTokens: envNum(["AI_CONCIERGE_PRO_DAILY_TOKENS"], 1_000_000),
+      ratePerMin: envNum(["AI_CONCIERGE_PRO_RATE_PER_MIN"], 10),
+    },
   },
   tables: {
     budget: "toritavi_concierge_budget",
@@ -112,43 +137,68 @@ export const CONCIERGE_GUARD: AiGuardConfig = {
 };
 
 /**
+ * 利用者プランを解決。toritavi_user_plan に行が無い / テーブル未作成 / エラー時は
+ * 'free'（= 現行挙動）にフォールバックする。SQL 適用前でも安全に動く。
+ */
+export async function resolvePlan(
+  sb: SupabaseClient,
+  userId: string,
+): Promise<Plan> {
+  try {
+    const { data } = await sb
+      .from("toritavi_user_plan")
+      .select("plan")
+      .eq("user_id", userId)
+      .maybeSingle();
+    return data?.plan === "pro" ? "pro" : "free";
+  } catch (e) {
+    // テーブル未作成や一時的 DB エラーは free フォールバック（fail-safe）。
+    // pro が課金対象になったら観測できるようログだけ残す。
+    console.error("[ai-guard] resolvePlan failed; defaulting to free:", e);
+    return "free";
+  }
+}
+
+/**
  * 3 層ガードを順に評価。ブロック時は NextResponse（503/429）を返し、通過時は null。
- * 呼び出し位置は各ルートの従来位置（OCR=body 解析前 / concierge=text 検証後）に置くこと。
+ * 日次・分間はプラン別上限。月予算はプラン非依存。
  */
 export async function enforceAiLimits(
   sb: SupabaseClient,
   userId: string,
   cfg: AiGuardConfig,
 ): Promise<NextResponse | null> {
-  // 1) 月予算（全体・共有）→ 503
+  const plan = await resolvePlan(sb, userId);
+  const tier = cfg.tiers[plan];
+
+  // 1) 月予算（全体・共有・プラン非依存）→ 503
   const { data: budget } = await sb
     .from(cfg.tables.budget)
     .select("spend_cents")
     .eq("month", firstOfThisMonth(cfg.monthTz))
     .maybeSingle();
-  if (budget && budget.spend_cents >= cfg.limits.budgetMonthlyCents) {
+  if (budget && budget.spend_cents >= cfg.budgetMonthlyCents) {
     return NextResponse.json(
       { error: "monthly_budget_exceeded", message: cfg.messages.budgetExceeded },
       { status: 503 },
     );
   }
 
-  // 2) 日次（ユーザー別）→ 429
-  const today = new Date().toISOString().slice(0, 10);
+  // 2) 日次（ユーザー別・プラン別）→ 429
   const { data: usage } = await sb
     .from(cfg.tables.usage)
     .select("requests_count, tokens_total")
     .eq("user_id", userId)
-    .eq("day", today)
+    .eq("day", utcToday())
     .maybeSingle();
   if (usage) {
-    if (usage.requests_count >= cfg.limits.dailyRequests) {
+    if (usage.requests_count >= tier.dailyRequests) {
       return NextResponse.json(
         { error: "daily_request_limit", message: cfg.messages.dailyRequest },
         { status: 429 },
       );
     }
-    if (usage.tokens_total >= cfg.limits.dailyTokens) {
+    if (usage.tokens_total >= tier.dailyTokens) {
       return NextResponse.json(
         { error: "daily_token_limit", message: cfg.messages.dailyToken },
         { status: 429 },
@@ -156,7 +206,7 @@ export async function enforceAiLimits(
     }
   }
 
-  // 3) 分間バースト → 429
+  // 3) 分間バースト（プラン別）→ 429
   const since = new Date(Date.now() - 60_000).toISOString();
   let q = sb
     .from(cfg.tables.events)
@@ -165,15 +215,53 @@ export async function enforceAiLimits(
     .gte("created_at", since);
   if (cfg.eventsRoleFilter) q = q.eq("role", cfg.eventsRoleFilter);
   const { count: recentCount } = await q;
-  if ((recentCount ?? 0) >= cfg.limits.ratePerMin) {
+  if ((recentCount ?? 0) >= tier.ratePerMin) {
     return NextResponse.json(
       {
         error: "rate_limit",
-        message: cfg.messages.rateLimit(cfg.limits.ratePerMin),
+        message: cfg.messages.rateLimit(tier.ratePerMin),
       },
       { status: 429 },
     );
   }
 
   return null;
+}
+
+export type AiFeatureUsage = {
+  usedRequests: number;
+  limitRequests: number;
+  usedTokens: number;
+  limitTokens: number;
+};
+
+/** P2: 当日の使用量と（プラン別）上限を返す。残量表示用。 */
+export async function getAiUsage(
+  sb: SupabaseClient,
+  userId: string,
+  cfg: AiGuardConfig,
+  plan: Plan,
+): Promise<AiFeatureUsage> {
+  const tier = cfg.tiers[plan];
+  const { data: usage } = await sb
+    .from(cfg.tables.usage)
+    .select("requests_count, tokens_total")
+    .eq("user_id", userId)
+    .eq("day", utcToday())
+    .maybeSingle();
+  return {
+    usedRequests: usage?.requests_count ?? 0,
+    limitRequests: tier.dailyRequests,
+    usedTokens: usage?.tokens_total ?? 0,
+    limitTokens: tier.dailyTokens,
+  };
+}
+
+/** 日次のリセット時刻（次の UTC 0:00）の ISO 文字列。 */
+export function nextDailyResetIso(): string {
+  const d = new Date();
+  const next = new Date(
+    Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1, 0, 0, 0),
+  );
+  return next.toISOString();
 }
