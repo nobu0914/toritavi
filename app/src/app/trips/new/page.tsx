@@ -78,7 +78,7 @@ const defaultItems: JourneyDraftItem[] = [
     source: "メール",
     step: {
       id: "sample-new-2",
-      category: "商談",
+      category: "アポ",
       title: "ABC社 商談",
       time: "14:00 - 16:00",
       detail: "大阪市北区梅田1-2-3",

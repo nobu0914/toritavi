@@ -24,8 +24,8 @@ import { Ticket } from "./Ticket";
 import { SheetHeader } from "./SheetHeader";
 
 const categories: StepCategory[] = [
-  "列車", "飛行機", "バス", "車", "徒歩",
-  "宿泊", "商談", "食事", "観光", "病院", "その他",
+  "飛行機", "列車", "バス", "タクシー", "車", "船", "徒歩",
+  "宿泊", "観光", "食事", "アポ", "その他",
 ];
 
 const sources: StepSource[] = ["撮影", "アップロード", "メール", "手入力"];

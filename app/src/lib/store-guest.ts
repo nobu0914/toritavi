@@ -177,7 +177,7 @@ function seedSampleJourneys(): Journey[] {
         },
         {
           id: crypto.randomUUID(),
-          category: "商談",
+          category: "アポ",
           title: "ABC株式会社",
           date: addDays(now, 3),
           time: "14:00",
@@ -233,7 +233,7 @@ function seedSampleJourneys(): Journey[] {
       steps: [
         {
           id: crypto.randomUUID(),
-          category: "病院",
+          category: "アポ",
           title: "◯◯内科クリニック",
           date: today,
           time: "10:30",

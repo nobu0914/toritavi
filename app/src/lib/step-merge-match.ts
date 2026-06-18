@@ -95,7 +95,7 @@ function evaluatePair(
   const dateDiff = daysBetween(draft.date, existing.date);
 
   // Tier 2: vehicle key match
-  if ((draft.category === "飛行機" || draft.category === "列車" || draft.category === "バス") && dateDiff <= 1) {
+  if ((draft.category === "飛行機" || draft.category === "列車" || draft.category === "バス" || draft.category === "タクシー" || draft.category === "車" || draft.category === "船") && dateDiff <= 1) {
     const dk = vehicleKey(draft.title ?? "");
     const ek = vehicleKey(existing.title ?? "");
     if (dk && ek && dk === ek) {
@@ -117,7 +117,7 @@ function evaluatePair(
   // Tier 4: title similarity for non-vehicle categories
   if (
     dateDiff === 0 &&
-    (draft.category === "宿泊" || draft.category === "商談" || draft.category === "食事" || draft.category === "病院" || draft.category === "観光")
+    (draft.category === "宿泊" || draft.category === "アポ" || draft.category === "食事" || draft.category === "観光")
   ) {
     const sim = titleSimilarity(draft.title ?? "", existing.title);
     if (sim >= 0.8) {

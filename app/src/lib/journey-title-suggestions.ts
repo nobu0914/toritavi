@@ -68,7 +68,7 @@ export function buildTitleSuggestions(
   //    suggests business/lodging, e.g. "福岡出張" / "大阪 宿泊".
   if (to) {
     const cityTo = cityOnly(to);
-    if (first.category === "商談") {
+    if (first.category === "アポ") {
       out.push({ key: "dest-business", label: `${cityTo}出張`, kind: "destination" });
     } else if (first.category === "宿泊") {
       out.push({ key: "dest-lodge", label: `${cityTo} 宿泊`, kind: "destination" });
@@ -89,7 +89,7 @@ export function buildTitleSuggestions(
     out.push({
       key: "title",
       label: cleaned,
-      kind: first.category === "宿泊" || first.category === "病院" ? "facility" : "title",
+      kind: first.category === "宿泊" || first.category === "アポ" ? "facility" : "title",
     });
   }
 
@@ -155,15 +155,26 @@ function cityOnly(s: string | undefined | null): string {
  * these, it's not really a name and shouldn't become a Journey title.
  */
 const GENERIC_LABELS = new Set([
+  // categoryDefs の表示ラベル
   "フライト",
   "鉄道",
-  "ホテル",
-  "チケット",
-  "ビジネス",
-  "レストラン",
   "バス",
-  "病院",
+  "タクシー・送迎",
+  "車",
+  "フェリー・船",
+  "徒歩",
+  "ホテル",
+  "チケット(イベント)",
+  "食事",
+  "予約・アポ",
   "その他",
+  // formToStep のフォールバックタイトル
+  "列車",
+  "宿泊",
+  "チケット",
+  "予約",
+  "移動",
+  "スキャンデータ",
 ]);
 function isGenericCategoryLabel(s: string): boolean {
   return GENERIC_LABELS.has(s);

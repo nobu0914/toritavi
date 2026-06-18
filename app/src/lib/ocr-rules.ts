@@ -17,9 +17,9 @@ export const DATE_RULES = {
     宿泊: "チェックイン日をdate、チェックアウト日をendDateに分離する",
     飛行機: "出発日をdate。到着が翌日の場合はendDateに到着日を入れる",
     列車: "乗車日をdate。日をまたぐ夜行の場合はendDateに到着日を入れる",
-    商談: "開始日をdate。複数日にまたがる場合はendDateに最終日を入れる",
+    船: "乗船日をdate。夜行便で日をまたぐ場合はendDateに到着日を入れる",
     観光: "イベント開始日をdate。フェス等の複数日はendDateに最終日を入れる",
-    病院: "受診日をdate。入院の場合はendDateに退院日を入れる",
+    アポ: "受診日・開始日をdate。入院や複数日にまたがる場合はendDateに最終日を入れる",
   },
 
   // 相対日付の変換
@@ -197,6 +197,38 @@ export const CATEGORY_FIXED_FIELDS: Record<string, FixedFieldDef[]> = {
     { key: "to", label: "到着地", placeholder: "関西空港" },
     { key: "confNumber", label: "確認番号", placeholder: "KB-553012" },
   ],
+  タクシー: [
+    { key: "title", label: "会社・便名", placeholder: "MKタクシー" },
+    { key: "date", label: "乗車日", placeholder: "2026-04-15" },
+    { key: "startTime", label: "出発時刻", placeholder: "9:00" },
+    { key: "from", label: "乗車地", placeholder: "ホテル大阪ベイ" },
+    { key: "to", label: "降車地", placeholder: "関西空港" },
+    { key: "confNumber", label: "予約番号", placeholder: "TX-220190" },
+  ],
+  車: [
+    { key: "title", label: "レンタカー会社・車種", placeholder: "トヨタレンタカー" },
+    { key: "date", label: "利用日", placeholder: "2026-04-15" },
+    { key: "startTime", label: "出発時刻", placeholder: "9:00" },
+    { key: "from", label: "出発地", placeholder: "関西空港店" },
+    { key: "to", label: "到着地", placeholder: "京都駅前店" },
+    { key: "confNumber", label: "予約番号", placeholder: "CR-771203" },
+  ],
+  船: [
+    { key: "title", label: "航路・便名", placeholder: "さんふらわあ" },
+    { key: "date", label: "乗船日", placeholder: "2026-04-15" },
+    { key: "startTime", label: "出発時刻", placeholder: "19:00" },
+    { key: "endTime", label: "到着時刻", placeholder: "7:30" },
+    { key: "from", label: "出発港", placeholder: "大阪南港" },
+    { key: "to", label: "到着港", placeholder: "別府港" },
+    { key: "confNumber", label: "予約番号", placeholder: "FB-330845" },
+  ],
+  徒歩: [
+    { key: "title", label: "メモ", placeholder: "駅まで徒歩" },
+    { key: "date", label: "日付", placeholder: "2026-04-15" },
+    { key: "startTime", label: "時刻", placeholder: "9:00" },
+    { key: "from", label: "出発地", placeholder: "ホテル" },
+    { key: "to", label: "到着地", placeholder: "京都駅" },
+  ],
   食事: [
     { key: "title", label: "店名", placeholder: "レストランオルフェ" },
     { key: "date", label: "予約日", placeholder: "2026-04-16" },
@@ -225,6 +257,14 @@ export const CATEGORY_FIXED_FIELDS: Record<string, FixedFieldDef[]> = {
     { key: "startTime", label: "開演時刻", placeholder: "18:00" },
     { key: "from", label: "会場", placeholder: "東京ドーム" },
     { key: "confNumber", label: "確認番号", placeholder: "TC-440291" },
+  ],
+  アポ: [
+    { key: "title", label: "タイトル", placeholder: "ABC社 打合せ / 内科 受診" },
+    { key: "date", label: "日付", placeholder: "2026-04-17" },
+    { key: "startTime", label: "開始時刻", placeholder: "14:00" },
+    { key: "endTime", label: "終了時刻", placeholder: "15:00" },
+    { key: "from", label: "場所", placeholder: "グランフロント大阪" },
+    { key: "confNumber", label: "確認番号", placeholder: "" },
   ],
   その他: [
     { key: "title", label: "タイトル", placeholder: "内容" },
@@ -259,7 +299,13 @@ export function checkNeedsReview(
   if (!fixed.date && !fixed.startTime) reasons.push({ field: "date", reason: "日時未読取" });
 
   // カテゴリ固有チェック
-  if (category === "飛行機" || category === "列車" || category === "バス") {
+  if (
+    category === "飛行機" ||
+    category === "列車" ||
+    category === "バス" ||
+    category === "タクシー" ||
+    category === "船"
+  ) {
     if (!fixed.from) reasons.push({ field: "from", reason: "出発地なし" });
     if (!fixed.to) reasons.push({ field: "to", reason: "到着地なし" });
   }

@@ -222,7 +222,7 @@ const ADD_STEP_TOOL: Anthropic.Tool = {
       journey_id: { type: "string", description: "対象 Journey の ID" },
       category: {
         type: "string",
-        enum: ["飛行機", "列車", "バス", "宿泊", "商談", "食事", "観光", "病院", "その他"],
+        enum: ["飛行機", "列車", "バス", "タクシー", "車", "船", "徒歩", "宿泊", "観光", "食事", "アポ", "その他"],
       },
       title: { type: "string", description: "Step タイトル（便名 / 会場名 / 店名 等）" },
       date: { type: "string", description: "開始日 YYYY-MM-DD（不明なら省略）" },

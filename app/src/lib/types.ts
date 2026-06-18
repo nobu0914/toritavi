@@ -1,16 +1,17 @@
 export type StepStatus = "未開始" | "進行中" | "完了" | "遅延" | "キャンセル";
 
 export type StepCategory =
-  | "列車"
   | "飛行機"
+  | "列車"
   | "バス"
+  | "タクシー"
   | "車"
+  | "船"
   | "徒歩"
   | "宿泊"
-  | "商談"
-  | "食事"
   | "観光"
-  | "病院"
+  | "食事"
+  | "アポ"
   | "その他";
 
 export type Information = {

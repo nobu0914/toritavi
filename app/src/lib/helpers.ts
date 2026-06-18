@@ -3,13 +3,14 @@ import {
   IconTrain,
   IconPlane,
   IconBus,
+  IconCarSuv,
   IconCar,
+  IconShip,
   IconWalk,
   IconBed,
-  IconBriefcase,
   IconToolsKitchen2,
   IconTicket,
-  IconStethoscope,
+  IconCalendarEvent,
   IconDots,
   IconCamera,
   IconUpload,
@@ -19,16 +20,17 @@ import {
 
 export function getCategoryIcon(category: StepCategory) {
   const map: Record<StepCategory, typeof IconTrain> = {
-    列車: IconTrain,
     飛行機: IconPlane,
+    列車: IconTrain,
     バス: IconBus,
+    タクシー: IconCarSuv,
     車: IconCar,
+    船: IconShip,
     徒歩: IconWalk,
     宿泊: IconBed,
-    商談: IconBriefcase,
-    食事: IconToolsKitchen2,
     観光: IconTicket,
-    病院: IconStethoscope,
+    食事: IconToolsKitchen2,
+    アポ: IconCalendarEvent,
     その他: IconDots,
   };
   return map[category] ?? IconDots;
