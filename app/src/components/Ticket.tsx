@@ -7,7 +7,6 @@ import {
   IconCamera,
   IconCalendarEvent,
   IconCar,
-  IconCarSuv,
   IconCheck,
   IconCircle,
   IconCopy,
@@ -57,14 +56,13 @@ type Props = {
   onCopyMailBody?: () => void;
 };
 
-const ROUTE_CATS: ReadonlySet<StepCategory> = new Set<StepCategory>(["飛行機", "列車", "バス", "タクシー", "車", "船", "徒歩"]);
+const ROUTE_CATS: ReadonlySet<StepCategory> = new Set<StepCategory>(["飛行機", "列車", "バス", "車", "船", "徒歩"]);
 
 function CategoryIcon({ category, size = 14 }: { category: StepCategory; size?: number }) {
   switch (category) {
     case "飛行機": return <IconPlane size={size} />;
     case "列車": return <IconTrain size={size} />;
     case "バス": return <IconBus size={size} />;
-    case "タクシー": return <IconCarSuv size={size} />;
     case "車": return <IconCar size={size} />;
     case "船": return <IconShip size={size} />;
     case "徒歩": return <IconWalk size={size} />;
@@ -81,7 +79,6 @@ function variantClass(cat: StepCategory): string {
     case "飛行機": return "ticket--flight";
     case "列車": return "ticket--train";
     case "バス": return "ticket--bus";
-    case "タクシー": return "ticket--bus";
     case "車": return "ticket--bus";
     case "船": return "ticket--bus";
     case "宿泊": return "ticket--lodge";

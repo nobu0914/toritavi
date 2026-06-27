@@ -4,7 +4,6 @@ export type StepCategory =
   | "飛行機"
   | "列車"
   | "バス"
-  | "タクシー"
   | "車"
   | "船"
   | "徒歩"

@@ -16,7 +16,7 @@ import { getFixedFields, formatTimeDisplay, isInternational, formatInferredField
 import { IconAlertTriangle } from "@tabler/icons-react";
 
 const categories: StepCategory[] = [
-  "飛行機", "列車", "バス", "タクシー", "車", "船", "徒歩",
+  "飛行機", "列車", "バス", "車", "船", "徒歩",
   "宿泊", "観光", "食事", "アポ", "その他",
 ];
 

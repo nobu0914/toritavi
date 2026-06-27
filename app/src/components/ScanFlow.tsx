@@ -9,7 +9,7 @@ import {
   IconBed,
   IconToolsKitchen2,
   IconBus,
-  IconCarSuv,
+  IconCar,
   IconShip,
   IconTicket,
   IconCalendarEvent,
@@ -62,10 +62,10 @@ const categoryDefs: CategoryDef[] = [
   { key: "飛行機", label: "フライト", icon: IconPlane, color: "blue" },
   { key: "列車", label: "鉄道", icon: IconTrain, color: "blue" },
   { key: "バス", label: "バス", icon: IconBus, color: "green" },
-  { key: "タクシー", label: "タクシー・送迎", icon: IconCarSuv, color: "green" },
+  { key: "車", label: "車", icon: IconCar, color: "green" },
   { key: "船", label: "フェリー・船", icon: IconShip, color: "green" },
   { key: "宿泊", label: "ホテル", icon: IconBed, color: "teal" },
-  { key: "観光", label: "チケット(イベント)", icon: IconTicket, color: "violet" },
+  { key: "観光", label: "チケット・体験", icon: IconTicket, color: "violet" },
   { key: "食事", label: "食事", icon: IconToolsKitchen2, color: "orange" },
   { key: "アポ", label: "予約・アポ", icon: IconCalendarEvent, color: "indigo" },
   { key: "その他", label: "その他", icon: IconDots, color: "gray" },
@@ -113,10 +113,10 @@ function detectCategory(text: string): StepCategory {
   // 病院・商談 → アポ（予約・アポ）に統合
   if (/病院|クリニック|医院|診療|診察|内科|外科|歯科|眼科|皮膚科|処方|会議|商談|meeting|打ち合わせ|会議室|アポイント/i.test(t)) return "アポ";
   if (/フェリー|ferry|乗船|客船|船便/i.test(t)) return "船";
-  if (/タクシー|taxi|ハイヤー|送迎/i.test(t)) return "タクシー";
+  if (/レンタカー|rent.?a.?car|カーシェア/i.test(t)) return "車";
   if (/バス|bus|乗車券|高速バス/i.test(t)) return "バス";
   if (/レストラン|食事|ランチ|ディナー|予約.*名|restaurant|cafe|カフェ/i.test(t)) return "食事";
-  if (/チケット|ticket|入場|座席|アリーナ|ホール|劇場|開演|開場/i.test(t)) return "観光";
+  if (/チケット|ticket|入場|座席|アリーナ|ホール|劇場|開演|開場|ツアー|tour|アクティビティ|バウチャー|voucher/i.test(t)) return "観光";
   return "その他";
 }
 
@@ -175,10 +175,10 @@ const categoryFields: Record<string, FormField[]> = {
     { key: "arrivalTime", label: "到着時刻", placeholder: "12:00" },
     { key: "confNumber", label: "確認番号", placeholder: "" },
   ],
-  タクシー: [
-    { key: "company", label: "会社・便名", placeholder: "MKタクシー" },
-    { key: "from", label: "乗車地", placeholder: "ホテル大阪ベイ" },
-    { key: "to", label: "降車地", placeholder: "関西空港" },
+  車: [
+    { key: "company", label: "レンタカー会社・車種", placeholder: "トヨタレンタカー" },
+    { key: "from", label: "出発地", placeholder: "関西空港店" },
+    { key: "to", label: "到着地", placeholder: "京都駅前店" },
     { key: "time", label: "出発時刻", placeholder: "9:00" },
     { key: "confNumber", label: "予約番号", placeholder: "" },
   ],
@@ -268,16 +268,16 @@ function extractFields(text: string, category: StepCategory): Record<string, str
       if (confMatch) values.confNumber = confMatch[1];
       break;
     }
-    case "タクシー": {
-      const co = allText.match(/([^\s]{2,10}(タクシー|ハイヤー|送迎))/);
-      if (co) values.company = co[0];
+    case "船": {
+      const sh = allText.match(/([^\s]{2,12}(フェリー|汽船))/i);
+      if (sh) values.routeName = sh[0];
       if (times[0]) values.time = times[0];
       if (confMatch) values.confNumber = confMatch[1];
       break;
     }
-    case "船": {
-      const sh = allText.match(/([^\s]{2,12}(フェリー|汽船))/i);
-      if (sh) values.routeName = sh[0];
+    case "車": {
+      const co = allText.match(/([^\s]{2,12}(レンタカー))/i);
+      if (co) values.company = co[0];
       if (times[0]) values.time = times[0];
       if (confMatch) values.confNumber = confMatch[1];
       break;
@@ -358,7 +358,7 @@ function formToStep(category: StepCategory, values: Record<string, string>): { t
         detail: values.location || "",
         confNumber: values.confNumber || "",
       };
-    case "タクシー":
+    case "車":
     case "船":
       return {
         title: values.company || values.routeName || "移動",

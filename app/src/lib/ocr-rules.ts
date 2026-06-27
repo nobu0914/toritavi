@@ -175,6 +175,7 @@ export const CATEGORY_FIXED_FIELDS: Record<string, FixedFieldDef[]> = {
     { key: "title", label: "列車名", placeholder: "のぞみ 225号" },
     { key: "date", label: "乗車日", placeholder: "2026-04-15" },
     { key: "startTime", label: "出発時刻", placeholder: "10:00" },
+    { key: "endDate", label: "到着日", placeholder: "2026-04-15" },
     { key: "endTime", label: "到着時刻", placeholder: "12:30" },
     { key: "from", label: "出発駅", placeholder: "東京" },
     { key: "to", label: "到着駅", placeholder: "新大阪" },
@@ -186,24 +187,19 @@ export const CATEGORY_FIXED_FIELDS: Record<string, FixedFieldDef[]> = {
     { key: "startTime", label: "チェックイン時刻", placeholder: "15:00" },
     { key: "endDate", label: "チェックアウト日", placeholder: "2026-04-17" },
     { key: "endTime", label: "チェックアウト時刻", placeholder: "11:00" },
+    { key: "from", label: "住所", placeholder: "大阪市港区海岸通1-2-3" },
+    { key: "guests", label: "人数", placeholder: "2名" },
     { key: "confNumber", label: "確認番号", placeholder: "HB-394021" },
   ],
   バス: [
     { key: "title", label: "路線名", placeholder: "関西空港交通バス" },
     { key: "date", label: "乗車日", placeholder: "2026-04-15" },
     { key: "startTime", label: "出発時刻", placeholder: "7:30" },
+    { key: "endDate", label: "到着日", placeholder: "2026-04-15" },
     { key: "endTime", label: "到着時刻", placeholder: "8:45" },
     { key: "from", label: "出発地", placeholder: "大阪駅前" },
     { key: "to", label: "到着地", placeholder: "関西空港" },
-    { key: "confNumber", label: "確認番号", placeholder: "KB-553012" },
-  ],
-  タクシー: [
-    { key: "title", label: "会社・便名", placeholder: "MKタクシー" },
-    { key: "date", label: "乗車日", placeholder: "2026-04-15" },
-    { key: "startTime", label: "出発時刻", placeholder: "9:00" },
-    { key: "from", label: "乗車地", placeholder: "ホテル大阪ベイ" },
-    { key: "to", label: "降車地", placeholder: "関西空港" },
-    { key: "confNumber", label: "予約番号", placeholder: "TX-220190" },
+    { key: "confNumber", label: "予約番号", placeholder: "KB-553012" },
   ],
   車: [
     { key: "title", label: "レンタカー会社・車種", placeholder: "トヨタレンタカー" },
@@ -217,6 +213,7 @@ export const CATEGORY_FIXED_FIELDS: Record<string, FixedFieldDef[]> = {
     { key: "title", label: "航路・便名", placeholder: "さんふらわあ" },
     { key: "date", label: "乗船日", placeholder: "2026-04-15" },
     { key: "startTime", label: "出発時刻", placeholder: "19:00" },
+    { key: "endDate", label: "到着日", placeholder: "2026-04-16" },
     { key: "endTime", label: "到着時刻", placeholder: "7:30" },
     { key: "from", label: "出発港", placeholder: "大阪南港" },
     { key: "to", label: "到着港", placeholder: "別府港" },
@@ -233,6 +230,7 @@ export const CATEGORY_FIXED_FIELDS: Record<string, FixedFieldDef[]> = {
     { key: "title", label: "店名", placeholder: "レストランオルフェ" },
     { key: "date", label: "予約日", placeholder: "2026-04-16" },
     { key: "startTime", label: "予約時刻", placeholder: "19:00" },
+    { key: "from", label: "場所", placeholder: "大阪市中央区道頓堀1-2-3" },
     { key: "guests", label: "人数", placeholder: "4名" },
     { key: "confNumber", label: "確認番号", placeholder: "RF-120456" },
   ],
@@ -252,25 +250,28 @@ export const CATEGORY_FIXED_FIELDS: Record<string, FixedFieldDef[]> = {
     { key: "confNumber", label: "確認番号", placeholder: "" },
   ],
   観光: [
-    { key: "title", label: "イベント名", placeholder: "Mr.Children DOME TOUR" },
+    { key: "title", label: "イベント・ツアー名", placeholder: "東京ドーム公演 / 現地ツアー" },
     { key: "date", label: "日付", placeholder: "2026-04-20" },
+    { key: "endDate", label: "最終日", placeholder: "2026-04-21" },
     { key: "startTime", label: "開演時刻", placeholder: "18:00" },
     { key: "from", label: "会場", placeholder: "東京ドーム" },
     { key: "confNumber", label: "確認番号", placeholder: "TC-440291" },
   ],
   アポ: [
-    { key: "title", label: "タイトル", placeholder: "ABC社 打合せ / 内科 受診" },
+    { key: "title", label: "タイトル", placeholder: "内科 受診" },
     { key: "date", label: "日付", placeholder: "2026-04-17" },
     { key: "startTime", label: "開始時刻", placeholder: "14:00" },
     { key: "endTime", label: "終了時刻", placeholder: "15:00" },
     { key: "from", label: "場所", placeholder: "グランフロント大阪" },
-    { key: "confNumber", label: "確認番号", placeholder: "" },
+    { key: "confNumber", label: "確認番号", placeholder: "A-12345" },
   ],
   その他: [
-    { key: "title", label: "タイトル", placeholder: "内容" },
+    { key: "title", label: "タイトル", placeholder: "〇〇展示会 入場券" },
     { key: "date", label: "日付", placeholder: "2026-04-15" },
-    { key: "startTime", label: "時刻", placeholder: "10:00" },
-    { key: "confNumber", label: "確認番号", placeholder: "" },
+    { key: "startTime", label: "開始時刻", placeholder: "10:00" },
+    { key: "endTime", label: "終了時刻", placeholder: "11:00" },
+    { key: "from", label: "場所", placeholder: "東京ビッグサイト" },
+    { key: "confNumber", label: "確認番号", placeholder: "EX-1024" },
   ],
 };
 
@@ -303,7 +304,7 @@ export function checkNeedsReview(
     category === "飛行機" ||
     category === "列車" ||
     category === "バス" ||
-    category === "タクシー" ||
+    category === "車" ||
     category === "船"
   ) {
     if (!fixed.from) reasons.push({ field: "from", reason: "出発地なし" });

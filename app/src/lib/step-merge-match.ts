@@ -95,7 +95,7 @@ function evaluatePair(
   const dateDiff = daysBetween(draft.date, existing.date);
 
   // Tier 2: vehicle key match
-  if ((draft.category === "飛行機" || draft.category === "列車" || draft.category === "バス" || draft.category === "タクシー" || draft.category === "車" || draft.category === "船") && dateDiff <= 1) {
+  if ((draft.category === "飛行機" || draft.category === "列車" || draft.category === "バス" || draft.category === "車" || draft.category === "船") && dateDiff <= 1) {
     const dk = vehicleKey(draft.title ?? "");
     const ek = vehicleKey(existing.title ?? "");
     if (dk && ek && dk === ek) {
