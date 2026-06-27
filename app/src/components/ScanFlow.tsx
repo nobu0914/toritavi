@@ -107,16 +107,27 @@ function categoryColorFg(color: string): string {
 
 function detectCategory(text: string): StepCategory {
   const t = text.toLowerCase();
-  if (/NH|JL|ANA|JAL|flight|搭乗|boarding|航空|便名|departure|arrival|gate/i.test(t)) return "飛行機";
-  if (/新幹線|のぞみ|ひかり|こだま|はやぶさ|かがやき|特急|号車|jr|列車/i.test(t)) return "列車";
-  if (/hotel|ホテル|check.?in|check.?out|宿泊|旅館|inn|チェックイン/i.test(t)) return "宿泊";
-  // 病院・商談 → アポ（予約・アポ）に統合
-  if (/病院|クリニック|医院|診療|診察|内科|外科|歯科|眼科|皮膚科|処方|会議|商談|meeting|打ち合わせ|会議室|アポイント/i.test(t)) return "アポ";
-  if (/フェリー|ferry|乗船|客船|船便/i.test(t)) return "船";
-  if (/レンタカー|rent.?a.?car|カーシェア/i.test(t)) return "車";
-  if (/バス|bus|乗車券|高速バス/i.test(t)) return "バス";
-  if (/レストラン|食事|ランチ|ディナー|予約.*名|restaurant|cafe|カフェ/i.test(t)) return "食事";
-  if (/チケット|ticket|入場|座席|アリーナ|ホール|劇場|開演|開場|ツアー|tour|アクティビティ|バウチャー|voucher/i.test(t)) return "観光";
+  // 判定順が肝。共通語（JR/号車/ホテル/入場 等）で別カテゴリに奪われないよう、
+  // 具体的で誤爆の少ないカテゴリを先に評価する。Flutter scan_text_extract.dart と完全一致。
+
+  // 1) 船 — 飛行機より先に。フェリー券の "Boarding Voucher" が飛行機の boarding に奪われるのを防ぐ。
+  if (/フェリー|ferry|乗船券|乗船日|客船|船便|汽船|高速船|ジェットフォイル|出航|入港|フェリーターミナル|船中泊|乗船/i.test(t)) return "船";
+  // 2) 飛行機 — "Tanaka" の ana 等、人名に含まれる航空コードの誤爆を防ぐため語境界(\b)付き。boarding は券種(pass)に限定。
+  if (/搭乗|boarding\s?pass|航空券|便名|フライト|欠航|搭乗口|搭乗券|国際線|国内線|受託手荷物|手荷物|機内|搭乗時刻|航空便|\b(ana|jal|nh|jl|ua|dl|aa|sq|cx|mm|gk|bc|sky|ek|zg)\b|emirates|zipair|全日空|日本航空|スターフライヤー|スカイマーク|peach|jetstar|gate\s?\d/i.test(t)) return "飛行機";
+  // 2) 食事（強い語）— ホテル内レストランや予約番号 "JR-…" に奪われる前に確定。
+  if (/食べログ|tablecheck|ぐるなび|ホットペッパー|一休.?com|居酒屋|焼肉|焼鳥|鮨|寿司|割烹|料亭|京料理|懐石|ビストロ|トラットリア|オステリア|オーベルジュ|auberge|もつ鍋|鍋料理|しゃぶしゃぶ|すき焼き|ステーキ|串揚げ|レストラン|ダイニング|カフェ|cafe|coffee|コース料理|飲み放題|ドレスコード|dress\s?code|\bchef\b|tasting|食事処|食堂|シェフ|omakase|お任せコース|席種/i.test(t)) return "食事";
+  // 3) バス — 号車/乗車券が列車と重なるため列車より先に。
+  if (/高速バス|路線バス|シャトルバス|空港バス|送迎バス|夜行バス|リムジンバス|バス|\bbus\b|シャトル|shuttle/i.test(t)) return "バス";
+  // 4) アポ（病院＋商談＋ビジネスイベント）— "入場/パス" 等が観光と衝突するため観光より先に。
+  if (/病院|クリニック|医院|診療|診察|受診|外来|採血|血液検査|blood\s?test|hospital|clinic|内科|外科|歯科|眼科|皮膚科|整形外科|耳鼻|小児科|産婦人科|処方|会議|商談|打ち合わせ|打合せ|ミーティング|meeting|アポイント|会議室|訪問|取引先|来訪|カンファレンス|conference|セミナー|seminar|サミット|summit|フォーラム|forum|出展|見本市|研修|training|受講|登壇|入場証|入館証|名刺|business\s?card/i.test(t)) return "アポ";
+  // 5) 列車 — 予約番号 "JR-1234" を誤検出しないよう jr は数字直前を除外。
+  if (/新幹線|のぞみ|ひかり|こだま|みずほ|さくら|はやぶさ|かがやき|つばさ|やまびこ|とき|あさま|ロマンスカー|特急|急行|号車|乗車券|きっぷ|jr[東西九北四]|jr(?![-\s]?\d)|私鉄|電鉄|列車|鉄道/i.test(t)) return "列車";
+  // 6) 宿泊
+  if (/hotel|ホテル|check.?in|check.?out|チェックイン|チェックアウト|宿泊|ご宿泊|連泊|旅館|inn|ゲストハウス|ヴィラ|リゾート/i.test(t)) return "宿泊";
+  // 8) 車
+  if (/レンタカー|rent.?a.?car|カーシェア|car\s?rental|タイムズカー/i.test(t)) return "車";
+  // 9) 観光（広め・フォールバック手前）
+  if (/チケット|ticket|入場|座席|アリーナ|ホール|劇場|シアター|開演|開場|ツアー|tour|アクティビティ|バウチャー|voucher|美術館|博物館|水族館|動物園|遊園地|テーマパーク|ディズニー|ユニバーサル|usj|デーパスポート|フリーパス|コンサート|ライブ|公演|観劇|試合|入園|招待券|前売券/i.test(t)) return "観光";
   return "その他";
 }
 
