@@ -2,6 +2,30 @@
  * Global styles — references design-tokens.css
  */
 
+/* Daylight wordmark / UI font. Drop the woff2 files into app/public/fonts/.
+ * 未配置のあいだは --font の次点（Noto Sans JP / system）にフォールバックする。 */
+@font-face {
+  font-family: "Open Runde";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/OpenRunde-Regular.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Open Runde";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/OpenRunde-Medium.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Open Runde";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fonts/OpenRunde-Semibold.woff2") format("woff2");
+}
+
 * {
   scrollbar-width: none;
 }
@@ -61,4 +85,15 @@ a {
  */
 body[data-scroll-locked] {
   padding-right: 0 !important;
+}
+
+/*
+ * 通知（テロップ）を iOS の safe-area（ステータスバー / ダイナミックアイランド）
+ * の下へ下げる。<Notifications position="top-center" /> の既定 top は viewport
+ * 最上端基準のため、ノッチ / Dynamic Island に食い込んで「上すぎる」状態になる。
+ * safe-area-inset-top 分を上乗せして安全領域の下に出す。
+ *   .mantine-Notifications-root = 通知スタックの fixed コンテナ
+ */
+.mantine-Notifications-root {
+  top: calc(env(safe-area-inset-top, 0px) + var(--mantine-spacing-md, 1rem)) !important;
 }

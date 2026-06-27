@@ -50,7 +50,7 @@
 }
 .confirmBtn {
   flex: 1;
-  background: var(--ink-800);
+  background: var(--primary);
   color: #fff;
   border: none;
   border-radius: 2px;

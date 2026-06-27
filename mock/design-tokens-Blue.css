@@ -1,0 +1,647 @@
+/* =============================================================================
+   design-tokens-Blue.css  —  "Blue Daylight" Design System (drop-in tokens)
+   -----------------------------------------------------------------------------
+   方向性:
+     アプリアイコンの実測色を骨格に据えたブランド忠実スケール。
+     sky #54C5F8 を 300 / azure #29B6F6 を 400 / deep navy #02579A を 800 /
+     darkest navy #023964 を 900 にそのまま固定。姉妹DS「Daylight」(teal) の
+     設計思想を厳守する: 明るく軽い・でも幼稚でない。brand は CTA/active/確定/
+     リンクの「点」としてのみ使い、面でベタ塗りしない。明るさは白(surface #FFF)
+     と青み極淡 near-white(bg #F4F8FE)・余白で出し、彩度は抑えめ、見出しは
+     semibold(600)、影は極薄+ヘアライン罫。
+     info は brand blue に統合(別の青を増やさない)。danger は低彩度コーラルの
+     「点」のみ(青で danger を表さない)、success=緑、warn=琥珀。種別はアイコンの
+     形で識別し thumbnail は2トーン(brand-tint / neutral)。文字は純黒を避け
+     deep-navy 寄り #0E1F33。
+
+   主役 CTA = --b-500 (#1184C7): azure と deep navy の間に導出した「白文字が
+     乗る最も明るい CTA 域」。白文字 CR=4.08(大字/UI部品で AA 合格)。小字/normal
+     text・hover は --b-600 (#0E72AE, CR=5.2)、リンクは --b-700 (#0C6296, 白上 6.56)。
+
+   出典: docs/design-system-blue.html (実測4停点 sky/azure/deep navy/darkest navy)
+   本ファイルは出典 HTML と HEX/役割パリティを保つ。出典との意図的差分(neutral
+     ink ランプ拡張・追加 hero alias 等)は各所コメントに明記する。
+
+   使い方:
+     1. アプリのエントリ CSS で最初に読み込む(最上位の :root)。
+     2. 正準名 --b-50..900 を新規参照に使う。
+     3. 既存/Daylight コンポーネントは --t-* / --primary / --accent 等の legacy
+        alias 経由でそのままブルー化される(drop-in 互換)。
+     4. Mantine 利用時は primaryColor="blue"。末尾「適用手順」コメント参照。
+   ============================================================================= */
+
+:root {
+  /* ---------------------------------------------------------------------------
+     CANONICAL BRAND SCALE  --b-50..900  (アイコン実測色を固定した忠実スケール)
+       300 = sky #54C5F8 / 400 = azure #29B6F6 / 800 = deep navy #02579A /
+       900 = darkest navy #023964。500 が CTA の主役。
+     --------------------------------------------------------------------------- */
+  --b-50:  #EAF6FE;
+  --b-100: #CFEAFD;
+  --b-200: #A6E1FB;   /* 極淡 tint (アイコン補助色) */
+  --b-300: #54C5F8;   /* sky  — 実測固定 */
+  --b-400: #29B6F6;   /* azure — 実測固定 */
+  --b-500: #1184C7;   /* CTA 主役 (白文字 CR 4.08) */
+  --b-600: #0E72AE;   /* hover / 小字CTA (白文字 CR 5.2) */
+  --b-700: #0C6296;   /* link (白上 6.56) */
+  --b-800: #02579A;   /* deep navy — 実測固定 */
+  --b-900: #023964;   /* darkest navy — 実測固定 */
+
+  --b-a8:   rgba(17, 132, 199, 0.08);  /* 極薄 brand wash (active/hover 面) */
+  --b-a14:  rgba(17, 132, 199, 0.14);  /* やや濃い brand wash */
+  --b-ring: rgba(17, 132, 199, 0.34);  /* focus ring base */
+
+  /* ---------------------------------------------------------------------------
+     NEUTRAL  — cool / blue-tinted gray。明るさは白と余白で出す。
+     --------------------------------------------------------------------------- */
+  --bg:       #F4F8FE;   /* 青み極淡 near-white アプリ背景 */
+  --surface:  #FFFFFF;   /* カード/シート面 */
+  --n-0:      #FFFFFF;
+  --n-50:     #F4F8FE;
+  --n-100:    #E7EFF7;
+  --n-200:    #D4E0EC;
+  --n-300:    #B7C7D8;
+  --n-400:    #90A3B8;
+
+  --fg:        #0E1F33;             /* 見出し/主文 (純黒回避, bg 上 15.61) */
+  --fg-body:   #33485F;             /* 本文 (bg 上 8.82) */
+  --fg-mute:   #5B7088;             /* 補助文 (surface 上 5.1) */
+  --fg-faint:  #90A3B8;             /* 最弱/プレースホルダ */
+  --line:        rgba(14, 31, 51, 0.08);   /* ヘアライン罫 */
+  --line-strong: rgba(14, 31, 51, 0.16);   /* 締めた罫 */
+
+  /* ---------------------------------------------------------------------------
+     WARM (danger)  — 低彩度コーラルの「点」のみ。青で danger を表さない。
+     --------------------------------------------------------------------------- */
+  --w-50:  #FDEEEA;
+  --w-300: #F0A793;
+  --w-500: #D85A40;   /* danger 面 (白文字 CR 3.85, 大字/UI) */
+  --w-600: #C24E33;   /* danger hover 中間段 (500→700 の橋渡し) */
+  --w-700: #A93C27;   /* danger テキスト (白上 6.25) */
+
+  /* ---------------------------------------------------------------------------
+     SEMANTIC  — success=緑 / warn=琥珀。danger は warm に alias。
+     注: --wrn-500 は出典 HTML の #C98A12 を #B97D0E に補正した。出典値は
+         白文字 CR=2.95 で 3.0 床を割るため、白グリフ/白文字を載せる fill にも
+         耐える #B97D0E(白上 CR=3.50)へ darken。色相(琥珀)は維持。warn の
+         normal text は引き続き --wrn-700(#9A680C, 白上 4.82)を使う。
+     --------------------------------------------------------------------------- */
+  --suc-50:  #E8F6EF;
+  --suc-500: #1F9D6B;
+  --suc-700: #157A52;   /* success テキスト (白上 5.33) */
+  --wrn-50:  #FBF1DD;
+  --wrn-500: #B97D0E;   /* warn 面 (白文字 CR 3.50, 出典 #C98A12 から補正) */
+  --wrn-700: #9A680C;   /* warn テキスト (白上 4.82) */
+
+  --dng-50:  var(--w-50);
+  --dng-300: var(--w-300);
+  --dng-500: var(--w-500);
+  --dng-700: var(--w-700);
+
+  /* ---------------------------------------------------------------------------
+     THUMBNAIL 2トーン  — 種別はアイコンの形で識別。10色パステルにしない。
+     --------------------------------------------------------------------------- */
+  --thumb-pri-bg: var(--b-50);    /* brand-tint サムネイル背景 */
+  --thumb-pri-fg: var(--b-700);   /* brand-tint アイコン色 */
+  --thumb-neu-bg: var(--n-100);   /* neutral サムネイル背景 */
+  --thumb-neu-fg: var(--fg-mute); /* neutral アイコン色 */
+
+  /* ---------------------------------------------------------------------------
+     TYPE  — fs スケールは出典 HTML に整合 (13/15/17/21/40px)。
+     --------------------------------------------------------------------------- */
+  --font: "Inter", "Noto Sans JP", system-ui, -apple-system, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+  --mono: "SF Mono", ui-monospace, "JetBrains Mono", "Roboto Mono", Menlo,
+          Consolas, monospace;
+
+  --fs-xs:   0.75rem;     /* 12px (下限) */
+  --fs-sm:   0.8125rem;   /* 13px */
+  --fs-md:   0.9375rem;   /* 15px (base) */
+  --fs-lg:   1.0625rem;   /* 17px */
+  --fs-xl:   1.3125rem;   /* 21px */
+  --fs-2xl:  1.75rem;     /* 28px */
+  --fs-3xl:  2.5rem;      /* 40px */
+
+  --fw-r:  400;   /* regular */
+  --fw-m:  500;   /* medium */
+  --fw-sb: 600;   /* semibold — 見出しの既定 */
+  --fw-b:  700;   /* bold */
+
+  /* ---------------------------------------------------------------------------
+     RADIUS
+     --------------------------------------------------------------------------- */
+  --r-sm:   6px;
+  --r-md:   10px;
+  --r-lg:   16px;
+  --r-pill: 999px;
+
+  /* ---------------------------------------------------------------------------
+     SHADOW  — 出典 HTML に整合。極薄+ヘアライン。--sh-card は罫 0 0 0 1px を含む。
+       brand 色付き影は CTA の浮き上がりのみ。
+     --------------------------------------------------------------------------- */
+  --sh-xs:   0 1px 2px rgba(14, 31, 51, 0.05);
+  --sh-sm:   0 1px 3px rgba(14, 31, 51, 0.06), 0 1px 2px rgba(14, 31, 51, 0.04);
+  --sh-card: 0 2px 8px rgba(14, 31, 51, 0.06), 0 0 0 1px var(--line);
+  --sh-lg:   0 8px 28px rgba(14, 31, 51, 0.10);
+  --sh-brand: 0 6px 18px rgba(17, 132, 199, 0.28);
+
+  /* ---------------------------------------------------------------------------
+     SPACING (4px base)
+     --------------------------------------------------------------------------- */
+  --sp-1:  4px;
+  --sp-2:  8px;
+  --sp-3:  12px;
+  --sp-4:  16px;
+  --sp-5:  20px;
+  --sp-6:  24px;
+  --sp-8:  32px;
+  --sp-10: 40px;
+  --sp-12: 48px;
+  --sp-16: 64px;
+
+  /* ---------------------------------------------------------------------------
+     MOTION
+     --------------------------------------------------------------------------- */
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* ---------------------------------------------------------------------------
+     INTERACTIVE SIZING
+     --------------------------------------------------------------------------- */
+  --btn-h-sm: 32px;
+  --btn-h-md: 40px;
+  --btn-h-lg: 48px;
+  --input-h:  44px;
+  --touch-min: 44px;
+}
+
+/* =============================================================================
+   COMPATIBILITY LAYER  —  legacy / Daylight 名を Blue 値へ再マップ
+   重要: --t-* を var(--b-*) に alias する → 既存が --t-* 参照のままブルー化。
+   ============================================================================= */
+:root {
+  /* Daylight brand scale alias --t-50..900 → blue */
+  --t-50:  var(--b-50);
+  --t-100: var(--b-100);
+  --t-200: var(--b-200);
+  --t-300: var(--b-300);
+  --t-400: var(--b-400);
+  --t-500: var(--b-500);
+  --t-600: var(--b-600);
+  --t-700: var(--b-700);
+  --t-800: var(--b-800);
+  --t-900: var(--b-900);
+  --t-a8:   var(--b-a8);
+  --t-a14:  var(--b-a14);
+  --t-ring: var(--b-ring);
+
+  /* core legacy roles */
+  --primary:      var(--b-500);
+  --primary-hover: var(--b-600);
+  --primary-active: var(--b-700);
+  --accent:       var(--b-400);   /* canonical azure (出典 line 62) */
+  --on-primary:   #FFFFFF;
+  --on-accent:    #FFFFFF;
+  --link:         var(--b-700);
+  --link-hover:   var(--b-800);
+
+  --text:        var(--fg);
+  --text-dim:    var(--fg-mute);
+  --text-muted:  var(--fg-faint);
+  --text-body:   var(--fg-body);
+  --heading:     var(--fg);
+  --border:      var(--line);
+  --border-strong: var(--line-strong);
+  --bg-subtle:   var(--n-50);
+  --bg-muted:    var(--n-100);
+
+  /* ink-* scale
+     アンカー --ink-900 / --ink-700 は出典 HTML に整合し brand-tinted
+     (b-900 navy / b-700 link)。--ink-800..0 の他段は出典が未定義のため neutral
+     (cool charcoal → near-white) で補った意図的拡張(silent contradiction では
+     なく明示的 extension)。brand-tinted accent が要る箇所は ink-900/700 を、
+     neutral テキスト/面が要る箇所は fg/n-* を直接参照する。 */
+  --ink-900: var(--b-900);   /* canonical brand navy (出典 line 67) */
+  --ink-800: #1A2C42;        /* extension: neutral */
+  --ink-700: var(--b-700);   /* canonical brand link (出典 line 68) */
+  --ink-600: #45596F;        /* extension: neutral */
+  --ink-500: var(--fg-mute); /* extension: neutral */
+  --ink-400: var(--fg-faint);/* extension: neutral */
+  --ink-300: var(--n-300);   /* extension: neutral */
+  --ink-200: var(--n-200);   /* extension: neutral */
+  --ink-100: var(--n-100);   /* extension: neutral */
+  --ink-50:  var(--n-50);    /* extension: neutral */
+  --ink-0:   var(--n-0);     /* extension: neutral */
+
+  /* accent-* scale (= brand) */
+  --accent-50:  var(--b-50);
+  --accent-100: var(--b-100);
+  --accent-200: var(--b-200);
+  --accent-300: var(--b-300);
+  --accent-400: var(--b-400);
+  --accent-500: var(--b-500);
+  --accent-600: var(--b-600);
+  --accent-700: var(--b-700);
+  --accent-800: var(--b-800);
+  --accent-900: var(--b-900);
+
+  /* semantic legacy roles */
+  --success:      var(--suc-500);
+  --success-bg:   var(--suc-50);
+  --success-text: var(--suc-700);
+  --success-50:   var(--suc-50);
+  --success-500:  var(--suc-500);
+  --success-700:  var(--suc-700);
+
+  --warn:       var(--wrn-500);
+  --warning:    var(--wrn-500);
+  --warn-bg:    var(--wrn-50);
+  --warn-text:  var(--wrn-700);
+  --warn-50:    var(--wrn-50);
+  --warn-500:   var(--wrn-500);
+  --warn-700:   var(--wrn-700);
+
+  --danger:       var(--w-500);
+  --danger-bg:    var(--w-50);
+  --danger-text:  var(--w-700);
+  --danger-50:    var(--w-50);
+  --danger-300:   var(--w-300);
+  --danger-500:   var(--w-500);
+  --danger-600:   var(--w-600);
+  --danger-700:   var(--w-700);
+  --on-danger:    #FFFFFF;
+
+  /* info → brand blue (別の青を増やさない) */
+  --info:       var(--b-500);
+  --info-bg:    var(--b-50);
+  --info-text:  var(--b-700);
+  --info-50:    var(--b-50);
+  --info-500:   var(--b-500);
+  --info-700:   var(--b-700);
+  --on-info:    #FFFFFF;
+
+  /* category tint-* — 全て neutral(種別はアイコンの形で識別) */
+  --tint-1: var(--n-100);
+  --tint-2: var(--n-100);
+  --tint-3: var(--n-100);
+  --tint-4: var(--n-100);
+  --tint-5: var(--n-100);
+  --tint-6: var(--n-100);
+  --tint-7: var(--n-100);
+  --tint-8: var(--n-100);
+  --tint-9: var(--n-100);
+  --tint-10: var(--n-100);
+  --tint-fg: var(--fg-mute);
+
+  /* font aliases */
+  --font-sans: var(--font);
+  --font-mono: var(--mono);
+  --fw-regular:  var(--fw-r);
+  --fw-medium:   var(--fw-m);
+  --fw-semibold: var(--fw-sb);
+  --fw-bold:     var(--fw-b);
+
+  /* shadow aliases */
+  --shadow-xs:   var(--sh-xs);
+  --shadow-sm:   var(--sh-sm);
+  --shadow-card: var(--sh-card);
+  --shadow-lg:   var(--sh-lg);
+  --shadow-brand: var(--sh-brand);
+
+  /* state-* roles  (done/active=brand, review=warn, cancel=danger, idle=neutral) */
+  --state-done-bg:     var(--b-50);
+  --state-done-fg:     var(--b-700);
+  --state-active-bg:   var(--b-50);
+  --state-active-fg:   var(--b-700);
+  --state-review-bg:   var(--wrn-50);
+  --state-review-fg:   var(--wrn-700);
+  --state-cancel-bg:   var(--w-50);
+  --state-cancel-fg:   var(--w-700);
+  --state-idle-bg:     var(--n-100);
+  --state-idle-fg:     var(--fg-mute);
+
+  /* infer-* (AI 推測 = 琥珀 warn 系) */
+  --infer:      var(--wrn-500);
+  --infer-bg:   var(--wrn-50);
+  --infer-text: var(--wrn-700);
+  --infer-border: var(--wrn-300, #ECC56B);
+
+  /* overlay / dialog */
+  --scrim:        rgba(14, 31, 51, 0.44);
+  --dialog-bg:    var(--surface);
+  --dialog-fg:    var(--fg);
+  --dialog-border: var(--line);
+  --dialog-shadow: var(--sh-lg);
+  --dialog-radius: var(--r-lg);
+
+  /* hero gradient
+     canonical 名 --grad-hero を出典 HTML に整合させて再現:
+       sky (--b-300) → darkest navy (--b-900)。.journey-cover / .hero::after /
+       .brandmark .dot / .ph-mini-cover 等が参照する正準名。
+     --hero-gradient / --hero-gradient-primary は追加の補助 alias(必要時のみ)。 */
+  --grad-hero: linear-gradient(135deg, var(--b-300) 0%, var(--b-900) 100%);
+  --hero-gradient: linear-gradient(135deg, var(--b-600), var(--b-800));
+  --hero-gradient-primary: linear-gradient(135deg, var(--b-400), var(--b-800));
+}
+
+/* =============================================================================
+   MANTINE BRIDGE  —  primaryColor = "blue"
+   ============================================================================= */
+:root {
+  --mantine-primary-color-filled:        var(--b-500);
+  --mantine-primary-color-filled-hover:  var(--b-600);
+  --mantine-primary-color-light:         var(--b-a8);
+  --mantine-primary-color-light-hover:   var(--b-a14);
+  --mantine-primary-color-light-color:   var(--b-700);
+  --mantine-primary-color-contrast:      #FFFFFF;
+
+  /* blue scale 0..9 → --b-* */
+  --mantine-color-blue-0: var(--b-50);
+  --mantine-color-blue-1: var(--b-100);
+  --mantine-color-blue-2: var(--b-200);
+  --mantine-color-blue-3: var(--b-300);
+  --mantine-color-blue-4: var(--b-400);
+  --mantine-color-blue-5: var(--b-500);
+  --mantine-color-blue-6: var(--b-600);
+  --mantine-color-blue-7: var(--b-700);
+  --mantine-color-blue-8: var(--b-800);
+  --mantine-color-blue-9: var(--b-900);
+  --mantine-color-blue-filled:       var(--b-500);
+  --mantine-color-blue-filled-hover: var(--b-600);
+  --mantine-color-blue-light:        var(--b-a8);
+  --mantine-color-blue-light-hover:  var(--b-a14);
+  --mantine-color-blue-light-color:  var(--b-700);
+  --mantine-color-blue-outline:      var(--b-500);
+  --mantine-color-blue-text:         var(--b-700);
+
+  /* red → danger (coral)。filled-hover は中間段 --w-600 を使い 500→600 の
+     1段 hover パターンに統一(blue 500→600 と整合)。 */
+  --mantine-color-red-0: var(--w-50);
+  --mantine-color-red-3: var(--w-300);
+  --mantine-color-red-6: var(--w-500);
+  --mantine-color-red-7: var(--w-700);
+  --mantine-color-red-filled:       var(--w-500);
+  --mantine-color-red-filled-hover: var(--w-600);
+  --mantine-color-red-light:        rgba(216, 90, 64, 0.10);
+  --mantine-color-red-light-color:  var(--w-700);
+  --mantine-color-red-text:         var(--w-700);
+
+  /* yellow → warn (琥珀) */
+  --mantine-color-yellow-0: var(--wrn-50);
+  --mantine-color-yellow-6: var(--wrn-500);
+  --mantine-color-yellow-7: var(--wrn-700);
+  --mantine-color-yellow-filled:       var(--wrn-500);
+  --mantine-color-yellow-filled-hover: var(--wrn-700);
+  --mantine-color-yellow-light:        rgba(185, 125, 14, 0.12);
+  --mantine-color-yellow-light-color:  var(--wrn-700);
+  --mantine-color-yellow-text:         var(--wrn-700);
+
+  /* green → success */
+  --mantine-color-green-0: var(--suc-50);
+  --mantine-color-green-6: var(--suc-500);
+  --mantine-color-green-7: var(--suc-700);
+  --mantine-color-green-filled:       var(--suc-500);
+  --mantine-color-green-filled-hover: var(--suc-700);
+  --mantine-color-green-light:        rgba(31, 157, 107, 0.12);
+  --mantine-color-green-light-color:  var(--suc-700);
+  --mantine-color-green-text:         var(--suc-700);
+
+  /* gray → neutral (cool/blue-tinted) */
+  --mantine-color-gray-0: var(--n-0);
+  --mantine-color-gray-1: var(--n-50);
+  --mantine-color-gray-2: var(--n-100);
+  --mantine-color-gray-3: var(--n-200);
+  --mantine-color-gray-4: var(--n-300);
+  --mantine-color-gray-5: var(--n-400);
+  --mantine-color-gray-6: var(--fg-mute);
+  --mantine-color-gray-7: var(--fg-body);
+  --mantine-color-gray-8: #1A2C42;
+  --mantine-color-gray-9: var(--fg);
+
+  /* dark-* (cool charcoal → deep navy) */
+  --mantine-color-dark-0: var(--n-200);
+  --mantine-color-dark-1: var(--n-300);
+  --mantine-color-dark-2: var(--n-400);
+  --mantine-color-dark-3: var(--fg-mute);
+  --mantine-color-dark-4: var(--fg-body);
+  --mantine-color-dark-5: #1A2C42;
+  --mantine-color-dark-6: var(--fg);
+  --mantine-color-dark-7: var(--b-900);
+  --mantine-color-dark-8: #021B30;
+  --mantine-color-dark-9: #01101D;
+
+  /* surfaces / text / borders */
+  --mantine-color-body:        var(--bg);
+  --mantine-color-default:        var(--surface);
+  --mantine-color-default-hover:  var(--n-50);
+  --mantine-color-default-border: var(--line);
+  --mantine-color-text:        var(--fg);
+  --mantine-color-dimmed:      var(--fg-mute);
+  --mantine-color-placeholder: var(--fg-faint);
+  --mantine-color-anchor:      var(--b-700);
+  --mantine-color-error:       var(--w-500);
+
+  /* radius / shadow / font */
+  --mantine-radius-default: var(--r-md);
+  --mantine-radius-xs: var(--r-sm);
+  --mantine-radius-sm: var(--r-sm);
+  --mantine-radius-md: var(--r-md);
+  --mantine-radius-lg: var(--r-lg);
+  --mantine-radius-xl: var(--r-pill);
+  --mantine-shadow-xs: var(--sh-xs);
+  --mantine-shadow-sm: var(--sh-sm);
+  --mantine-shadow-md: var(--sh-card);
+  --mantine-shadow-lg: var(--sh-lg);
+  --mantine-shadow-xl: var(--sh-lg);
+  --mantine-font-family:           var(--font);
+  --mantine-font-family-monospace: var(--mono);
+  --mantine-font-family-headings:  var(--font);
+  --mantine-heading-font-weight:   var(--fw-sb);
+}
+
+/* =============================================================================
+   COMPONENT OVERRIDES
+   ============================================================================= */
+
+/* Button — pill 形 + brand。filled は白文字、CTA は色付き影で浮かす。 */
+.mantine-Button-root,
+button.btn,
+.btn {
+  border-radius: var(--r-pill);
+  font-weight: var(--fw-sb);
+  font-family: var(--font);
+  transition: background-color 0.16s var(--ease), box-shadow 0.16s var(--ease),
+              transform 0.06s var(--ease);
+}
+.mantine-Button-root[data-variant="filled"],
+.btn--primary {
+  background-color: var(--b-500);
+  color: #FFFFFF;
+  box-shadow: var(--sh-brand);
+}
+.mantine-Button-root[data-variant="filled"]:hover,
+.btn--primary:hover {
+  background-color: var(--b-600);
+}
+.mantine-Button-root[data-variant="filled"]:active,
+.btn--primary:active {
+  background-color: var(--b-700);
+  transform: translateY(0.5px);
+}
+.mantine-Button-root[data-variant="light"],
+.btn--soft {
+  background-color: var(--b-a8);
+  color: var(--b-700);
+  box-shadow: none;
+}
+.mantine-Button-root[data-variant="light"]:hover,
+.btn--soft:hover {
+  background-color: var(--b-a14);
+}
+.mantine-Button-root[data-variant="outline"],
+.btn--outline {
+  border: 1px solid var(--b-500);
+  color: var(--b-700);
+  background: transparent;
+}
+.mantine-Button-root[data-variant="subtle"]:hover {
+  background-color: var(--b-a8);
+}
+
+/* TextInput / Textarea / Select — focus = --b-500 + ring */
+.mantine-TextInput-input,
+.mantine-Textarea-input,
+.mantine-Select-input,
+.mantine-NumberInput-input,
+input.field,
+textarea.field {
+  min-height: var(--input-h);
+  border-radius: var(--r-md);
+  border: 1px solid var(--line-strong);
+  background-color: var(--surface);
+  color: var(--fg);
+  font-family: var(--font);
+  transition: border-color 0.16s var(--ease), box-shadow 0.16s var(--ease);
+}
+.mantine-TextInput-input::placeholder,
+.mantine-Textarea-input::placeholder,
+input.field::placeholder,
+textarea.field::placeholder {
+  color: var(--fg-faint);
+}
+.mantine-TextInput-input:focus,
+.mantine-TextInput-input:focus-within,
+.mantine-Textarea-input:focus,
+.mantine-Select-input:focus,
+.mantine-NumberInput-input:focus,
+input.field:focus,
+textarea.field:focus {
+  outline: none;
+  border-color: var(--b-500);
+  box-shadow: 0 0 0 3px var(--b-ring);
+}
+.mantine-TextInput-input[data-error],
+.mantine-Textarea-input[data-error],
+input.field[aria-invalid="true"] {
+  border-color: var(--w-500);
+}
+.mantine-TextInput-input[data-error]:focus,
+input.field[aria-invalid="true"]:focus {
+  box-shadow: 0 0 0 3px rgba(216, 90, 64, 0.30);
+}
+
+/* InputWrapper label */
+.mantine-InputWrapper-label,
+.field-label,
+label.field-label {
+  font-weight: var(--fw-m);
+  font-size: var(--fs-sm);
+  color: var(--fg-body);
+  margin-bottom: var(--sp-1);
+}
+.mantine-InputWrapper-required {
+  color: var(--w-500);
+}
+.mantine-InputWrapper-error,
+.field-error {
+  color: var(--w-700);
+  font-size: var(--fs-xs);
+}
+.mantine-InputWrapper-description,
+.field-help {
+  color: var(--fg-mute);
+  font-size: var(--fs-xs);
+}
+
+/* Global focus ring (keyboard) */
+:where(a, button, [role="button"], [tabindex]):focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--b-ring);
+  border-radius: var(--r-sm);
+}
+
+/* Anchor / link */
+a,
+.link {
+  color: var(--b-700);
+  text-decoration: none;
+}
+a:hover,
+.link:hover {
+  color: var(--b-800);
+  text-decoration: underline;
+}
+
+/* Card surface + ヘアライン罫 */
+.card,
+.mantine-Card-root,
+.mantine-Paper-root {
+  background-color: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh-card);
+}
+
+/* Badge / chip — 既定 neutral、状態色は state-* で点付け */
+.badge,
+.mantine-Badge-root {
+  border-radius: var(--r-pill);
+  font-weight: var(--fw-m);
+  background-color: var(--n-100);
+  color: var(--fg-mute);
+}
+.badge--brand { background-color: var(--b-50);  color: var(--b-700); }
+.badge--success { background-color: var(--suc-50); color: var(--suc-700); }
+.badge--warn  { background-color: var(--wrn-50); color: var(--wrn-700); }
+.badge--danger { background-color: var(--w-50);  color: var(--w-700); }
+
+/* Thumbnail 2トーン */
+.thumb--brand { background-color: var(--thumb-pri-bg); color: var(--thumb-pri-fg); }
+.thumb--neutral { background-color: var(--thumb-neu-bg); color: var(--thumb-neu-fg); }
+
+/* =============================================================================
+   適用手順 (Blue Daylight)
+   -----------------------------------------------------------------------------
+   1. このファイルをアプリ最上位 CSS で最初に import する。
+        @import "./design-tokens-Blue.css";
+   2. Mantine を使う場合は theme で primaryColor を "blue" に設定:
+        createTheme({
+          primaryColor: "blue",
+          primaryShade: { light: 5, dark: 6 },   // 5 = --b-500 (#1184C7)
+          defaultRadius: "md",
+          fontFamily: 'Inter, "Noto Sans JP", system-ui, sans-serif',
+          headings: { fontWeight: "600" },
+        });
+   3. ネイティブ/PWA のテーマカラー(ブラウザ/OS の chrome 着色)は azure を使う:
+        <meta name="theme-color" content="#29B6F6">   <!-- themeColor #29B6F6 -->
+      ステータスバー/スプラッシュは hero 深部 navy #02579A〜#023964 を併用可。
+   4. 既存・Daylight 由来コンポーネントは --t-* / --primary / --accent /
+      --link / --success 等の legacy alias 経由で自動的にブルー化される
+      (drop-in 互換。マークアップ変更不要)。--accent は canonical 通り azure
+      (--b-400)、CTA shade が要る箇所は --primary (--b-500) を使う。hero 面は
+      canonical 名 --grad-hero (sky→darkest navy) を参照する。
+   5. 新規実装は正準名 --b-50..900 を直接参照する。CTA は --b-500、hover/小字は
+      --b-600、リンクは --b-700。brand は「点」で使い、背景やカードを brand で
+      ベタ塗りしないこと。danger は青で表さず低彩度コーラル(--w-500/--w-700)の点のみ。
+      warn 面に白文字を載せる場合は補正済 --wrn-500 (#B97D0E, CR 3.50) を使い、
+      normal text は --wrn-700 (#9A680C) を使う。
+   ============================================================================= */

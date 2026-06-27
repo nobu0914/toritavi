@@ -447,7 +447,7 @@
   width: 100%;
   height: var(--btn-h-md);
   border-radius: var(--r-pill);
-  background: var(--ink-800);
+  background: var(--primary);
   font-weight: var(--fw-bold);
 }
 

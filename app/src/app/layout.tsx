@@ -20,7 +20,8 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "black-translucent",
+    // Daylight: 白ヘッダーなので暗いテキストのステータスバー。
+    statusBarStyle: "default",
     title: "toritavi",
   },
 };
@@ -29,7 +30,12 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
-  themeColor: "#0F1B2D",
+  themeColor: "#12B3AB",
+  // Required for env(safe-area-inset-*) to report real values inside the iOS
+  // WebView / standalone PWA. Without it the insets are all 0, so the sticky
+  // AppHeader, the bottom TabBar and the notifications stack all collide with
+  // the status bar / Dynamic Island / home indicator.
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

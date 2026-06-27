@@ -9,10 +9,11 @@
 }
 
 .header {
-  background: var(--ink-800);
-  color: #fff;
+  background: var(--surface);
+  color: var(--fg);
+  border-bottom: 1px solid var(--line);
   padding: 14px 16px;
-  font-weight: var(--fw-bold);
+  font-weight: var(--fw-sb);
   font-size: var(--fs-md);
 }
 
@@ -146,7 +147,7 @@
 }
 .confirmBtn {
   flex: 1;
-  background: var(--ink-800);
+  background: var(--primary);
   color: #fff;
   border: none;
   border-radius: 2px;

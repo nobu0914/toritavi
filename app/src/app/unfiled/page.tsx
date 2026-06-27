@@ -253,7 +253,7 @@ function Row({
             flex: 1,
             padding: "8px 12px",
             borderRadius: 999,
-            background: "var(--ink-800)",
+            background: "var(--primary)",
             color: "#fff",
             border: "none",
             fontSize: 13,

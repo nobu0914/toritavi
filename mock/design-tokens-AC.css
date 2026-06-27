@@ -1,0 +1,252 @@
+/*
+ * ============================================================
+ *  toritavi — Design Direction "Calm Atlas" (A + C hybrid)  — PROPOSAL
+ * ============================================================
+ *  これは美的方向性 見直しの提案トークンです。本番 app/src/app/design-tokens.css は
+ *  まだ上書きしていません。採用が決まったら本ファイルの :root 群を design-tokens.css に
+ *  置き換える形で適用します（移行手順は末尾コメント参照）。
+ *
+ *  方向性:
+ *   - 親ブランド Coyote & Powell の teal restraint をアプリへ統合（A=Calm Atlas）
+ *   - teal は「点」で。カテゴリは色面でなくアイコン形で識別（パステル10色を廃止）
+ *   - scan / ticket 系の面だけ「旅程ドキュメント」モチーフを部分採用（C）
+ *  捨てるもの: 食欲オレンジ accent / 10色カテゴリ tint / 深い影 / 見出し800
+ * ============================================================
+ */
+
+:root {
+  /* === Brand: teal (Figma teal / 親サイト準拠) — 主役。CTA・active・確定・focus === */
+  --teal-pearl: #9EFCFF;
+  --teal-400:   #07B7B7;
+  --teal-500:   #069494;   /* base / primary */
+  --teal-600:   #058484;   /* hover */
+  --teal-700:   #057373;   /* active / text-on-light emphasis */
+  --teal-800:   #046363;
+  --teal-900:   #034242;
+  --teal-a6:    rgba(6,148,148,0.06);
+  --teal-a10:   rgba(6,148,148,0.10);   /* thumbnail / chip 背景 */
+  --teal-a16:   rgba(6,148,148,0.16);
+  --teal-ring:  rgba(6,148,148,0.38);   /* focus ring */
+
+  /* === Ink / Neutral: テキストと面（親サイト neutral 準拠） === */
+  --fg-strong: #181925;   /* 見出し・主要テキスト */
+  --fg-body:   #4A4A55;   /* 本文 */
+  --fg-mute:   #7A7A87;   /* 補助 */
+  --fg-faint:  #A3A3AD;   /* 最弱・非活性アイコン */
+
+  --n-0:  #FFFFFF;
+  --n-50: #FAFAFA;
+  --n-100:#F7F7F7;
+  --n-200:#F2F2F2;
+  --n-300:#EBEBEB;
+  --n-400:#E4E4E4;
+
+  --line:        rgba(24,25,37,0.08);
+  --line-strong: rgba(24,25,37,0.16);
+
+  /* === Semantic（teal と同居するよう減彩。色数を絞る） === */
+  /* done/確定 は brand teal に統合（"良い・確定" = teal） */
+  --state-done-bg:    var(--teal-a10);
+  --state-done-fg:    var(--teal-700);
+  --state-done-accent:var(--teal-500);
+  /* review/仮予約 = 落ち着いた琥珀 */
+  --warn-bg:  #FBF1DD;
+  --warn-fg:  #9A6A14;
+  --warn-500: #D6A024;
+  --state-review-bg:    var(--warn-bg);
+  --state-review-fg:    var(--warn-fg);
+  --state-review-accent:var(--warn-500);
+  /* planned/予定・idle = ニュートラル */
+  --state-idle-bg:    var(--n-200);
+  --state-idle-fg:    var(--fg-mute);
+  --state-idle-accent:var(--fg-faint);
+  /* active/進行中・info は teal に統合（青を新設しない） */
+  --state-active-bg:    var(--teal-a10);
+  --state-active-fg:    var(--teal-700);
+  --state-active-accent:var(--teal-500);
+  /* danger = 減彩テラコッタ（C の stamp 色と共有） */
+  --danger-bg:  #FBE9E4;
+  --danger-fg:  #B23A22;
+  --danger-500: #D0492F;
+
+  /* === Category サムネ: 10色 tint を廃止 → 2トーン。種別はアイコン形で識別 === */
+  --thumb-primary-bg: var(--teal-a10);   /* 交通の主役（flight/hotel 等 確定系） */
+  --thumb-primary-fg: var(--teal-700);
+  --thumb-neutral-bg: var(--n-200);      /* それ以外 */
+  --thumb-neutral-fg: var(--fg-body);
+
+  /* === C モチーフ: scan / ticket / boarding-pass 面のみで使用 === */
+  --paper:       #FBF7EF;   /* 温かい紙地（scan/チケット背景） */
+  --paper-card:  #FFFFFF;
+  --paper-line:  #E7DDCA;   /* ミシン目・罫 */
+  --paper-fg:    #1C1B19;
+  --paper-mute:  #8A8270;
+  --stamp:       #C8553D;   /* 朱（ticket の価格・スタンプ） = danger と同系 */
+  /* code 表示（便名/ゲート/座席/時刻/金額）は --font-mono を使う */
+
+  /* === Typography === */
+  /* Open Runde を self-host（親サイト fonts/ から複製）。未導入時は system にフォールバック */
+  --font-sans: "Open Runde", "Noto Sans JP", -apple-system, BlinkMacSystemFont,
+               "Hiragino Sans", "Yu Gothic UI", "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+
+  --fs-xs:  12px;
+  --fs-sm:  13px;
+  --fs-md:  15px;   /* 本文基準 */
+  --fs-lg:  17px;
+  --fs-xl:  20px;
+  --fs-2xl: 24px;
+  --fs-3xl: 30px;
+
+  --fw-regular: 400;
+  --fw-medium:  500;
+  --fw-semibold:600;   /* 見出し標準（旧 800 heavy は廃止） */
+  --fw-bold:    700;
+
+  --tracking-display: -0.03em;
+  --tracking-head:    -0.02em;
+  --tracking-body:    -0.01em;
+
+  /* === Spacing（据え置き） === */
+  --sp-xxs: 4px;  --sp-xs: 8px;  --sp-sm: 12px;  --sp-md: 16px;
+  --sp-lg: 24px;  --sp-xl: 32px; --sp-2xl: 48px;
+
+  /* === Interactive sizing（据え置き） === */
+  --btn-h-sm: 36px; --btn-h-md: 44px; --btn-h-lg: 52px;
+  --input-h: 46px;  --touch-min: 44px;
+
+  /* === Radius（親サイト寄りに緩める） === */
+  --r-sm:   12px;
+  --r-md:   16px;
+  --r-lg:   20px;
+  --r-xl:   24px;
+  --r-pill: 999px;
+
+  /* === Shadow（ほぼ無影 + teal グロウ） === */
+  --shadow-xs:   0 1px 2px rgba(24,25,37,0.04);
+  --shadow-sm:   0 4px 16px rgba(24,25,37,0.06);
+  --shadow-card: 0 1px 2px rgba(24,25,37,0.04), 0 8px 24px rgba(24,25,37,0.05);
+  --shadow-lg:   0 12px 32px rgba(24,25,37,0.10);
+  --shadow-teal: 0 8px 24px rgba(6,148,148,0.22), 0 2px 6px rgba(6,148,148,0.14);
+
+  /* === Motion === */
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+
+  /* === Aliases（コンポーネントはこちらを参照） === */
+  --bg:        var(--n-50);
+  --surface:   var(--n-0);
+  --text:      var(--fg-strong);
+  --text-dim:  var(--fg-mute);
+  --text-muted:var(--fg-faint);
+  --border:    var(--line);
+  --primary:   var(--teal-500);   /* ← 主役は teal（旧: ink-800）。CTA二枚看板を解消 */
+  --accent:    var(--teal-500);   /* ← 旧: 食欲オレンジ #FF5722 を廃止し teal に一本化 */
+  --on-primary:#FFFFFF;
+  --link:      var(--teal-700);
+
+  /* === Scrim / Dialog === */
+  --scrim:       rgba(24,25,37,0.50);
+  --scrim-light: rgba(255,255,255,0.85);
+  --dialog-radius: var(--r-xl);
+  --dialog-shadow: var(--shadow-lg);
+
+  /* === Gradients（hero は teal-deep のディープトーンに） === */
+  --hero-gradient:         linear-gradient(160deg, #0B5E5E 0%, #034242 100%);
+  --hero-gradient-primary: linear-gradient(135deg, var(--teal-500) 0%, var(--teal-800) 100%);
+}
+
+/* ============================================================
+ *  Mantine bridge — primary を teal に再マップ
+ *  （theme.ts の primaryColor を "teal" 系に合わせる。詳細は theme.ts 差分）
+ * ============================================================ */
+:root {
+  --mantine-shadow-xs: var(--shadow-xs);
+  --mantine-shadow-sm: var(--shadow-sm);
+  --mantine-shadow-md: var(--shadow-card);
+  --mantine-shadow-lg: var(--shadow-lg);
+
+  --mantine-radius-xs: var(--r-sm);
+  --mantine-radius-sm: var(--r-sm);
+  --mantine-radius-md: var(--r-md);
+  --mantine-radius-lg: var(--r-lg);
+  --mantine-radius-xl: var(--r-xl);
+
+  --mantine-font-family: var(--font-sans);
+  --mantine-font-family-monospace: var(--font-mono);
+
+  /* teal（= primary brand） */
+  --mantine-color-teal-0: var(--teal-a10);
+  --mantine-color-teal-5: var(--teal-400);
+  --mantine-color-teal-6: var(--teal-500);
+  --mantine-color-teal-7: var(--teal-700);
+  --mantine-color-teal-8: var(--teal-800);
+  --mantine-color-teal-filled: var(--teal-500);
+  --mantine-color-teal-filled-hover: var(--teal-600);
+  --mantine-color-teal-light: var(--teal-a10);
+  --mantine-color-teal-light-color: var(--teal-700);
+
+  /* yellow → review */
+  --mantine-color-yellow-0: var(--warn-bg);
+  --mantine-color-yellow-6: var(--warn-500);
+  --mantine-color-yellow-light: var(--warn-bg);
+  --mantine-color-yellow-light-color: var(--warn-fg);
+
+  /* red → danger（テラコッタ） */
+  --mantine-color-red-0: var(--danger-bg);
+  --mantine-color-red-6: var(--danger-500);
+  --mantine-color-red-filled: var(--danger-500);
+  --mantine-color-red-light: var(--danger-bg);
+  --mantine-color-red-light-color: var(--danger-fg);
+
+  /* gray → neutral */
+  --mantine-color-gray-0: var(--n-50);
+  --mantine-color-gray-1: var(--n-100);
+  --mantine-color-gray-2: var(--n-200);
+  --mantine-color-gray-3: var(--n-300);
+  --mantine-color-gray-5: var(--fg-faint);
+  --mantine-color-gray-6: var(--fg-mute);
+  --mantine-color-gray-7: var(--fg-body);
+  --mantine-color-gray-9: var(--fg-strong);
+
+  --mantine-color-dark-7: var(--fg-strong);
+  --mantine-color-dark-8: #0F0F16;
+}
+
+/* === Component overrides === */
+.mantine-Button-root[data-variant="filled"],
+.mantine-Button-root[data-variant="light"],
+.mantine-Button-root[data-variant="default"] { border-radius: var(--r-pill); }
+.mantine-Button-root[data-variant="default"] { border-color: var(--border); }
+
+.mantine-TextInput-input,
+.mantine-PasswordInput-input {
+  border-radius: var(--r-sm);
+  border-color: var(--border);
+  background: var(--surface);
+}
+.mantine-TextInput-input:focus,
+.mantine-PasswordInput-input:focus { border-color: var(--teal-500); }
+.mantine-InputWrapper-label {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  color: var(--text-dim);
+  letter-spacing: 0.02em;
+}
+.mantine-Alert-root  { border-radius: var(--r-md); }
+.mantine-Modal-content { border-radius: var(--dialog-radius); }
+
+/*
+ * ============================================================
+ *  適用手順（採用が決まったら）
+ * ============================================================
+ *  1. Open Runde を app/public/fonts/ に複製し、globals.css に @font-face を追加
+ *     （元: company-site/fonts/OpenRunde-{Regular,Medium,Semibold}.woff2）
+ *  2. 本ファイルの :root 群で app/src/app/design-tokens.css を置換
+ *  3. theme.ts: primaryColor "brand"(navy) → "teal"、colors.brand を teal スケールに、
+ *     accent(orange) を削除、headings.fontWeight 800 → 600
+ *  4. カテゴリ別 tint を参照している箇所を --thumb-primary-* / --thumb-neutral-* の2系統へ
+ *     （種別はアイコンで表現。色面での区別をやめる）
+ *  5. scan / ticket 系コンポーネントにのみ --paper-* / --stamp / --font-mono を適用
+ *  6. 旧 ink-navy ヘッダー/タブバーを white + teal-active に。themeColor を #069494 系に
+ * ============================================================
+ */

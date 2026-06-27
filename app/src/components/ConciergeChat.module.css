@@ -189,7 +189,7 @@
   height: 40px;
   border-radius: 2px;
   border: none;
-  background: var(--ink-800);
+  background: var(--primary);
   color: #fff;
   display: flex;
   align-items: center;

@@ -419,11 +419,11 @@ export default function NewTripPage() {
                       fontSize: 12,
                       fontWeight: 700,
                       borderRadius: 999,
-                      background: selected ? "var(--ink-800)" : "#fff",
-                      color: selected ? "#fff" : "var(--ink-800)",
+                      background: selected ? "var(--primary)" : "#fff",
+                      color: selected ? "#fff" : "var(--fg)",
                       border: selected
-                        ? "1px solid var(--ink-800)"
-                        : "1px solid var(--accent-100, #FFDBCF)",
+                        ? "1px solid var(--primary)"
+                        : "1px solid var(--line)",
                       cursor: "pointer",
                       fontFamily: "inherit",
                     }}

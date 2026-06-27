@@ -18,7 +18,7 @@
   position: relative;
   padding: 20px 22px 22px;
   color: #fff;
-  background: linear-gradient(135deg, #14253B 0%, #0F1B2D 55%, #1E3456 100%);
+  background: var(--hero-gradient);
 }
 .ticket-hero-top {
   display: flex; align-items: center; justify-content: space-between;
@@ -225,11 +225,11 @@
 }
 
 /* ---------- Category tints ---------- */
-.ticket--train .ticket-hero { background: linear-gradient(135deg,#13332A 0%,#0F2A23 55%,#1A4D3F 100%); }
-.ticket--lodge .ticket-hero { background: linear-gradient(135deg,#32230F 0%,#241808 55%,#4D371A 100%); }
-.ticket--sight .ticket-hero { background: linear-gradient(135deg,#231332 0%,#180824 55%,#3F1A4D 100%); }
-.ticket--bus   .ticket-hero { background: linear-gradient(135deg,#13293A 0%,#0A1929 55%,#1B3E5D 100%); }
-.ticket--hospital .ticket-hero { background: linear-gradient(135deg,#1E2B3A 0%,#131F2E 55%,#35495E 100%); }
+.ticket--train .ticket-hero { background: var(--hero-gradient); }
+.ticket--lodge .ticket-hero { background: var(--hero-gradient); }
+.ticket--sight .ticket-hero { background: var(--hero-gradient); }
+.ticket--bus   .ticket-hero { background: var(--hero-gradient); }
+.ticket--hospital .ticket-hero { background: var(--hero-gradient); }
 .ticket--meet  { border-left: 3px solid var(--info-500); }
 .ticket--dine  { border-left: 3px solid var(--accent-500); }
 

@@ -9,7 +9,7 @@ import { LoadingOverlay, useNavigateWithLoading } from "@/components/LoadingOver
  *   Type B (Page):    back=true。 スタック下階層で使用。
  *   Type B' (Save):   action に Accent Pill ボタンを注入、left=✕（キャンセル）想定。
  *
- * background: var(--ink-800), 白文字, 戻るボタン + タイトル + 右アクション の 3 スロット。
+ * Daylight: 白背景(--surface) + 暗文字(--fg) + 下ヘアライン罫。3 スロット(戻る/タイトル/右アクション)。
  * body max-width (430px) を越えて、広い画面でも横幅を viewport 全域に展開する。
  */
 
@@ -29,8 +29,10 @@ export function AppHeader({ title, back, backHref, action }: Props) {
       {navigating && <LoadingOverlay message="読み込み中..." />}
       <div
         style={{
-          background: "var(--ink-800)",
-          color: "#fff",
+          background: "var(--surface)",
+          color: "var(--fg)",
+          borderBottom: "1px solid var(--line)",
+          boxShadow: "var(--sh-xs)",
           position: "sticky",
           top: 0,
           zIndex: 100,
@@ -60,7 +62,7 @@ export function AppHeader({ title, back, backHref, action }: Props) {
                 border: "none",
                 padding: 0,
                 margin: 0,
-                color: "#fff",
+                color: "var(--fg)",
                 cursor: "pointer",
                 width: 36,
                 height: 36,
@@ -77,8 +79,8 @@ export function AppHeader({ title, back, backHref, action }: Props) {
             onClick={back ? handleBack : undefined}
             style={{
               fontSize: "var(--fs-lg)",
-              fontWeight: 700,
-              color: "#fff",
+              fontWeight: 600,
+              color: "var(--fg)",
               lineHeight: 1.2,
               cursor: back ? "pointer" : "default",
               whiteSpace: "nowrap",
@@ -90,7 +92,7 @@ export function AppHeader({ title, back, backHref, action }: Props) {
           </div>
         </div>
         {action && (
-          <div style={{ color: "rgba(255,255,255,0.85)", flexShrink: 0 }}>
+          <div style={{ color: "var(--fg)", flexShrink: 0 }}>
             {action}
           </div>
         )}

@@ -1,0 +1,10 @@
+# Capacitor / native shell — not part of the Vercel (Next.js) build
+ios/
+www/
+capacitor.config.ts
+capacitor.config.json
+
+# local build artifacts
+build/
+.next/
+supabase/.temp/

@@ -4,12 +4,25 @@ import { NextResponse, type NextRequest } from "next/server";
 /**
  * Generate a per-request CSP nonce and the full CSP header value.
  *
- *   - script-src uses 'nonce-xxx' + 'strict-dynamic'. Next.js automatically
- *     applies the nonce to its bootstrap/hydration scripts when it's pulled
- *     from the x-nonce request header (set below).
- *   - style-src keeps 'unsafe-inline' because Mantine v7 injects SSR styles
- *     as inline <style> tags. A separate migration path is needed to
- *     nonce/hash those (tracked as follow-up).
+ *   - script-src uses 'nonce-xxx' + 'strict-dynamic'. Next.js stamps its
+ *     bootstrap/hydration scripts (and preload <link>s) with the nonce it
+ *     parses out of the *request* Content-Security-Policy header — see
+ *     getScriptNonceFromHeader() in next/dist/server/app-render. It does NOT
+ *     read 'x-nonce'. We set the same nonce on the request CSP header
+ *     (consumed by the renderer) and the response CSP header (sent to the
+ *     browser), so the two are identical by construction. The force-dynamic
+ *     in app/layout.tsx keeps every route rendered at request time, so the
+ *     live request header is always present — a statically prerendered page
+ *     would instead carry a build-time nonce that no longer matches the fresh
+ *     per-request response header.
+ *   - style-src keeps 'unsafe-inline'. Mantine v9 has no emotion/CSS-in-JS
+ *     runtime — it ships a static styles.css loaded via <link> (covered by
+ *     'self'). But MantineProvider still injects un-nonced
+ *     <style data-mantine-styles> blocks (theme CSS variables + classes) at
+ *     runtime, and Mantine components emit pervasive inline style="" attrs
+ *     (CSS variables, style props). Inline style *attributes* cannot be
+ *     nonced or hashed under CSP, so 'unsafe-inline' is unavoidable here
+ *     regardless of whether the <style> blocks themselves were nonced.
  *   - dev mode re-enables 'unsafe-eval' to let Next HMR work.
  */
 function buildCsp(nonce: string): string {
@@ -17,7 +30,7 @@ function buildCsp(nonce: string): string {
   const scriptSrc = isProd
     ? `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`
     : `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'unsafe-eval'`;
-  return [
+  const directives = [
     "default-src 'self'",
     scriptSrc,
     "style-src 'self' 'unsafe-inline'",
@@ -29,8 +42,13 @@ function buildCsp(nonce: string): string {
     "base-uri 'self'",
     "form-action 'self'",
     "object-src 'none'",
-    "upgrade-insecure-requests",
-  ].join("; ");
+  ];
+  // Only upgrade subresource requests to https in production. In local dev the
+  // app is served over plain http (including to the Capacitor WebView on a LAN
+  // IP), where upgrading the same-origin CSS/asset <link>s to https points them
+  // at a non-existent TLS listener and silently breaks styling.
+  if (isProd) directives.push("upgrade-insecure-requests");
+  return directives.join("; ");
 }
 
 function generateNonce(): string {
@@ -76,9 +94,17 @@ function withSecHeaders(res: NextResponse, csp: string): NextResponse {
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Per-request CSP nonce. Forward it to the app via a request header so
-  // the root layout can pick it up (`headers().get('x-nonce')`) and Next.js
-  // automatically tags its own bootstrap scripts with it.
+  // Per-request CSP nonce.
+  //
+  // Next.js stamps its own bootstrap/hydration scripts (and preload <link>s)
+  // with the nonce it parses from the *request* Content-Security-Policy header
+  // set just below — not from x-nonce. Setting that request header is
+  // load-bearing: drop it and the scripts render without a nonce, which under
+  // 'strict-dynamic' means every script is blocked.
+  //
+  // x-nonce is exposed only so first-party inline <script>/<style> in app code
+  // can read the same nonce via headers().get('x-nonce'). Nothing reads it
+  // today; it's kept as the conventional Next.js hook for when something does.
   const nonce = generateNonce();
   const csp = buildCsp(nonce);
   const requestHeaders = new Headers(request.headers);

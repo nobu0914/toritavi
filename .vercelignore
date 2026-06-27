@@ -1,0 +1,11 @@
+# Vercel builds only the Next.js app (Root Directory = app).
+# Exclude everything not needed by that build to keep the upload small.
+/mock
+/test-data
+/supabase_migrations
+/*.md
+# native shell + local build artifacts under app/
+/app/ios
+/app/build
+/app/www
+/app/.next

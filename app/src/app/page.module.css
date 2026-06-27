@@ -283,7 +283,7 @@
 }
 
 .journeyCover[data-variant="dark"] {
-  background: linear-gradient(135deg, var(--ink-700) 0%, var(--ink-900) 100%);
+  background: var(--hero-gradient);
 }
 
 .journeyCover[data-variant="muted"] {
@@ -460,7 +460,7 @@
   margin-top: 16px;
   padding: 10px 20px;
   border-radius: var(--r-pill);
-  background: var(--ink-800);
+  background: var(--primary);
   color: white;
   font-size: var(--fs-sm);
   font-weight: var(--fw-bold);
