@@ -110,7 +110,7 @@ export function StepDetailDrawer({
 
   const handleShare = async () => {
     const text = buildShareText();
-    const title = draft.title || "toritavi 予定";
+    const title = draft.title || "Curlew 予定";
     type NavShare = { share: (d: { title?: string; text?: string }) => Promise<void> };
     const nav = typeof navigator !== "undefined" ? (navigator as Navigator & Partial<NavShare>) : undefined;
     if (nav?.share) {
@@ -155,14 +155,14 @@ export function StepDetailDrawer({
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${draft.title || "toritavi"}.ics`;
+    a.download = `${draft.title || "Curlew"}.ics`;
     a.click();
     URL.revokeObjectURL(url);
   };
 
   const downloadImage = async (url: string, index: number) => {
     try {
-      const safeTitle = (draft.title || "toritavi").replace(/[/\\?%*:|"<>]/g, "_");
+      const safeTitle = (draft.title || "Curlew").replace(/[/\\?%*:|"<>]/g, "_");
       const ext = url.match(/\.(png|jpe?g|webp|gif)/i)?.[1] ?? "jpg";
       const a = document.createElement("a");
       a.href = url;

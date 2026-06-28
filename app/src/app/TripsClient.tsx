@@ -169,7 +169,7 @@ export default function TripsClient({ journeys: initialJourneys }: { journeys: J
 
   return (
     <>
-      <AppHeader title="toritavi" />
+      <AppHeader title="Curlew" />
       <Box className={classes.screen} pb={110}>
         <Box className={classes.searchBar}>
           <IconSearch size={18} className={classes.searchIcon} />

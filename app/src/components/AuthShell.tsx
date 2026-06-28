@@ -38,7 +38,7 @@ export function AuthShell({
             lineHeight: 1.1,
           }}
         >
-          toritavi
+          Curlew
         </div>
         <div
           style={{

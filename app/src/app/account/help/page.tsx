@@ -64,7 +64,7 @@ const FAQS: FaqItem[] = [
     icon: IconBell,
     body:
       "通知が届かない場合は以下を確認してください:\n\n" +
-      "・端末のシステム設定で toritavi の通知が許可されているか\n" +
+      "・端末のシステム設定で Curlew の通知が許可されているか\n" +
       "・アプリ内「通知設定」で受け取りたい通知がオンか\n" +
       "・機内モードや集中モードが有効になっていないか\n\n" +
       "ブラウザ版（Web）ではプッシュ通知は現時点で未対応です。",
@@ -190,12 +190,12 @@ export default function HelpPage() {
           <Row
             icon={<IconFileDescription size={18} color="var(--text-dim)" />}
             label="利用規約"
-            href="/terms"
+            href="https://coyoteandpowell.com/curlew/terms/"
           />
           <Row
             icon={<IconLock size={18} color="var(--text-dim)" />}
             label="プライバシーポリシー"
-            href="/privacy"
+            href="https://coyoteandpowell.com/curlew/privacy/"
             last
           />
         </Card>
@@ -207,7 +207,7 @@ export default function HelpPage() {
           ta="center"
           style={{ padding: "24px 16px 8px", lineHeight: 1.6 }}
         >
-          toritavi v1.0.0 · 最終更新 2026-04-20
+          Curlew v1.0.0 · 最終更新 2026-04-20
         </Text>
       </Box>
 

@@ -95,7 +95,7 @@ export default function AccountDataPage() {
       const a = document.createElement("a");
       a.href = url;
       const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
-      a.download = `toritavi-export-${stamp}.json`;
+      a.download = `curlew-export-${stamp}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
