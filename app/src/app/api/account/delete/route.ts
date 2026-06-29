@@ -1,28 +1,41 @@
-import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase-server";
+import { NextRequest, NextResponse } from "next/server";
+import { authenticateRequest } from "@/lib/supabase-server";
 import { createServiceClient } from "@/lib/supabase-service";
 
 /**
  * POST /api/account/delete
  *
- * Self-service account deletion. Authenticates the caller via the
- * request's session cookie, then uses the service-role client to
- * delete the auth user. `ON DELETE CASCADE` on the tables
- * (toritavi_journeys / toritavi_steps / toritavi_user_settings) drops
- * the user's data in the same transaction.
+ * Self-service account deletion. Authenticates the caller via either the
+ * browser session cookie (web) or a Bearer JWT (mobile app) using
+ * `authenticateRequest`, then uses the service-role client to delete the
+ * auth user. `ON DELETE CASCADE` on the tables
+ * (toritavi_journeys / toritavi_steps / toritavi_user_settings) drops the
+ * user's data in the same transaction.
  *
  * Note: the Storage bucket `toritavi-avatars` is not cascaded — any
  * avatar object is removed explicitly before the user row goes away.
- * If that removal fails we still proceed with user deletion so the
- * user is never left in a half-deleted state (orphan avatar objects
- * are cleaned up by a periodic janitor elsewhere).
+ * If that removal fails we still proceed with user deletion so the user
+ * is never left in a half-deleted state.
  */
-export async function POST() {
-  const sb = await createClient();
-  const { data: { user } } = await sb.auth.getUser();
-  if (!user) {
+const ALLOWED_ORIGINS = new Set([
+  "https://toritavi.com",
+  "https://app-lime-seven-80.vercel.app",
+  "http://localhost:3000",
+]);
+
+export async function POST(request: NextRequest) {
+  // Reject cross-site browser callers. Origin is absent on native (mobile)
+  // requests, so skip the check when it is not present.
+  const origin = request.headers.get("origin");
+  if (origin && !ALLOWED_ORIGINS.has(origin)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const auth = await authenticateRequest(request);
+  if (!auth) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const { sb, userId } = auth;
 
   let admin;
   try {
@@ -39,20 +52,19 @@ export async function POST() {
   try {
     await admin.storage
       .from("toritavi-avatars")
-      .remove([`${user.id}/avatar.jpg`, `${user.id}/avatar.png`, `${user.id}/avatar.webp`]);
+      .remove([`${userId}/avatar.jpg`, `${userId}/avatar.png`, `${userId}/avatar.webp`]);
   } catch (e) {
     console.warn("[account/delete] avatar cleanup failed (continuing)", e);
   }
 
-  const { error } = await admin.auth.admin.deleteUser(user.id);
+  const { error } = await admin.auth.admin.deleteUser(userId);
   if (error) {
     console.error("[account/delete] deleteUser failed", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Best-effort: invalidate the caller's session cookies so the browser
-  // doesn't keep stale credentials around after the server-side user
-  // record has been removed.
+  // Best-effort: clear the caller's cookie session (web). Mobile clients
+  // sign out locally after a successful response.
   try {
     await sb.auth.signOut();
   } catch {
