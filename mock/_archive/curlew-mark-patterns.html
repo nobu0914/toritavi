@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Curlew — ロゴマーク候補（Space Grotesk に合わせる）</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Noto+Sans+JP:wght@500&display=swap');
+:root{--bg:#F4F8FE;--surface:#fff;--ink:#0E1F33;--muted:#5B7088;--line:rgba(14,31,51,.08);--brand:#1184C7;--deep:#0C6296;--azure:#54C5F8}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#fff,var(--bg));color:var(--ink);font-family:"Noto Sans JP",system-ui,sans-serif;padding:32px}
+main{max-width:1180px;margin:0 auto}
+h1{font-size:26px;margin:0 0 6px;letter-spacing:-.3px}
+.sub{color:var(--muted);font-size:14px;line-height:1.7;margin:0 0 24px}
+.sub b{font-family:"Space Grotesk",sans-serif}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:760px){.grid{grid-template-columns:1fr}}
+.card{border:1px solid var(--line);background:var(--surface);border-radius:14px;padding:20px 22px;box-shadow:0 2px 8px rgba(14,31,51,.05)}
+.top{display:flex;align-items:center;gap:26px;min-height:96px}
+.standalone{width:78px;height:78px;flex:none;display:block}
+.lockup{display:flex;align-items:center;gap:14px}
+.lockup svg{width:46px;height:46px;display:block}
+.word{font-family:"Space Grotesk",sans-serif;font-weight:600;letter-spacing:-.02em;font-size:38px;color:var(--deep);line-height:1}
+.word .ac{color:var(--azure)}
+.meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.num{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#fff;background:var(--deep);padding:2px 7px;border-radius:6px;font-weight:700}
+.meta b{font-size:14px}
+.vibe{flex-basis:100%;font-size:12px;color:var(--muted);margin-top:2px}
+.darkbar{margin-top:14px;background:var(--ink);border-radius:10px;padding:14px 16px;display:flex;align-items:center;gap:12px}
+.darkbar svg{width:34px;height:34px}
+.darkbar .word{font-size:26px;color:#fff}
+footer{color:#90A3B8;font-size:12px;text-align:center;border-top:1px solid var(--line);padding-top:16px;margin-top:24px;font-family:ui-monospace,Menlo,monospace}
+</style>
+</head>
+<body>
+<!-- mark symbols -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+
+  <!-- M1: C monogram（幾何・フラット終端） -->
+  <symbol id="m1" viewBox="0 0 120 120">
+    <path d="M96.8 44.4 A40 40 0 1 0 96.8 75.6" fill="none" stroke="#1184C7" stroke-width="15" stroke-linecap="butt"/>
+  </symbol>
+
+  <!-- M2: C + ルートドット -->
+  <symbol id="m2" viewBox="0 0 120 120">
+    <path d="M96.8 44.4 A40 40 0 1 0 96.8 75.6" fill="none" stroke="#1184C7" stroke-width="15" stroke-linecap="butt"/>
+    <circle cx="96.8" cy="44.4" r="5.5" fill="#1184C7"/>
+    <circle cx="96.8" cy="75.6" r="10" fill="#54C5F8"/>
+  </symbol>
+
+  <!-- M3: カーリュー（鳥・ミニマル） -->
+  <symbol id="m3" viewBox="0 0 120 120">
+    <ellipse cx="50" cy="58" rx="25" ry="18" fill="#1184C7"/>
+    <path d="M68 50 Q77 38 84 41" fill="none" stroke="#1184C7" stroke-width="11" stroke-linecap="round"/>
+    <circle cx="86" cy="40" r="9" fill="#1184C7"/>
+    <path d="M93 42 Q107 49 103 74" fill="none" stroke="#1184C7" stroke-width="5" stroke-linecap="round"/>
+    <path d="M44 74 L40 96 M56 74 L60 96" stroke="#1184C7" stroke-width="4.5" stroke-linecap="round"/>
+    <circle cx="88" cy="39" r="2.2" fill="#fff"/>
+  </symbol>
+
+  <!-- M4: ビル・スウッシュ（抽象） -->
+  <symbol id="m4" viewBox="0 0 120 120">
+    <path d="M52 44 Q96 50 80 100" fill="none" stroke="#1184C7" stroke-width="13" stroke-linecap="round"/>
+    <circle cx="42" cy="40" r="14" fill="#1184C7"/>
+    <circle cx="46" cy="37" r="3.6" fill="#54C5F8"/>
+  </symbol>
+
+  <!-- M5: 鳥 in サークル（バッジ） -->
+  <symbol id="m5" viewBox="0 0 120 120">
+    <circle cx="60" cy="60" r="50" fill="#1184C7"/>
+    <path d="M34 64 Q52 42 60 62 Q68 42 86 64" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round"/>
+    <circle cx="60" cy="80" r="4" fill="#54C5F8"/>
+  </symbol>
+
+  <!-- M6: ジオメトリック・フライウェイ（角ノード） -->
+  <symbol id="m6" viewBox="0 0 120 120">
+    <path d="M26 92 L54 62 L74 74 L98 34" fill="none" stroke="#1184C7" stroke-width="13" stroke-linejoin="miter" stroke-linecap="butt"/>
+    <rect x="20" y="86" width="12" height="12" fill="#1184C7"/>
+    <rect x="91" y="27" width="14" height="14" fill="#54C5F8"/>
+  </symbol>
+
+  <!-- M7: モノライン・バード（一筆） -->
+  <symbol id="m7" viewBox="0 0 120 120">
+    <path d="M24 72 Q46 38 60 66 Q74 38 96 72" fill="none" stroke="#1184C7" stroke-width="13" stroke-linecap="round"/>
+    <circle cx="60" cy="40" r="5.5" fill="#54C5F8"/>
+  </symbol>
+
+</defs></svg>
+
+<main>
+<h1>Curlew — ロゴマーク候補</h1>
+<p class="sub">フォントは <b>Space Grotesk 600</b> 固定。それに合う<strong>幾何／角系のマーク</strong>を7案。各案を「Curlew」と並べて、白地＋濃色地で表示。気に入った番号を教えてください（複数可）。配色は brand <code>#1184C7</code>＋azure <code>#54C5F8</code>。</p>
+
+<div class="grid">
+
+  <div class="card">
+    <div class="top">
+      <svg class="standalone"><use href="#m1"/></svg>
+      <div class="lockup"><svg><use href="#m1"/></svg><span class="word">Curle<span class="ac">w</span></span></div>
+    </div>
+    <div class="darkbar"><svg><use href="#m1"/></svg><span class="word">Curle<span class="ac">w</span></span></div>
+    <div class="meta"><span class="num">01</span><b>C モノグラム</b><div class="vibe">頭文字 C・フラット終端で Space Grotesk と同じ「幾何＋カット」。最も汎用・堅実。</div></div>
+  </div>
+
+  <div class="card">
+    <div class="top">
+      <svg class="standalone"><use href="#m2"/></svg>
+      <div class="lockup"><svg><use href="#m2"/></svg><span class="word">Curle<span class="ac">w</span></span></div>
+    </div>
+    <div class="darkbar"><svg><use href="#m2"/></svg><span class="word">Curle<span class="ac">w</span></span></div>
+    <div class="meta"><span class="num">02</span><b>C ＋ ルートドット</b><div class="vibe">C の終端に azure の「到着点」。頭文字＋旅程（スキャン→積む）を内包。</div></div>
+  </div>
+
+  <div class="card">
+    <div class="top">
+      <svg class="standalone"><use href="#m3"/></svg>
+      <div class="lockup"><svg><use href="#m3"/></svg><span class="word">Curle<span class="ac">w</span></span></div>
+    </div>
+    <div class="darkbar"><svg><use href="#m3"/></svg><span class="word">Curle<span class="ac">w</span></span></div>
+    <div class="meta"><span class="num">03</span><b>カーリュー（鳥）</b><div class="vibe">名前そのもの＝長い湾曲した嘴の旅鳥。最も意味が直結・差別化。</div></div>
+  </div>
+
+  <div class="card">
+    <div class="top">
+      <svg class="standalone"><use href="#m4"/></svg>
+      <div class="lockup"><svg><use href="#m4"/></svg><span class="word">Curle<span class="ac">w</span></span></div>
+    </div>
+    <div class="darkbar"><svg><use href="#m4"/></svg><span class="word">Curle<span class="ac">w</span></span></div>
+    <div class="meta"><span class="num">04</span><b>ビル・スウッシュ（抽象）</b><div class="vibe">嘴＝飛翔の曲線を最小化。頭＋ロングカーブ。スマートで余白が効く。</div></div>
+  </div>
+
+  <div class="card">
+    <div class="top">
+      <svg class="standalone"><use href="#m5"/></svg>
+      <div class="lockup"><svg><use href="#m5"/></svg><span class="word">Curle<span class="ac">w</span></span></div>
+    </div>
+    <div class="darkbar"><svg><use href="#m5"/></svg><span class="word">Curle<span class="ac">w</span></span></div>
+    <div class="meta"><span class="num">05</span><b>鳥 in サークル（バッジ）</b><div class="vibe">塗り円＋白の鳥。塊感がありアプリアイコンに最適。視認性◎。</div></div>
+  </div>
+
+  <div class="card">
+    <div class="top">
+      <svg class="standalone"><use href="#m6"/></svg>
+      <div class="lockup"><svg><use href="#m6"/></svg><span class="word">Curle<span class="ac">w</span></span></div>
+    </div>
+    <div class="darkbar"><svg><use href="#m6"/></svg><span class="word">Curle<span class="ac">w</span></span></div>
+    <div class="meta"><span class="num">06</span><b>ジオメトリック・フライウェイ</b><div class="vibe">角ノードの渡りルート。Space Grotesk の角・直線と最も同質。プロダクト直結（旅程）。</div></div>
+  </div>
+
+  <div class="card">
+    <div class="top">
+      <svg class="standalone"><use href="#m7"/></svg>
+      <div class="lockup"><svg><use href="#m7"/></svg><span class="word">Curle<span class="ac">w</span></span></div>
+    </div>
+    <div class="darkbar"><svg><use href="#m7"/></svg><span class="word">Curle<span class="ac">w</span></span></div>
+    <div class="meta"><span class="num">07</span><b>モノライン・バード</b><div class="vibe">一筆の鳥＋azure。シンプル・親しみ。ただし一般的になりやすい。</div></div>
+  </div>
+
+</div>
+<footer>Curlew mark patterns ／ 7案 ／ font=Space Grotesk 600 固定 ／ mock/curlew-mark-patterns.html</footer>
+</main>
+</body>
+</html>

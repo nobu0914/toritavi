@@ -1,0 +1,160 @@
+<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Curlew Brand Kit — App Icon 転用</title><style>
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap');
+:root{--b300:#54C5F8;--b400:#29B6F6;--b500:#1184C7;--b700:#0C6296;--b800:#02579A;--b900:#023964;
+--bg:#F4F8FE;--surface:#FFFFFF;--ink:#0E1F33;--muted:#5B7088;--faint:#90A3B8;--line:rgba(14,31,51,0.08);}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#FFFFFF 0%,var(--bg) 100%);color:var(--ink);font-family:"Noto Sans JP",-apple-system,system-ui,sans-serif;padding:32px}
+main{max-width:1180px;margin:0 auto}
+header{margin-bottom:30px}
+.kicker{font-family:"Plus Jakarta Sans",sans-serif;font-weight:700;letter-spacing:.18em;font-size:12px;color:var(--b600,#0E72AE);text-transform:uppercase}
+h1{margin:6px 0 10px;font-size:30px;letter-spacing:-.4px;font-weight:700}
+header p{margin:0;color:var(--muted);line-height:1.8;font-size:14px;max-width:840px}
+.note{background:#FFF7E8;border:1px solid #F2DDB0;border-radius:12px;padding:14px 18px;font-size:13px;color:#8A5A00;line-height:1.7;margin-bottom:26px}
+.section{margin-bottom:40px}
+.section-h{display:flex;align-items:baseline;justify-content:space-between;border-bottom:1px solid var(--line);padding-bottom:8px;margin-bottom:18px}
+.section-h h2{margin:0;font-size:16px}.section-h .meta{font-size:11px;color:var(--faint);text-transform:uppercase;letter-spacing:.6px;font-family:ui-monospace,Menlo,monospace}
+.grid{display:grid;gap:14px}.grid.c2{grid-template-columns:1fr 1fr}@media(max-width:580px){.grid.c2{grid-template-columns:1fr}}
+.panel{border:1px solid var(--line);background:var(--surface);border-radius:14px;padding:22px;box-shadow:0 2px 8px rgba(14,31,51,.05)}
+.panel.dark{background:var(--ink);color:#fff;border-color:rgba(255,255,255,.10)}.panel.bgc{background:var(--bg)}.panel.deep{background:var(--b900);color:#fff;border-color:transparent}
+.plabel{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;font-family:ui-monospace,Menlo,monospace;margin-bottom:16px}
+.panel.dark .plabel,.panel.deep .plabel{color:#9DB4CC}
+.cap{margin-top:14px;font-size:11.5px;color:var(--muted);line-height:1.6}.panel.dark .cap,.panel.deep .cap{color:#9DB4CC}
+.fname{display:inline-block;margin-top:10px;padding:3px 8px;background:rgba(14,31,51,.06);border-radius:5px;font-size:10.5px;font-family:ui-monospace,Menlo,monospace;color:var(--ink)}
+.panel.dark .fname,.panel.deep .fname{background:rgba(255,255,255,.12);color:#fff}
+.row{display:flex;align-items:center;justify-content:center;gap:24px;flex-wrap:wrap;min-height:150px}
+.mk{display:block}
+.wm{font-family:"Plus Jakarta Sans",sans-serif;font-weight:700;letter-spacing:-.025em;font-size:54px;line-height:1;display:inline-block}
+.wm-grad{background:linear-gradient(92deg,var(--b800),var(--b500) 60%,var(--b400));-webkit-background-clip:text;background-clip:text;color:transparent}
+.lockup{display:flex;align-items:center;gap:18px;justify-content:center;flex-wrap:wrap}
+.jp{font-family:"Noto Sans JP",sans-serif;font-weight:500;letter-spacing:.22em;color:var(--muted);font-size:13px}
+.airow{display:flex;align-items:center;justify-content:center;gap:30px;flex-wrap:wrap}
+.ai{display:block;background:#fff}
+.ai.huge{width:176px;height:176px;border-radius:39px}.ai.lg{width:120px;height:120px;border-radius:27px}.ai.md{width:84px;height:84px;border-radius:19px}.ai.sm{width:56px;height:56px;border-radius:13px}.ai.tiny{width:40px;height:40px;border-radius:9px}
+.maskrow{display:flex;align-items:center;justify-content:center;gap:30px;flex-wrap:wrap}.mcell{text-align:center}
+.mimg{width:132px;height:132px;display:block;background:#fff}.mimg.circle{border-radius:50%}.mimg.squircle{border-radius:30px}.mimg.square{border-radius:0}
+.mlabel{margin-top:6px;font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
+.favrow{display:flex;align-items:end;justify-content:center;gap:28px;flex-wrap:wrap}.favcell{text-align:center}.favlabel{margin-top:6px;font-size:10.5px;color:var(--muted);font-family:ui-monospace,Menlo,monospace}
+.swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:10px}
+.sw{border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface)}.sw-c{aspect-ratio:16/9}
+.sw-m{padding:8px 10px;font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--muted);border-top:1px solid var(--line)}.sw-m .n{color:var(--ink);font-weight:700;display:block;margin-bottom:2px;font-size:11.5px}
+.cs-stage{background:repeating-linear-gradient(0deg,rgba(17,132,199,.07) 0 1px,transparent 1px 24px),repeating-linear-gradient(90deg,rgba(17,132,199,.07) 0 1px,transparent 1px 24px);border:1px dashed rgba(17,132,199,.5);border-radius:10px;padding:34px;display:flex;align-items:center;justify-content:center}
+.cs-rule{font-size:12px;color:var(--muted);line-height:1.8}.cs-rule code,.cap code{background:rgba(14,31,51,.06);padding:1px 5px;border-radius:4px;font-size:11px;font-family:ui-monospace,Menlo,monospace}
+.splash-frame{width:210px;aspect-ratio:1170/2532;border-radius:28px;overflow:hidden;border:6px solid var(--ink);box-shadow:0 10px 28px rgba(14,31,51,.18);margin:0 auto;background:var(--b900);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px}
+.do2{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:720px){.do2{grid-template-columns:1fr}}
+.gcard{border-radius:12px;padding:16px;font-size:12.5px;line-height:1.7}
+.gdo{background:#E9F8F0;color:#147A52;border:1px solid #BFE6CF}.gdont{background:#FCEEEA;color:#B4432A;border:1px solid #F6CFC2}
+.gcard .gh{font-weight:700;margin-bottom:6px;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em}
+footer{color:var(--faint);font-size:12px;text-align:center;border-top:1px solid var(--line);padding-top:18px;margin-top:10px;font-family:ui-monospace,Menlo,monospace}
+</style></head><body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="appicon" viewBox="0 0 1024 1024"><image href="data:image/png;base64,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" width="1024" height="1024"/></symbol>
+</defs></svg>
+<main>
+<header>
+  <div class="kicker">Curlew Brand Kit</div>
+  <h1>App Icon 転用 — Mark / Logotype</h1>
+  <p>現在アプリアイコンに設定されているマーク（<code style="font-family:ui-monospace,Menlo,monospace">Icon-App-1024x1024@1x.png</code> の実ファイル）を<strong>そのまま転用</strong>。
+  Latin ワードマークは新名称 <strong>Curlew</strong>。配色はこのマーク由来の Blue Daylight ランプ。</p>
+</header>
+<div class="note">⚠️ この現行アイコンは <strong>Flutter フレームワークの既定ロゴ</strong>（未差し替えのプレースホルダ）です。実ファイルをそのまま転用していますが、<strong>公開前には独自マークへの差し替えを推奨</strong>（第三者ロゴのため商標上の配慮が必要）。</div>
+
+<section class="section"><div class="section-h"><h2>Color tokens</h2><span class="meta">icon-derived blue</span></div>
+<div class="swatches">
+  <div class="sw"><div class="sw-c" style="background:#54C5F8"></div><div class="sw-m"><span class="n">azure 300</span>#54C5F8</div></div>
+  <div class="sw"><div class="sw-c" style="background:#29B6F6"></div><div class="sw-m"><span class="n">sky 400</span>#29B6F6</div></div>
+  <div class="sw"><div class="sw-c" style="background:#1184C7"></div><div class="sw-m"><span class="n">brand 500</span>#1184C7</div></div>
+  <div class="sw"><div class="sw-c" style="background:#0C6296"></div><div class="sw-m"><span class="n">blue 700</span>#0C6296</div></div>
+  <div class="sw"><div class="sw-c" style="background:#02579A"></div><div class="sw-m"><span class="n">deep 800</span>#02579A</div></div>
+  <div class="sw"><div class="sw-c" style="background:#023964"></div><div class="sw-m"><span class="n">navy 900</span>#023964</div></div>
+  <div class="sw"><div class="sw-c" style="background:#FFFFFF;border-bottom:1px solid var(--line)"></div><div class="sw-m"><span class="n">surface</span>#FFFFFF</div></div>
+  <div class="sw"><div class="sw-c" style="background:#0E1F33"></div><div class="sw-m"><span class="n">ink</span>#0E1F33</div></div>
+</div></section>
+
+<section class="section"><div class="section-h"><h2>1. Mark / Symbol</h2><span class="meta">1024 × 1024 · そのまま転用</span></div>
+<div class="grid c2">
+  <div class="panel"><div class="plabel">Primary（現行アイコン）</div>
+    <div class="row"><svg class="mk " style="width:128px;height:128px" viewBox="0 0 1024 1024"><use href="#appicon"/></svg><svg class="mk " style="width:64px;height:64px" viewBox="0 0 1024 1024"><use href="#appicon"/></svg><svg class="mk " style="width:36px;height:36px" viewBox="0 0 1024 1024"><use href="#appicon"/></svg></div>
+    <div class="fname">curlew-mark.png（現 Icon-App-1024.png）</div>
+    <div class="cap">現在のアプリアイコンの実ファイルを無加工で使用。</div>
+  </div>
+  <div class="panel bgc"><div class="plabel">On tint / deep</div>
+    <div class="row"><svg class="mk ai sm" style="" viewBox="0 0 1024 1024"><use href="#appicon"/></svg><svg class="mk ai md" style="" viewBox="0 0 1024 1024"><use href="#appicon"/></svg><span style="display:inline-block;padding:14px;background:var(--b900);border-radius:18px"><svg class="mk " style="width:72px;height:72px;border-radius:14px" viewBox="0 0 1024 1024"><use href="#appicon"/></svg></span></div>
+    <div class="fname">背景別の見え方</div>
+    <div class="cap">白地アイコンのため、濃色地では角丸タイルとして配置すると収まりが良い。</div>
+  </div>
+</div></section>
+
+<section class="section"><div class="section-h"><h2>2. Logotype（Curlew）</h2><span class="meta">Plus Jakarta Sans 700</span></div>
+<div class="grid c2">
+  <div class="panel"><div class="plabel">Primary · Light</div><div class="row"><span class="wm wm-grad">Curlew</span></div></div>
+  <div class="panel dark"><div class="plabel">Reversed · Dark</div><div class="row"><span class="wm" style="color:#fff">Curle<span style="color:#54C5F8">w</span></span></div></div>
+  <div class="panel bgc"><div class="plabel">Mono · Ink</div><div class="row"><span class="wm" style="color:#0E1F33">Curlew</span></div></div>
+  <div class="panel deep"><div class="plabel">Mono · White</div><div class="row"><span class="wm" style="color:#fff">Curlew</span></div></div>
+</div></section>
+
+<section class="section"><div class="section-h"><h2>2b. Lockup（Icon + Curlew）</h2><span class="meta">横組み一体型</span></div>
+<div class="grid c2">
+  <div class="panel"><div class="plabel">Primary · Light</div>
+    <div class="row"><div class="lockup"><svg class="mk " style="width:78px;height:78px;border-radius:17px" viewBox="0 0 1024 1024"><use href="#appicon"/></svg><div style="display:flex;flex-direction:column;align-items:flex-start;gap:3px"><span class="wm wm-grad" style="font-size:44px">Curlew</span><span class="jp">カーリュー</span></div></div></div>
+  </div>
+  <div class="panel deep"><div class="plabel">Reversed · Deep</div>
+    <div class="row"><div class="lockup"><svg class="mk " style="width:78px;height:78px;border-radius:17px" viewBox="0 0 1024 1024"><use href="#appicon"/></svg><div style="display:flex;flex-direction:column;align-items:flex-start;gap:3px"><span class="wm" style="font-size:44px;color:#fff">Curle<span style="color:#54C5F8">w</span></span><span class="jp" style="color:#7FB4DE">カーリュー</span></div></div></div>
+  </div>
+</div></section>
+
+<section class="section"><div class="section-h"><h2>Clearspace &amp; minimum size</h2><span class="meta">守備範囲</span></div>
+<div class="grid c2">
+  <div class="panel"><div class="plabel">Clearspace</div><div class="cs-stage"><svg class="mk " style="width:120px;height:120px;border-radius:26px" viewBox="0 0 1024 1024"><use href="#appicon"/></svg></div>
+    <div class="cs-rule" style="margin-top:14px">アイコン外周に最低 <code>x = 角丸半径</code> の余白。ロックアップはアイコン高 ÷ 2 を clearspace に。</div></div>
+  <div class="panel"><div class="plabel">Minimum size</div><div class="cs-rule" style="line-height:2.1">
+    <strong style="color:var(--ink)">Mark</strong> — デジタル <code>20 px</code> / 印刷 <code>7 mm</code><br>
+    <strong style="color:var(--ink)">Lockup (横)</strong> — デジタル <code>120 px</code> 幅 / 印刷 <code>32 mm</code><br>
+    <strong style="color:var(--ink)">Favicon</strong> — <code>16 px</code> でもシルエットで識別。</div></div>
+</div></section>
+
+<section class="section"><div class="section-h"><h2>3. App Icon</h2><span class="meta">1024 × 1024</span></div>
+<div class="grid c2">
+  <div class="panel"><div class="plabel">Primary（iOS · 角丸プレビュー）</div>
+    <div class="airow"><svg class="mk ai huge" style="" viewBox="0 0 1024 1024"><use href="#appicon"/></svg><svg class="mk ai lg" style="" viewBox="0 0 1024 1024"><use href="#appicon"/></svg><svg class="mk ai md" style="" viewBox="0 0 1024 1024"><use href="#appicon"/></svg><svg class="mk ai sm" style="" viewBox="0 0 1024 1024"><use href="#appicon"/></svg><svg class="mk ai tiny" style="" viewBox="0 0 1024 1024"><use href="#appicon"/></svg></div>
+    <div class="fname">curlew-app-icon.png</div>
+    <div class="cap">現行アイコンそのまま。iOS は実機側で squircle マスク。</div></div>
+  <div class="panel"><div class="plabel">Maskable（Android adaptive · PWA）</div>
+    <div class="maskrow">
+      <div class="mcell"><svg class="mk mimg circle" style="" viewBox="0 0 1024 1024"><use href="#appicon"/></svg><div class="mlabel">circle</div></div>
+      <div class="mcell"><svg class="mk mimg squircle" style="" viewBox="0 0 1024 1024"><use href="#appicon"/></svg><div class="mlabel">squircle</div></div>
+      <div class="mcell"><svg class="mk mimg square" style="" viewBox="0 0 1024 1024"><use href="#appicon"/></svg><div class="mlabel">square</div></div></div>
+    <div class="fname">curlew-app-icon-maskable.png</div>
+    <div class="cap">白地フルブリード。マークは中央 safe zone 内なので各マスクで切れない。</div></div>
+</div></section>
+
+<section class="section"><div class="section-h"><h2>4. Favicon</h2><span class="meta">16 / 24 / 32 / 48</span></div>
+<div class="panel"><div class="plabel">Native sizes</div>
+<div class="favrow">
+  <div class="favcell"><svg class="mk " style="width:48px;height:48px;border-radius:11px" viewBox="0 0 1024 1024"><use href="#appicon"/></svg><div class="favlabel">48</div></div>
+  <div class="favcell"><svg class="mk " style="width:32px;height:32px;border-radius:8px" viewBox="0 0 1024 1024"><use href="#appicon"/></svg><div class="favlabel">32</div></div>
+  <div class="favcell"><svg class="mk " style="width:24px;height:24px;border-radius:6px" viewBox="0 0 1024 1024"><use href="#appicon"/></svg><div class="favlabel">24</div></div>
+  <div class="favcell"><svg class="mk " style="width:16px;height:16px;border-radius:4px" viewBox="0 0 1024 1024"><use href="#appicon"/></svg><div class="favlabel">16</div></div></div>
+<div class="fname">curlew-favicon.png</div></section>
+
+<section class="section"><div class="section-h"><h2>5. Splash / OG</h2><span class="meta">launch & social</span></div>
+<div class="grid c2">
+  <div class="panel deep"><div class="plabel">Splash（1170×2532）</div>
+    <div class="splash-frame"><svg class="mk " style="width:120px;height:120px;border-radius:26px" viewBox="0 0 1024 1024"><use href="#appicon"/></svg><div class="wm" style="font-size:40px;color:#fff">Curle<span style="color:#54C5F8">w</span></div><div class="jp" style="color:#7FB4DE">スキャンして、旅程に積む。</div></div>
+    <div class="fname">curlew-splash.png</div></div>
+  <div class="panel deep"><div class="plabel">OG card（1200×630）</div>
+    <div style="background:var(--b900);border-radius:8px;aspect-ratio:1200/630;display:flex;align-items:center;gap:28px;padding:0 56px">
+      <svg class="mk " style="width:150px;height:150px;border-radius:33px" viewBox="0 0 1024 1024"><use href="#appicon"/></svg>
+      <div><div class="wm" style="font-size:64px;color:#fff">Curle<span style="color:#54C5F8">w</span></div><div class="jp" style="color:#9DC4E6;margin-top:8px">スキャンして、旅程に積む。</div></div>
+    </div>
+    <div class="fname">curlew-og-image.png</div></div>
+</div></section>
+
+<section class="section"><div class="section-h"><h2>Usage</h2><span class="meta">Do / Don't</span></div>
+<div class="do2">
+  <div class="gcard gdo"><div class="gh">✓ Do</div>・現行アイコンを無加工で使用<br>・濃色地では白角丸タイルとして配置<br>・Latin 併記は Curlew（Plus Jakarta Sans 700）</div>
+  <div class="gcard gdont"><div class="gh">✕ Don't</div>・マークの形・色を改変しない<br>・低コントラスト地に直置きしない<br>・公開ブランドとして長期運用しない（要・独自マーク）</div>
+</div></section>
+
+<footer>Curlew Brand Kit ／ 現行アプリアイコン転用（実ファイル内蔵）／ mock/curlew-logo-preview.html</footer>
+</main></body></html>
