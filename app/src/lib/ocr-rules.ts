@@ -19,7 +19,7 @@ export const DATE_RULES = {
     列車: "乗車日をdate。日をまたぐ夜行の場合はendDateに到着日を入れる",
     船: "乗船日をdate。夜行便で日をまたぐ場合はendDateに到着日を入れる",
     観光: "イベント開始日をdate。フェス等の複数日はendDateに最終日を入れる",
-    アポ: "受診日・開始日をdate。入院や複数日にまたがる場合はendDateに最終日を入れる",
+    アポ: "開始日をdate。複数日にまたがる場合はendDateに最終日を入れる",
   },
 
   // 相対日付の変換
@@ -234,13 +234,6 @@ export const CATEGORY_FIXED_FIELDS: Record<string, FixedFieldDef[]> = {
     { key: "guests", label: "人数", placeholder: "4名" },
     { key: "confNumber", label: "確認番号", placeholder: "RF-120456" },
   ],
-  病院: [
-    { key: "title", label: "施設名", placeholder: "田中内科クリニック" },
-    { key: "date", label: "受診日", placeholder: "2026-04-18" },
-    { key: "startTime", label: "予約時刻", placeholder: "10:30" },
-    { key: "department", label: "診療科", placeholder: "内科" },
-    { key: "confNumber", label: "診察券番号", placeholder: "58234" },
-  ],
   商談: [
     { key: "title", label: "タイトル", placeholder: "ABC社 商談" },
     { key: "date", label: "日付", placeholder: "2026-04-17" },
@@ -258,7 +251,7 @@ export const CATEGORY_FIXED_FIELDS: Record<string, FixedFieldDef[]> = {
     { key: "confNumber", label: "確認番号", placeholder: "TC-440291" },
   ],
   アポ: [
-    { key: "title", label: "タイトル", placeholder: "内科 受診" },
+    { key: "title", label: "タイトル", placeholder: "ABC社 打ち合わせ" },
     { key: "date", label: "日付", placeholder: "2026-04-17" },
     { key: "startTime", label: "開始時刻", placeholder: "14:00" },
     { key: "endTime", label: "終了時刻", placeholder: "15:00" },

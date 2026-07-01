@@ -8,7 +8,7 @@
  * Categories we know how to describe:
  *   - flight / train / bus  → "HND → FUK" (route)
  *   - lodging               → "○○ホテル" (facility)
- *   - medical / business    → "○○クリニック" or "商談: ○○"
+ *   - business              → "商談: ○○" (facility)
  *   - meal / sight / other  → "{title}"
  *
  * If no strong signal is found we fall back to a date-based label
@@ -78,7 +78,7 @@ export function buildTitleSuggestions(
   }
 
   // 3) Facility — the step's own title is often the best label for
-  //    lodging, medical, or meeting. Skip if it's the generic
+  //    lodging or meeting. Skip if it's the generic
   //    "フライト"-style category default.
   const cleaned = first.title?.trim();
   if (

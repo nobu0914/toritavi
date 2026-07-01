@@ -115,8 +115,8 @@ function detectCategory(text: string): StepCategory {
   if (/食べログ|tablecheck|ぐるなび|ホットペッパー|一休.?com|居酒屋|焼肉|焼鳥|鮨|寿司|割烹|料亭|京料理|懐石|ビストロ|トラットリア|オステリア|オーベルジュ|auberge|もつ鍋|鍋料理|しゃぶしゃぶ|すき焼き|ステーキ|串揚げ|レストラン|ダイニング|カフェ|cafe|coffee|コース料理|飲み放題|ドレスコード|dress\s?code|\bchef\b|tasting|食事処|食堂|シェフ|omakase|お任せコース|席種/i.test(t)) return "食事";
   // 3) バス — 号車/乗車券が列車と重なるため列車より先に。
   if (/高速バス|路線バス|シャトルバス|空港バス|送迎バス|夜行バス|リムジンバス|バス|\bbus\b|シャトル|shuttle/i.test(t)) return "バス";
-  // 4) アポ（病院＋商談＋ビジネスイベント）— "入場/パス" 等が観光と衝突するため観光より先に。
-  if (/病院|クリニック|医院|診療|診察|受診|外来|採血|血液検査|blood\s?test|hospital|clinic|内科|外科|歯科|眼科|皮膚科|整形外科|耳鼻|小児科|産婦人科|処方|会議|商談|打ち合わせ|打合せ|ミーティング|meeting|アポイント|会議室|訪問|取引先|来訪|カンファレンス|conference|セミナー|seminar|サミット|summit|フォーラム|forum|出展|見本市|研修|training|受講|登壇|入場証|入館証|名刺|business\s?card/i.test(t)) return "アポ";
+  // 4) アポ（会議・商談・ビジネスイベント。医療は対象外）— "入場/パス" 等が観光と衝突するため観光より先に。
+  if (/会議|商談|打ち合わせ|打合せ|ミーティング|meeting|アポイント|会議室|訪問|取引先|来訪|カンファレンス|conference|セミナー|seminar|サミット|summit|フォーラム|forum|出展|見本市|研修|training|受講|登壇|入場証|入館証|名刺|business\s?card/i.test(t)) return "アポ";
   // 5) 列車 — 予約番号 "JR-1234" を誤検出しないよう jr は数字直前を除外。
   if (/新幹線|のぞみ|ひかり|こだま|みずほ|さくら|はやぶさ|かがやき|つばさ|やまびこ|とき|あさま|ロマンスカー|特急|急行|号車|乗車券|きっぷ|jr[東西九北四]|jr(?![-\s]?\d)|私鉄|電鉄|列車|鉄道/i.test(t)) return "列車";
   // 6) 宿泊
@@ -165,7 +165,7 @@ const categoryFields: Record<string, FormField[]> = {
     { key: "confNumber", label: "確認番号", placeholder: "H-283901" },
   ],
   アポ: [
-    { key: "title", label: "タイトル", placeholder: "ABC社 打合せ / 内科 受診" },
+    { key: "title", label: "タイトル", placeholder: "ABC社 打合せ" },
     { key: "location", label: "場所", placeholder: "グランフロント大阪" },
     { key: "startTime", label: "開始時刻", placeholder: "14:00" },
     { key: "endTime", label: "終了時刻", placeholder: "15:00" },
@@ -266,10 +266,10 @@ function extractFields(text: string, category: StepCategory): Record<string, str
       break;
     }
     case "アポ": {
-      // 病院・商談を統合。施設名/会社名をタイトル、診療科/場所を場所に。
-      const name = allText.match(/([\u4e00-\u9faf]{2,10}(病院|クリニック|医院|診療所)|[^\s]{2,10}(株式会社|（株）|社))/);
+      // 会議・商談。会社名をタイトル、場所を場所に。※医療は対象外。
+      const name = allText.match(/([^\s]{2,10}(株式会社|（株）|社))/);
       if (name) values.title = name[0];
-      const loc = allText.match(/(内科|外科|眼科|歯科|皮膚科|整形外科|耳鼻科|小児科|産婦人科|[\u4e00-\u9faf]{2,6}(ビル|センター|ホール|会議室))/);
+      const loc = allText.match(/([\u4e00-\u9faf]{2,6}(ビル|センター|ホール|会議室))/);
       if (loc) values.location = loc[0];
       if (times[0]) values.startTime = times[0];
       if (times[1]) values.endTime = times[1];
@@ -1301,7 +1301,7 @@ export function ScanFlow({ chrome = "standalone", target, onComplete }: ScanFlow
               centered
             >
               <Text size="sm" style={{ lineHeight: 1.7 }}>
-                スキャンする書類（搭乗券・予約票・診察予約票など）には、氏名・連絡先のほか、診察・受診に関する情報（要配慮個人情報）が含まれることがあります。
+                スキャンする書類（搭乗券・予約票など）には、氏名・連絡先などの個人情報が含まれることがあります。
                 <br />
                 <br />
                 読み取りのため、画像と抽出した文字は、海外（米国）のAI事業者（Anthropic）へ送信して処理されます。

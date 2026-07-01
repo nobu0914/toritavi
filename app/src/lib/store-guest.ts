@@ -225,7 +225,7 @@ function seedSampleJourneys(): Journey[] {
     },
     {
       id: crypto.randomUUID(),
-      title: "通院予定",
+      title: "商談予定",
       startDate: today,
       endDate: today,
       createdAt: t1,
@@ -234,10 +234,10 @@ function seedSampleJourneys(): Journey[] {
         {
           id: crypto.randomUUID(),
           category: "アポ",
-          title: "◯◯内科クリニック",
+          title: "ABC商事 打ち合わせ",
           date: today,
           time: "10:30",
-          detail: "定期健診",
+          detail: "本社 会議室",
           status: "未開始",
           information: [],
         },
