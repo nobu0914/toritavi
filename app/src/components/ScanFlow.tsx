@@ -1,6 +1,6 @@
 "use client";
 
-import { Box, Text, Loader, TextInput, Checkbox, Textarea } from "@mantine/core";
+import { Box, Text, Loader, TextInput, Checkbox, Textarea, Modal, Button, Group, Anchor } from "@mantine/core";
 import {
   IconCamera,
   IconUpload,
@@ -488,6 +488,9 @@ export function ScanFlow({ chrome = "standalone", target, onComplete }: ScanFlow
 
   // プレビュー用 object URL を追跡し reset/アンマウントでまとめて revoke（リーク防止）。
   const objectUrlsRef = useRef<string[]>([]);
+  // 要配慮個人情報を含みうる書類のスキャン前同意（初回のみ・localStorage記録）。
+  const [showScanConsent, setShowScanConsent] = useState(false);
+  const pendingFileRef = useRef<File | null>(null);
   const releaseObjectUrls = () => {
     for (const u of objectUrlsRef.current) URL.revokeObjectURL(u);
     objectUrlsRef.current = [];
@@ -687,12 +690,38 @@ export function ScanFlow({ chrome = "standalone", target, onComplete }: ScanFlow
     }
   };
 
+  // スキャン前同意ゲート。未同意なら同意モーダルを表示してファイルを保留し、
+  // 同意後に処理する。要配慮個人情報の取得同意＋海外(米国)AI送信の開示（撮影・
+  // ファイル選択・ドラッグ&ドロップの全経路をここで一元的にガードする）。
+  const SCAN_CONSENT_KEY = "scan_sensitive_consent_v1";
+  const processScanFile = (file: File) => {
+    if (aiMode) handleFileAI(file);
+    else handleFile(file);
+  };
+  const startScan = (file: File) => {
+    const consented =
+      typeof window !== "undefined" &&
+      window.localStorage.getItem(SCAN_CONSENT_KEY) === "1";
+    if (!consented) {
+      pendingFileRef.current = file;
+      setShowScanConsent(true);
+      return;
+    }
+    processScanFile(file);
+  };
+  const confirmScanConsent = () => {
+    try {
+      window.localStorage.setItem(SCAN_CONSENT_KEY, "1");
+    } catch {}
+    setShowScanConsent(false);
+    const file = pendingFileRef.current;
+    pendingFileRef.current = null;
+    if (file) processScanFile(file);
+  };
+
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      if (aiMode) handleFileAI(file);
-      else handleFile(file);
-    }
+    if (file) startScan(file);
     e.target.value = "";
   };
 
@@ -785,10 +814,7 @@ export function ScanFlow({ chrome = "standalone", target, onComplete }: ScanFlow
     setDragging(false);
     setInputSource("アップロード");
     const file = e.dataTransfer.files?.[0];
-    if (file) {
-      if (aiMode) handleFileAI(file);
-      else handleFile(file);
-    }
+    if (file) startScan(file);
   };
 
   const changeCategory = (cat: StepCategory) => {
@@ -1267,6 +1293,39 @@ export function ScanFlow({ chrome = "standalone", target, onComplete }: ScanFlow
               style={{ display: "none" }}
               onChange={onFileChange}
             />
+
+            <Modal
+              opened={showScanConsent}
+              onClose={() => setShowScanConsent(false)}
+              title="スキャン前のご確認"
+              centered
+            >
+              <Text size="sm" style={{ lineHeight: 1.7 }}>
+                スキャンする書類（搭乗券・予約票・診察予約票など）には、氏名・連絡先のほか、診察・受診に関する情報（要配慮個人情報）が含まれることがあります。
+                <br />
+                <br />
+                読み取りのため、画像と抽出した文字は、海外（米国）のAI事業者（Anthropic）へ送信して処理されます。
+                <br />
+                <br />
+                内容を理解し、これに同意したうえでスキャンを行ってください。
+              </Text>
+              <Anchor
+                href="https://coyoteandpowell.com/curlew/privacy/"
+                target="_blank"
+                rel="noreferrer"
+                size="sm"
+                mt="xs"
+                style={{ display: "inline-block" }}
+              >
+                プライバシーポリシー（詳細）を読む
+              </Anchor>
+              <Group justify="flex-end" mt="lg">
+                <Button variant="default" onClick={() => setShowScanConsent(false)}>
+                  キャンセル
+                </Button>
+                <Button onClick={confirmScanConsent}>同意して続ける</Button>
+              </Group>
+            </Modal>
           </>
         )}
 
