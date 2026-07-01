@@ -7,7 +7,6 @@ import {
   IconPlane,
   IconReceipt2,
   IconTicket,
-  IconTrain,
   IconTypography,
   IconUpload,
 } from "@tabler/icons-react";

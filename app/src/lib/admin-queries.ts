@@ -38,10 +38,13 @@ function todayStr(): string {
 }
 
 function monthStr(): string {
+  // budget テーブルの month 列は DATE 型で、RPC increment_*_usage が
+  // date_trunc('month', CURRENT_DATE)::DATE = 月初日(YYYY-MM-01, UTC) を書き込む。
+  // 同じ形式で問い合わせないと該当行に一致せず金額が 0 表示になる。
   const d = new Date();
   const y = d.getUTCFullYear();
   const m = String(d.getUTCMonth() + 1).padStart(2, "0");
-  return `${y}-${m}`;
+  return `${y}-${m}-01`;
 }
 
 async function safeCount(
@@ -279,8 +282,7 @@ export async function fetchAdminUserList(
 
   // Batch-fetch per-user aggregates. Individual calls are fine for
   // per-page counts (≤200 rows per table).
-  const [journeysRes, ocrRes, conciergeRes] = await Promise.all([
-    admin.from("toritavi_journeys").select("user_id").in("user_id", ids),
+  const [ocrRes, conciergeRes] = await Promise.all([
     admin
       .from("toritavi_ocr_usage")
       .select("user_id, requests_count")
@@ -293,10 +295,26 @@ export async function fetchAdminUserList(
       .in("user_id", ids),
   ]);
 
+  // Journey は user あたり無制限に増えるため、PostgREST の 1000 行上限だと
+  // 件数が過少になる。ページングして全件を数える（usage テーブルは日次1行/人で安全）。
   const journeyCountBy = new Map<string, number>();
-  for (const j of journeysRes.data ?? []) {
-    const uid = (j as { user_id: string }).user_id;
-    journeyCountBy.set(uid, (journeyCountBy.get(uid) ?? 0) + 1);
+  {
+    const PAGE = 1000;
+    let offset = 0;
+    for (;;) {
+      const { data, error } = await admin
+        .from("toritavi_journeys")
+        .select("user_id")
+        .in("user_id", ids)
+        .range(offset, offset + PAGE - 1);
+      if (error || !data || data.length === 0) break;
+      for (const j of data) {
+        const uid = (j as { user_id: string }).user_id;
+        journeyCountBy.set(uid, (journeyCountBy.get(uid) ?? 0) + 1);
+      }
+      if (data.length < PAGE) break;
+      offset += PAGE;
+    }
   }
   const ocrBy = new Map<string, number>();
   for (const r of ocrRes.data ?? []) {

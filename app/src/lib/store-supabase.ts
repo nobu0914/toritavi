@@ -184,7 +184,18 @@ export async function addUnfiledSteps(
   steps: Step[]
 ): Promise<void> {
   if (steps.length === 0) return;
-  const rows = steps.map((s, i) => stepToRowNullable(s, null, userId, i));
+  // sort_order をバッチ間で単調増加させる（getUnfiledSteps は sort_order DESC で
+  // 新しい順に並べるため。バッチ相対の 0,1,2… だと過去バッチと衝突し順序が乱れる）。
+  const { data: maxRow } = await sb
+    .from("toritavi_steps")
+    .select("sort_order")
+    .is("journey_id", null)
+    .eq("user_id", userId)
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const base = ((maxRow?.sort_order as number | null) ?? -1) + 1;
+  const rows = steps.map((s, i) => stepToRowNullable(s, null, userId, base + i));
   const { error } = await sb.from("toritavi_steps").upsert(rows);
   if (error) {
     console.error("[addUnfiledSteps] error:", error);

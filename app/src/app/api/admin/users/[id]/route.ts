@@ -27,7 +27,9 @@ export async function GET(
     }
 
     const h = await headers();
-    recordAuditLog(ctx, {
+    // PII 閲覧の監査ログは await して確実に永続化する（serverless では
+    // レスポンス返却後に fire-and-forget の insert が落とされうるため）。
+    await recordAuditLog(ctx, {
       action: "admin.user.viewed",
       targetType: "user",
       targetId: id,

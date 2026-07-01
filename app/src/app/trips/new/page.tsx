@@ -265,6 +265,7 @@ export default function NewTripPage() {
       endTime: draft.endTime.trim() || undefined,
       from: draft.from.trim() || undefined,
       to: draft.to.trim() || undefined,
+      airline: draft.airline.trim() || undefined,
       confNumber: draft.confNumber.trim() || undefined,
       status: "未開始",
       information: draft.information,

@@ -28,7 +28,6 @@ import { createClient } from "@/lib/supabase-browser";
 import { isGuestMode } from "@/lib/guest";
 import { getSettings, updateSettings } from "@/lib/store-settings";
 import {
-  avatarPathFor,
   deleteAvatar,
   fileToObjectUrl,
   signedAvatarUrl,

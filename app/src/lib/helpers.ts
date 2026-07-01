@@ -73,17 +73,6 @@ export function getTodayDateString(): string {
   return `${year}-${month}-${day}`;
 }
 
-export function daysUntil(dateStr: string): string {
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  const target = new Date(dateStr + "T00:00:00");
-  const diff = Math.ceil((target.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-  if (diff < 0) return "完了";
-  if (diff === 0) return "今日";
-  if (diff === 1) return "明日";
-  return `${diff}日後`;
-}
-
 function parseStepMinutes(time: string): number {
   const match = time.match(/(\d{1,2}):(\d{2})/);
   if (!match) return Number.MAX_SAFE_INTEGER;
@@ -114,20 +103,6 @@ export function getJourneyState(journey: Journey): JourneyState {
   if (allDone || end < now) return "完了";
   if (start > now) return "準備中";
   return "進行中";
-}
-
-export function getJourneyProgress(journey: Journey): {
-  completed: number;
-  total: number;
-  ratio: number;
-} {
-  const total = journey.steps.filter((step) => step.status !== "キャンセル").length;
-  const completed = journey.steps.filter((step) => step.status === "完了").length;
-  return {
-    completed,
-    total,
-    ratio: total === 0 ? 0 : completed / total,
-  };
 }
 
 export function getJourneyStateColor(state: JourneyState): string {

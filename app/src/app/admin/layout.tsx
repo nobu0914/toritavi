@@ -10,8 +10,9 @@ export const metadata = {
 };
 
 /**
- * Admin route group layout. Middleware already gates /admin behind a
- * live session, but that only checks "are you logged in at all". The
+ * Admin route group layout. The proxy middleware (src/proxy.ts, Next.js 16's
+ * renamed middleware) already gates /admin behind a live session, but that
+ * only checks "are you logged in at all". The
  * actual role-based authorisation happens here — a logged-in but
  * non-admin user lands in /login with ?from=/admin so their session
  * isn't lost when they come back.

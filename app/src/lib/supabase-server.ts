@@ -26,10 +26,6 @@ export async function createClient() {
   });
 }
 
-export function isSupabaseConfigured(): boolean {
-  return !!(supabaseUrl && supabaseKey);
-}
-
 /**
  * Authenticate an API request from either the web (cookie session) or a native
  * client (Authorization: Bearer <supabase access token>). Returns a Supabase

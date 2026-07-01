@@ -292,14 +292,11 @@ function buildAnthropicMessages(history: MessageRow[]): Anthropic.MessageParam[]
     if (m.role === "user" && m.content) {
       out.push({ role: "user", content: m.content });
     } else if (m.role === "assistant") {
+      // 過去の assistant ターンはテキストのみで再構成する。tool_use ブロックを
+      // 含めると、対応する tool_result（クライアント確認はローカルのみで未永続化）が
+      // 無いため Anthropic API が 400 を返し、提案後は会話を継続できなくなる。
       const blocks: Anthropic.ContentBlockParam[] = [];
       if (m.content) blocks.push({ type: "text", text: m.content });
-      if (m.tool_use) {
-        const tu = m.tool_use as { id?: string; name?: string; input?: Record<string, unknown> };
-        if (tu.id && tu.name) {
-          blocks.push({ type: "tool_use", id: tu.id, name: tu.name, input: tu.input ?? {} });
-        }
-      }
       if (blocks.length > 0) out.push({ role: "assistant", content: blocks });
     }
   }

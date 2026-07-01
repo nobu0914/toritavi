@@ -38,6 +38,17 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async redirects() {
+    // 開発用の UI サンプルギャラリー（/ui-sample*, /ui-sample-dads）は
+    // 本番ビルドでは公開しない（内部モックが URL 直打ちで見えるのを防ぐ）。
+    if (process.env.NODE_ENV !== "production") return [];
+    return [
+      { source: "/ui-sample", destination: "/", permanent: false },
+      { source: "/ui-sample/:path*", destination: "/", permanent: false },
+      { source: "/ui-sample-dads", destination: "/", permanent: false },
+      { source: "/ui-sample-dads/:path*", destination: "/", permanent: false },
+    ];
+  },
 };
 
 export default nextConfig;

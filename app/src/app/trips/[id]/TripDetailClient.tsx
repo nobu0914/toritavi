@@ -190,7 +190,12 @@ export default function TripDetailClient({
   const handleSaveStep = () => {
     if (!draft.title.trim()) return;
 
+    // 既存ステップを土台に、フォームで編集した項目だけ上書きする。
+    // これで timezone / sourceImageUrls / detail / inferred / needsReview など
+    // 編集フォームが扱わない項目を保持する（従来は allow-list で消えていた）。
+    const prev = editingIndex !== null ? journey.steps[editingIndex] : undefined;
     const step: Step = {
+      ...prev,
       id: editingStepId,
       category: draft.category,
       source: draft.source,
@@ -203,10 +208,8 @@ export default function TripDetailClient({
       to: draft.to.trim() || undefined,
       airline: draft.airline.trim() || undefined,
       confNumber: draft.confNumber.trim() || undefined,
-      memo: editingIndex !== null ? journey.steps[editingIndex].memo : undefined,
-      sourceImageUrl: editingIndex !== null ? journey.steps[editingIndex].sourceImageUrl : undefined,
-      status: editingIndex !== null ? journey.steps[editingIndex].status : "未開始",
       information: draft.information,
+      status: prev?.status ?? "未開始",
     };
 
     const nextSteps =

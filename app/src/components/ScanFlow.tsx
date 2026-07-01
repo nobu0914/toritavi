@@ -26,9 +26,6 @@ import {
   IconFlask,
 } from "@tabler/icons-react";
 import { notifications } from "@mantine/notifications";
-import { StepMergeDialog } from "./StepMergeDialog";
-import { findMergeCandidates, type MergeCandidate } from "@/lib/step-merge-match";
-import { applyMerge } from "@/lib/step-merge-rules";
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
@@ -458,6 +455,8 @@ export function ScanFlow({ chrome = "standalone", target, onComplete }: ScanFlow
   const [currentPage, setCurrentPage] = useState(0);
   const [status, setStatus] = useState<ScanStatus>("idle");
   const [detectedCategory, setDetectedCategory] = useState<StepCategory>("その他");
+  // 往復など複数ステップOCR時に、レビュー画面で表示中のステップ番号。
+  const [currentStepIdx, setCurrentStepIdx] = useState(0);
   const [formValues, setFormValues] = useState<Record<string, string>>({});
   const [ocrText, setOcrText] = useState("");
   const [progress, setProgress] = useState(0);
@@ -477,14 +476,6 @@ export function ScanFlow({ chrome = "standalone", target, onComplete }: ScanFlow
   const [registering, setRegistering] = useState(false);
   const [errorDetail, setErrorDetail] = useState("");
 
-  // §16 Step マージ確認ダイアログ用コンテキスト。候補ヒット時に stepsToRegister を
-  // いったん保持して、ユーザー判断（統合 or 新規）を待つ。
-  const [mergeCtx, setMergeCtx] = useState<{
-    candidates: MergeCandidate[];
-    primaryDraft: Step;
-    stepsToRegister: Step[];
-  } | null>(null);
-
   // Flow A: OCR 完了後に「新規 / 既存 / 未整理」を選ばせるために保留する
   // stepsToRegister。target 指定が無い通常導線でのみ使用する。
   const [pendingCommit, setPendingCommit] = useState<{
@@ -494,6 +485,18 @@ export function ScanFlow({ chrome = "standalone", target, onComplete }: ScanFlow
   } | null>(null);
   const [selectorOpen, setSelectorOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+
+  // プレビュー用 object URL を追跡し reset/アンマウントでまとめて revoke（リーク防止）。
+  const objectUrlsRef = useRef<string[]>([]);
+  const releaseObjectUrls = () => {
+    for (const u of objectUrlsRef.current) URL.revokeObjectURL(u);
+    objectUrlsRef.current = [];
+  };
+  useEffect(() => {
+    return () => {
+      for (const u of objectUrlsRef.current) URL.revokeObjectURL(u);
+    };
+  }, []);
 
   const pdfToImages = async (file: File): Promise<Blob[]> => {
     const pdfjsLib = await import("pdfjs-dist");
@@ -556,6 +559,7 @@ export function ScanFlow({ chrome = "standalone", target, onComplete }: ScanFlow
     setStatus("processing");
     setProgress(0);
     setCurrentPage(0);
+    releaseObjectUrls();
 
     try {
       let ocrTargets: (File | Blob)[] = [];
@@ -563,11 +567,13 @@ export function ScanFlow({ chrome = "standalone", target, onComplete }: ScanFlow
       if (file.type === "application/pdf") {
         const imageBlobs = await pdfToImages(file);
         const urls = imageBlobs.map((b) => URL.createObjectURL(b));
+        objectUrlsRef.current.push(...urls);
         setPageUrls(urls);
         setImageUrl(urls[0]);
         ocrTargets = imageBlobs;
       } else {
         const url = URL.createObjectURL(file);
+        objectUrlsRef.current.push(url);
         setImageUrl(url);
         setPageUrls([url]);
         ocrTargets = [file];
@@ -604,6 +610,7 @@ export function ScanFlow({ chrome = "standalone", target, onComplete }: ScanFlow
     setProgress(0);
     setCurrentPage(0);
     setErrorDetail("");
+    releaseObjectUrls();
 
     try {
       // 画像化（PDFはページ毎にJPEG化、画像はリサイズ＋JPEG圧縮）
@@ -611,11 +618,13 @@ export function ScanFlow({ chrome = "standalone", target, onComplete }: ScanFlow
       if (file.type === "application/pdf") {
         imageBlobs = await pdfToImages(file);
         const urls = imageBlobs.map((b) => URL.createObjectURL(b));
+        objectUrlsRef.current.push(...urls);
         setPageUrls(urls);
         setImageUrl(urls[0]);
       } else {
         const resized = await resizeImage(file);
         const url = URL.createObjectURL(resized);
+        objectUrlsRef.current.push(url);
         setImageUrl(url);
         setPageUrls([url]);
         imageBlobs = [resized];
@@ -661,9 +670,10 @@ export function ScanFlow({ chrome = "standalone", target, onComplete }: ScanFlow
       console.log("[OCR] API result:", JSON.stringify(result, null, 2));
       setProgress(90);
 
-      // steps配列から処理（TODO: 往復時は複数Step登録UI）
+      // steps配列から処理（往復など複数Stepはレビュー画面のページャで切替）
       const allSteps = result.steps || [result];
       setAiSteps(allSteps);
+      setCurrentStepIdx(0);
 
       // 最初のStepを表示
       applyAiStep(allSteps[0]);
@@ -717,6 +727,31 @@ export function ScanFlow({ chrome = "standalone", target, onComplete }: ScanFlow
     setNeedsReview(!!stepData.needsReview);
   };
 
+  // 表示中ステップの編集内容(fixedValues/variableFields等)を aiSteps に書き戻した
+  // 配列を返す。ステップ切替・登録の直前に呼び、編集の取りこぼしを防ぐ。
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const flushStepsWithCurrentEdits = (): any[] => {
+    if (aiSteps.length === 0) return aiSteps;
+    const next = [...aiSteps];
+    next[currentStepIdx] = {
+      category: detectedCategory,
+      fixed: { ...fixedValues },
+      variable: variableFields.map((v) => ({ label: v.label, value: v.value })),
+      inferred: inferredFields,
+      needsReview,
+    };
+    return next;
+  };
+
+  // レビュー画面のページャでステップを切り替える。現在の編集を保持してから移動。
+  const goToStep = (idx: number) => {
+    if (idx < 0 || idx >= aiSteps.length || idx === currentStepIdx) return;
+    const flushed = flushStepsWithCurrentEdits();
+    setAiSteps(flushed);
+    setCurrentStepIdx(idx);
+    applyAiStep(flushed[idx]);
+  };
+
   const handleTextSubmit = () => {
     if (!pasteText.trim()) return;
     setInputSource("メール");
@@ -758,7 +793,9 @@ export function ScanFlow({ chrome = "standalone", target, onComplete }: ScanFlow
 
   const changeCategory = (cat: StepCategory) => {
     setDetectedCategory(cat);
-    setFormValues(extractFields(ocrText, cat));
+    // AIモードは fixedValues を使う。ocrText は AI の JSON 文字列なので
+    // 正規表現抽出しても無意味（誤値の元）。手入力/OCRテキスト時のみ抽出する。
+    if (!aiMode) setFormValues(extractFields(ocrText, cat));
     setShowCategoryPicker(false);
   };
 
@@ -810,8 +847,10 @@ export function ScanFlow({ chrome = "standalone", target, onComplete }: ScanFlow
 
     // AI往復対応: aiStepsが複数ある場合は全て登録
     if (aiMode && aiSteps.length > 1) {
-      for (let si = 0; si < aiSteps.length; si++) {
-        const s = aiSteps[si];
+      // 表示中ステップの編集を aiSteps に反映してから全ステップを登録する。
+      const flushed = flushStepsWithCurrentEdits();
+      for (let si = 0; si < flushed.length; si++) {
+        const s = flushed[si];
         const f = s.fixed || {};
         stepsToRegister.push({
           id: generateId(),
@@ -1052,74 +1091,8 @@ export function ScanFlow({ chrome = "standalone", target, onComplete }: ScanFlow
     }
   };
 
-  /** §16 ダイアログで「統合する」を押した時の処理。候補ステップにマージして保存。 */
-  const handleMergeConfirm = async (candidate: MergeCandidate) => {
-    if (!mergeCtx) return;
-    const now = new Date().toISOString();
-    const todayStr = now.split("T")[0];
-    try {
-      const journey = candidate.journey;
-      const targetStep = candidate.step;
-      const { merged } = applyMerge(targetStep, mergeCtx.primaryDraft);
-      const nextSteps = journey.steps.map((s) => (s.id === targetStep.id ? merged : s));
-      await updateJourney(journey.id, { steps: nextSteps });
-
-      // 先頭以外の stepsToRegister があれば同 Journey に追記
-      const remaining = mergeCtx.stepsToRegister.slice(1);
-      if (remaining.length > 0) {
-        await updateJourney(journey.id, {
-          steps: [...nextSteps, ...remaining],
-        });
-      }
-
-      setMergeCtx(null);
-      notifications.show({
-        message: `${targetStep.title} に情報を追記しました`,
-        icon: <IconCheck size={18} />,
-        autoClose: 5000,
-        withBorder: false,
-        style: { background: "var(--success-500)", color: "white" },
-        styles: { icon: { color: "white", background: "transparent" } },
-      });
-      if (onComplete) onComplete(journey.id);
-      else router.push(`/trips/${journey.id}`);
-    } catch (err) {
-      console.error("[merge] failed:", err);
-      notifications.show({
-        message: "統合に失敗しました",
-        color: "red",
-        autoClose: 4000,
-        icon: <IconAlertCircle size={18} />,
-      });
-      setRegistering(false);
-      setMergeCtx(null);
-    }
-    // あえて todayStr を握らない（将来末尾のみ参照する場合に備え placeholder）
-    void todayStr;
-  };
-
-  /** §16 ダイアログで「新規として登録」を押した時の処理。通常パスで保存。 */
-  const handleMergeDecline = async () => {
-    if (!mergeCtx) return;
-    const ctx = mergeCtx;
-    setMergeCtx(null);
-    try {
-      const now = new Date().toISOString();
-      const todayStr = now.split("T")[0];
-      await finishRegister(ctx.stepsToRegister, now, todayStr);
-    } catch (err) {
-      console.error("[scan] register failed:", err);
-      notifications.show({
-        message: err instanceof Error ? err.message : "予定の登録に失敗しました",
-        color: "red",
-        autoClose: 4000,
-        icon: <IconAlertCircle size={18} />,
-      });
-      setRegistering(false);
-    }
-  };
-
   const reset = () => {
+    releaseObjectUrls();
     setImageUrl(null);
     setPageUrls([]);
     setCurrentPage(0);
@@ -1133,6 +1106,7 @@ export function ScanFlow({ chrome = "standalone", target, onComplete }: ScanFlow
     setFixedValues({});
     setVariableFields([]);
     setAiSteps([]);
+    setCurrentStepIdx(0);
     setInferredFields([]);
     setNeedsReview(false);
     setErrorDetail("");
@@ -1393,6 +1367,61 @@ export function ScanFlow({ chrome = "standalone", target, onComplete }: ScanFlow
             {/* フォーム: AI時は固定+変動、ブラウザ時は従来 */}
             {aiMode && Object.keys(fixedValues).length > 0 ? (
               <>
+                {/* 往復など複数ステップのページャ */}
+                {aiSteps.length > 1 && (
+                  <Box
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 8,
+                      marginBottom: 10,
+                      padding: "6px 10px",
+                      background: "var(--surface, #f5f5f5)",
+                      borderRadius: 8,
+                      border: "1px solid var(--border)",
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => goToStep(currentStepIdx - 1)}
+                      disabled={currentStepIdx === 0}
+                      aria-label="前のステップ"
+                      style={{
+                        background: "none",
+                        border: "none",
+                        fontSize: 20,
+                        lineHeight: 1,
+                        padding: "2px 8px",
+                        cursor: currentStepIdx === 0 ? "default" : "pointer",
+                        opacity: currentStepIdx === 0 ? 0.3 : 1,
+                      }}
+                    >
+                      ‹
+                    </button>
+                    <Text size="13px" fw={600}>
+                      ステップ {currentStepIdx + 1} / {aiSteps.length}
+                    </Text>
+                    <button
+                      type="button"
+                      onClick={() => goToStep(currentStepIdx + 1)}
+                      disabled={currentStepIdx === aiSteps.length - 1}
+                      aria-label="次のステップ"
+                      style={{
+                        background: "none",
+                        border: "none",
+                        fontSize: 20,
+                        lineHeight: 1,
+                        padding: "2px 8px",
+                        cursor: currentStepIdx === aiSteps.length - 1 ? "default" : "pointer",
+                        opacity: currentStepIdx === aiSteps.length - 1 ? 0.3 : 1,
+                      }}
+                    >
+                      ›
+                    </button>
+                  </Box>
+                )}
+
                 {/* 要確認警告 */}
                 {needsReview && (
                   <Box className={classes.reviewBanner}>
@@ -1581,17 +1610,6 @@ export function ScanFlow({ chrome = "standalone", target, onComplete }: ScanFlow
       </Box>
 
       {!isEmbedded && <TabBar />}
-
-      {/* §16 Step マージ確認ダイアログ — Flow A 導入後は自動トリガーしない */}
-      {mergeCtx && (
-        <StepMergeDialog
-          opened={true}
-          candidates={mergeCtx.candidates}
-          draft={mergeCtx.primaryDraft}
-          onConfirm={handleMergeConfirm}
-          onDecline={handleMergeDecline}
-        />
-      )}
 
       {/* Flow A: 登録先の 3 分岐 */}
       <DestinationSelector

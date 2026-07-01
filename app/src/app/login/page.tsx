@@ -3,19 +3,25 @@
 import { Alert, Button, Divider, PasswordInput, Stack, Text, TextInput } from "@mantine/core";
 import { IconAlertCircle, IconBrandGoogle } from "@tabler/icons-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 import { AuthShell } from "@/components/AuthShell";
 import { createClient } from "@/lib/supabase-browser";
 import { disableGuestMode, enableGuestMode } from "@/lib/guest";
 import { clearGuestData } from "@/lib/store-guest";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  // auth/callback がエラー時に付ける ?error= を初期表示する（期限切れ/使用済みの
+  // 確認・再設定リンクを無言で握りつぶさない）。以降はフォーム操作で上書きされる。
+  const [error, setError] = useState(() => {
+    const code = searchParams.get("error");
+    return code ? resolveCallbackError(code) : "";
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -122,6 +128,26 @@ export default function LoginPage() {
       </Text>
     </AuthShell>
   );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function resolveCallbackError(code: string): string {
+  const c = code.toLowerCase();
+  if (c === "missing_code") return "リンクが無効です。もう一度お試しください。";
+  if (c.includes("expired") || c.includes("otp")) {
+    return "リンクの有効期限が切れています。お手数ですが、もう一度メールを送信してください。";
+  }
+  if (c.includes("invalid") || c.includes("used")) {
+    return "リンクが無効か、既に使用されています。もう一度お試しください。";
+  }
+  return "認証に失敗しました。もう一度お試しください。";
 }
 
 function resolveAuthError(message: string): string {
