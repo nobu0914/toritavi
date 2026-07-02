@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { buildOcrRulesPrompt } from "@/lib/ocr-rules";
 import { authenticateRequest } from "@/lib/supabase-server";
 import { enforceAiLimits, OCR_GUARD } from "@/lib/ai-guard";
+import { ALLOWED_ORIGINS } from "@/lib/allowed-origins";
 
 const SYSTEM_PROMPT = `あなたは旅行・予約文書の情報抽出専門家です。
 画像から予約情報を読み取り、以下のJSON形式で返してください。
@@ -68,12 +69,6 @@ ${buildOcrRulesPrompt()}
 - 読み取れない固定項目はnullを返す（推測しない）
 - JSONのみ返す（説明文不要）
 `;
-
-const ALLOWED_ORIGINS = new Set([
-  "https://toritavi.com",
-  "https://app-lime-seven-80.vercel.app",
-  "http://localhost:3000",
-]);
 
 // Anthropic pricing for claude-sonnet-4-6 (vision):
 //   input  $3 / Mtok, output $15 / Mtok → 300/1500 cents per Mtok.

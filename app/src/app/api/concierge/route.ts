@@ -17,12 +17,7 @@ import { authenticateRequest } from "@/lib/supabase-server";
 import { enforceAiLimits, CONCIERGE_GUARD } from "@/lib/ai-guard";
 import { buildConciergeContext } from "@/lib/concierge-context";
 import type { Journey, Step } from "@/lib/types";
-
-const ALLOWED_ORIGINS = new Set([
-  "https://toritavi.com",
-  "https://app-lime-seven-80.vercel.app",
-  "http://localhost:3000",
-]);
+import { ALLOWED_ORIGINS } from "@/lib/allowed-origins";
 
 const MODEL = "claude-haiku-4-5-20251001";
 const MAX_TOKENS = 1024;

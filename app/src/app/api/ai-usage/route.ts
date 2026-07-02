@@ -15,12 +15,7 @@ import {
   getAiUsage,
   nextDailyResetIso,
 } from "@/lib/ai-guard";
-
-const ALLOWED_ORIGINS = new Set([
-  "https://toritavi.com",
-  "https://app-lime-seven-80.vercel.app",
-  "http://localhost:3000",
-]);
+import { ALLOWED_ORIGINS } from "@/lib/allowed-origins";
 
 export async function GET(request: NextRequest) {
   const origin = request.headers.get("origin");

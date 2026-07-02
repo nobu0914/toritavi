@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateRequest } from "@/lib/supabase-server";
 import { createServiceClient } from "@/lib/supabase-service";
+import { ALLOWED_ORIGINS } from "@/lib/allowed-origins";
 
 /**
  * POST /api/account/delete
@@ -19,11 +20,6 @@ import { createServiceClient } from "@/lib/supabase-service";
  * auth user. All cleanup is best-effort: failures are logged but never block
  * user deletion, so the user is never left in a half-deleted state.
  */
-const ALLOWED_ORIGINS = new Set([
-  "https://toritavi.com",
-  "https://app-lime-seven-80.vercel.app",
-  "http://localhost:3000",
-]);
 
 // Per-user tables lacking an ON DELETE CASCADE FK to auth.users — must be
 // purged explicitly or they orphan after account deletion (trip_contacts
