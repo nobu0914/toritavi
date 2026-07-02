@@ -4,6 +4,7 @@ import { Box, Button, Loader, Stack, Text } from "@mantine/core";
 import {
   IconBell,
   IconChevronRight,
+  IconCrown,
   IconDatabase,
   IconFlask,
   IconHelpCircle,
@@ -26,6 +27,7 @@ type MenuItem = {
 // 親画面は DS v2 §15 の「状態確認 + 主要導線」ロール。
 // フォーム本体 / トグル大量表示 / 破壊的操作の確認 は下層に逃がす。
 const MENU: MenuItem[] = [
+  { href: "/account/plan", label: "プラン", icon: IconCrown },
   { href: "/account/profile", label: "プロフィール設定", icon: IconUserCircle },
   { href: "/account/notifications", label: "通知設定", icon: IconBell },
   { href: "/account/help", label: "ヘルプ・サポート", icon: IconHelpCircle },
