@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import { requireAdmin } from "@/lib/admin-auth";
 import { recordAuditLog } from "@/lib/admin-audit";
-import { fetchAdminUserDetail } from "@/lib/admin-queries";
+import { fetchAdminUserDetail, maskEmail } from "@/lib/admin-queries";
 
 export const dynamic = "force-dynamic";
 
@@ -26,11 +26,14 @@ export default async function AdminUserDetailPage({
   if (!detail) notFound();
 
   const h = await headers();
-  recordAuditLog(ctx, {
+  // PII 閲覧ログは確実に永続化したいので await する（serverless では
+  // fire-and-forget だとレスポンス後に insert が落とされうる）。
+  // summary は security 画面で support_viewer にも見えるためマスク版のみ。
+  await recordAuditLog(ctx, {
     action: "admin.user.viewed",
     targetType: "user",
     targetId: id,
-    summary: detail.email ? `viewed ${detail.email}` : `viewed user ${id}`,
+    summary: detail.email ? `viewed ${maskEmail(detail.email)}` : `viewed user ${id}`,
     ip: h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
     userAgent: h.get("user-agent"),
   });

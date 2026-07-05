@@ -35,8 +35,9 @@ export default async function AdminDashboardPage() {
   const ctx = await requireAdmin("support_viewer");
 
   const h = await headers();
-  // Fire-and-forget audit entry. Not awaited so it can't slow the page.
-  recordAuditLog(ctx, {
+  // serverless ではレスポンス後に fire-and-forget の insert が落とされうる
+  // ため await して確実に記録する（1 insert なので体感遅延は無視できる）。
+  await recordAuditLog(ctx, {
     action: "admin.dashboard.viewed",
     ip: h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
     userAgent: h.get("user-agent"),

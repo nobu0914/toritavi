@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { AdminAuthError, requireAdmin } from "@/lib/admin-auth";
-import { fetchAdminUserDetail } from "@/lib/admin-queries";
+import { fetchAdminUserDetail, maskEmail } from "@/lib/admin-queries";
 import { recordAuditLog } from "@/lib/admin-audit";
 import { headers } from "next/headers";
 
@@ -33,7 +33,11 @@ export async function GET(
       action: "admin.user.viewed",
       targetType: "user",
       targetId: id,
-      summary: detail.email ? `api viewed ${detail.email}` : `api viewed ${id}`,
+      // summary は /api/admin/security 経由で support_viewer にも見えるため、
+      // 生 email は書かない（マスク版のみ）。生 email の永続化は削除権にも反する。
+      summary: detail.email
+        ? `api viewed ${maskEmail(detail.email)}`
+        : `api viewed ${id}`,
       ip: h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
       userAgent: h.get("user-agent"),
     });
