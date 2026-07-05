@@ -11,7 +11,6 @@ import "server-only";
 import { createServiceClient } from "@/lib/supabase-service";
 import { recordAuditLog } from "@/lib/admin-audit";
 import type { AdminContext } from "@/lib/admin-auth";
-import { maskEmail } from "@/lib/admin-queries";
 import { sendToUser } from "@/lib/fcm";
 import type { UserStatus } from "@/lib/moderation";
 
@@ -130,7 +129,7 @@ export async function setUserFlag(
 
 export type AbuseSignalRow = {
   userId: string;
-  emailMasked: string;
+  email: string | null;
   status: UserStatus;
   flagged: boolean;
   rejections7d: number;
@@ -207,28 +206,33 @@ export async function fetchAbuseSignals(limit = 100): Promise<AbuseSignalRow[]> 
     (conciergeRes.data ?? []).map((r) => [r.user_id as string, r.requests_count as number])
   );
 
-  const rows: AbuseSignalRow[] = [];
-  for (const uid of userIds) {
+  // email 解決は 1 件ずつ getUserById が必要（listUsers はメール検索不可）。
+  // 逐次だと遅いので並列で引く。
+  const emails = await Promise.all(
+    userIds.map(async (uid) => {
+      try {
+        const { data } = await admin.auth.admin.getUserById(uid);
+        return data?.user?.email ?? null;
+      } catch {
+        return null;
+      }
+    })
+  );
+
+  const rows: AbuseSignalRow[] = userIds.map((uid, i) => {
     const rej = byUser.get(uid)!;
     const st = statusByUser.get(uid);
-    let emailMasked = "—";
-    try {
-      const { data } = await admin.auth.admin.getUserById(uid);
-      emailMasked = maskEmail(data?.user?.email ?? null);
-    } catch {
-      /* leave masked placeholder */
-    }
-    rows.push({
+    return {
       userId: uid,
-      emailMasked,
+      email: emails[i],
       status: st?.status ?? "active",
       flagged: st?.flagged ?? false,
       rejections7d: rej.count,
       ocrToday: ocrByUser.get(uid) ?? 0,
       conciergeToday: conciergeByUser.get(uid) ?? 0,
       lastRejectionAt: rej.last || null,
-    });
-  }
+    };
+  });
 
   // most rejections first, then flagged/suspended
   rows.sort((a, b) => {

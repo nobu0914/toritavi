@@ -101,3 +101,9 @@ body[data-scroll-locked] {
 .mantine-Notifications-root[data-position^="top"] {
   top: calc(env(safe-area-inset-top, 0px) + var(--mantine-spacing-md, 1rem)) !important;
 }
+
+/* 管理コンソールのローディングスケルトン用シマー */
+@keyframes adminShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}

@@ -22,10 +22,10 @@ export async function GET(request: NextRequest) {
 
   try {
     const result = await fetchAdminUserList({ page, perPage, query });
-    // Never return raw email in API response — admin UI uses emailMasked.
-    const safeRows = result.rows.map((r) => ({
+    // 管理コンソール専用API（requireAdmin 済み）なので生 email を返す。
+    const rows = result.rows.map((r) => ({
       id: r.id,
-      emailMasked: r.emailMasked,
+      email: r.email,
       createdAt: r.createdAt,
       lastSignInAt: r.lastSignInAt,
       journeyCount: r.journeyCount,
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
       page: result.page,
       perPage: result.perPage,
       total: result.total,
-      rows: safeRows,
+      rows,
     });
   } catch (e) {
     console.error("[api admin/users] failed", e);
