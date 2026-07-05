@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateRequest } from "@/lib/supabase-server";
+import { ALLOWED_ORIGINS } from "@/lib/allowed-origins";
 import { sendToUser } from "@/lib/fcm";
 
 /**
@@ -12,6 +13,13 @@ import { sendToUser } from "@/lib/fcm";
  * から送る。これはあくまで疎通確認用。
  */
 export async function POST(request: NextRequest) {
+  // Reject cross-site browser callers. Origin is absent on native (mobile)
+  // requests, so skip the check when it is not present.
+  const origin = request.headers.get("origin");
+  if (origin && !ALLOWED_ORIGINS.has(origin)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   const auth = await authenticateRequest(request);
   if (!auth) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
