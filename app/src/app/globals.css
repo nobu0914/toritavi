@@ -93,7 +93,11 @@ body[data-scroll-locked] {
  * 最上端基準のため、ノッチ / Dynamic Island に食い込んで「上すぎる」状態になる。
  * safe-area-inset-top 分を上乗せして安全領域の下に出す。
  *   .mantine-Notifications-root = 通知スタックの fixed コンテナ
+ *
+ * top 系コンテナに限定すること。Mantine v9 は 6 方向すべてのコンテナを常時
+ * レンダリングするため、無条件に top を強制すると bottom 系コンテナが
+ * top+bottom 両指定で全画面に広がり、下のフォームへのクリックを奪う。
  */
-.mantine-Notifications-root {
+.mantine-Notifications-root[data-position^="top"] {
   top: calc(env(safe-area-inset-top, 0px) + var(--mantine-spacing-md, 1rem)) !important;
 }
