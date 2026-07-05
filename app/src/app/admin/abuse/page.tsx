@@ -57,7 +57,7 @@ export default async function AdminAbusePage() {
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
               <thead>
                 <tr style={{ color: "var(--text-dim)", fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5 }}>
-                  <th style={th}>EMAIL (MASKED)</th>
+                  <th style={th}>EMAIL</th>
                   <th style={th}>状態</th>
                   <th style={thNum}>拒否 7日</th>
                   <th style={thNum}>OCR 当日</th>
@@ -69,7 +69,7 @@ export default async function AdminAbusePage() {
               <tbody>
                 {rows.map((r) => (
                   <tr key={r.userId} style={{ borderTop: "1px solid var(--n-100)" }}>
-                    <td style={td}>{r.emailMasked}</td>
+                    <td style={td}>{r.email ?? "—"}</td>
                     <td style={td}>
                       {r.status !== "active" ? (
                         <span style={badge("danger")}>{STATUS_LABEL[r.status]}</span>

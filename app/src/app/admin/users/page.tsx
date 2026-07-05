@@ -40,7 +40,7 @@ export default async function AdminUsersPage({
       <section>
         <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>利用者</h1>
         <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--text-dim)" }}>
-          個別ユーザーの調査入口 · email は一覧ではマスク表示
+          個別ユーザーの調査入口
         </p>
       </section>
 
@@ -114,7 +114,7 @@ export default async function AdminUsersPage({
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead>
               <tr style={{ background: "var(--n-50)", fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5, color: "var(--text-dim)" }}>
-                <th style={th}>email (masked)</th>
+                <th style={th}>email</th>
                 <th style={th}>user_id</th>
                 <th style={th}>登録</th>
                 <th style={th}>最終ログイン</th>
@@ -134,7 +134,7 @@ export default async function AdminUsersPage({
               ) : (
                 result.rows.map((r) => (
                   <tr key={r.id} style={{ borderTop: "1px solid var(--n-100)" }}>
-                    <td style={td}>{r.emailMasked}</td>
+                    <td style={td}>{r.email ?? "—"}</td>
                     <td style={{ ...td, fontFamily: "var(--font-mono, monospace)", fontSize: 12, color: "var(--text-dim)" }}>
                       {r.id.slice(0, 8)}…
                     </td>
