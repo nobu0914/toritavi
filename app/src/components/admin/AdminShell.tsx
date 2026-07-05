@@ -6,6 +6,7 @@ import {
   IconLayoutDashboard,
   IconUsers,
   IconShieldLock,
+  IconAlertTriangle,
   IconLogout,
 } from "@tabler/icons-react";
 import { useState } from "react";
@@ -29,6 +30,7 @@ type NavItem = {
 const NAV: NavItem[] = [
   { href: "/admin", label: "ダッシュボード", Icon: IconLayoutDashboard },
   { href: "/admin/users", label: "利用者", Icon: IconUsers, matchPrefix: true },
+  { href: "/admin/abuse", label: "違反検知", Icon: IconAlertTriangle, matchPrefix: true },
   { href: "/admin/security", label: "セキュリティ", Icon: IconShieldLock, matchPrefix: true },
 ];
 

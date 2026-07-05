@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { logAiRejection } from "@/lib/moderation";
 
 /**
  * AI 利用制限（OCR / コンシェルジュ共通）。
@@ -171,6 +172,17 @@ export async function enforceAiLimits(
   const plan = await resolvePlan(sb, userId);
   const tier = cfg.tiers[plan];
 
+  // 拒否は toritavi_ai_rejections に記録して繰り返し違反者を可視化する
+  // （規約 第9条6/7/8号）。記録はベストエフォートで await しても安全。
+  const reject = async (
+    reason: string,
+    message: string,
+    status: number,
+  ): Promise<NextResponse> => {
+    await logAiRejection(userId, cfg.feature as "ocr" | "concierge", reason);
+    return NextResponse.json({ error: reason, message }, { status });
+  };
+
   // 1) 月予算（全体・共有・プラン非依存）→ 503
   const { data: budget } = await sb
     .from(cfg.tables.budget)
@@ -178,10 +190,7 @@ export async function enforceAiLimits(
     .eq("month", firstOfThisMonth(cfg.monthTz))
     .maybeSingle();
   if (budget && budget.spend_cents >= cfg.budgetMonthlyCents) {
-    return NextResponse.json(
-      { error: "monthly_budget_exceeded", message: cfg.messages.budgetExceeded },
-      { status: 503 },
-    );
+    return reject("monthly_budget_exceeded", cfg.messages.budgetExceeded, 503);
   }
 
   // 2) 日次（ユーザー別・プラン別）→ 429
@@ -193,16 +202,10 @@ export async function enforceAiLimits(
     .maybeSingle();
   if (usage) {
     if (usage.requests_count >= tier.dailyRequests) {
-      return NextResponse.json(
-        { error: "daily_request_limit", message: cfg.messages.dailyRequest },
-        { status: 429 },
-      );
+      return reject("daily_request_limit", cfg.messages.dailyRequest, 429);
     }
     if (usage.tokens_total >= tier.dailyTokens) {
-      return NextResponse.json(
-        { error: "daily_token_limit", message: cfg.messages.dailyToken },
-        { status: 429 },
-      );
+      return reject("daily_token_limit", cfg.messages.dailyToken, 429);
     }
   }
 
@@ -216,13 +219,7 @@ export async function enforceAiLimits(
   if (cfg.eventsRoleFilter) q = q.eq("role", cfg.eventsRoleFilter);
   const { count: recentCount } = await q;
   if ((recentCount ?? 0) >= tier.ratePerMin) {
-    return NextResponse.json(
-      {
-        error: "rate_limit",
-        message: cfg.messages.rateLimit(tier.ratePerMin),
-      },
-      { status: 429 },
-    );
+    return reject("rate_limit", cfg.messages.rateLimit(tier.ratePerMin), 429);
   }
 
   return null;

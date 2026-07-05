@@ -4,8 +4,18 @@ import Link from "next/link";
 import { requireAdmin } from "@/lib/admin-auth";
 import { recordAuditLog } from "@/lib/admin-audit";
 import { fetchAdminUserDetail, maskEmail } from "@/lib/admin-queries";
+import { fetchUserStatus, fetchUserRejections } from "@/lib/admin-moderation";
+import UserModerationPanel from "@/components/admin/UserModerationPanel";
+import UserFilesPanel from "@/components/admin/UserFilesPanel";
 
 export const dynamic = "force-dynamic";
+
+const REJECTION_LABEL: Record<string, string> = {
+  monthly_budget_exceeded: "月予算超過",
+  daily_request_limit: "日次上限",
+  daily_token_limit: "日次トークン上限",
+  rate_limit: "分間バースト",
+};
 
 function fmtDateTime(iso: string | null) {
   if (!iso) return "—";
@@ -24,6 +34,12 @@ export default async function AdminUserDetailPage({
 
   const detail = await fetchAdminUserDetail(id);
   if (!detail) notFound();
+
+  const [modStatus, rejections] = await Promise.all([
+    fetchUserStatus(id),
+    fetchUserRejections(id, 20),
+  ]);
+  const canSuspend = ctx.role === "super_admin";
 
   const h = await headers();
   // PII 閲覧ログは確実に永続化したいので await する（serverless では
@@ -146,9 +162,34 @@ export default async function AdminUserDetailPage({
         )}
       </Card>
 
-      <section style={{ background: "var(--n-50)", border: "1px dashed var(--border)", borderRadius: 10, padding: 16, fontSize: 13, color: "var(--text-dim)" }}>
-        MVP では表示のみです。今後の拡張で 管理メモ追加 / email 変更補助 / パスワード強制再設定 などを予定しています（いずれも ConfirmDialog + 監査ログ必須）。
+      <section style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+        <UserModerationPanel
+          userId={detail.id}
+          canSuspend={canSuspend}
+          initialStatus={modStatus.status}
+          initialReason={modStatus.reason}
+          initialFlagged={modStatus.flagged}
+          initialNote={modStatus.note}
+        />
+        <Card title="AI/OCR 拒否履歴（直近20件）">
+          {rejections.length === 0 ? (
+            <div style={{ fontSize: 13, color: "var(--text-dim)" }}>拒否はありません</div>
+          ) : (
+            <ul style={{ listStyle: "none", padding: 0, margin: 0, fontSize: 12 }}>
+              {rejections.map((r, i) => (
+                <li key={i} style={{ padding: "5px 0", borderTop: "1px solid var(--n-100)", display: "flex", justifyContent: "space-between", gap: 8 }}>
+                  <span>
+                    <strong>{r.feature}</strong> · {REJECTION_LABEL[r.reason] ?? r.reason}
+                  </span>
+                  <span style={{ color: "var(--text-dim)" }}>{fmtDateTime(r.created_at)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
       </section>
+
+      <UserFilesPanel userId={detail.id} canDelete={canSuspend} />
     </div>
   );
 }

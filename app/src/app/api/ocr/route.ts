@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { buildOcrRulesPrompt } from "@/lib/ocr-rules";
 import { authenticateRequest } from "@/lib/supabase-server";
 import { enforceAiLimits, OCR_GUARD } from "@/lib/ai-guard";
+import { assertActiveOr403 } from "@/lib/moderation";
 import { ALLOWED_ORIGINS } from "@/lib/allowed-origins";
 
 const SYSTEM_PROMPT = `あなたは旅行・予約文書の情報抽出専門家です。
@@ -99,6 +100,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const { sb, userId } = auth;
+
+  // --- モデレーション: 停止/凍結ユーザーは 403（フェイルオープン）---
+  const suspended = await assertActiveOr403(sb, userId);
+  if (suspended) return suspended;
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {

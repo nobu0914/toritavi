@@ -15,6 +15,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateRequest } from "@/lib/supabase-server";
 import { enforceAiLimits, CONCIERGE_GUARD } from "@/lib/ai-guard";
+import { assertActiveOr403 } from "@/lib/moderation";
 import { buildConciergeContext } from "@/lib/concierge-context";
 import type { Journey, Step } from "@/lib/types";
 import { ALLOWED_ORIGINS } from "@/lib/allowed-origins";
@@ -97,6 +98,10 @@ export async function POST(request: NextRequest) {
   const text = (body.text ?? "").trim();
   if (!text) return NextResponse.json({ error: "text required" }, { status: 400 });
   if (text.length > 2000) return NextResponse.json({ error: "text too long" }, { status: 400 });
+
+  /* ---- モデレーション: 停止/凍結ユーザーは 403（フェイルオープン）---- */
+  const suspended = await assertActiveOr403(sb, userId);
+  if (suspended) return suspended;
 
   /* ---- AI 利用制限（月予算 → 日次 → 分間。@/lib/ai-guard で共通化）---- */
   const blocked = await enforceAiLimits(sb, userId, CONCIERGE_GUARD);

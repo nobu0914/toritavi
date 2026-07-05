@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateRequest } from "@/lib/supabase-server";
 import { ALLOWED_ORIGINS } from "@/lib/allowed-origins";
+import { assertActiveOr403 } from "@/lib/moderation";
 import { sendToUser } from "@/lib/fcm";
 
 /**
@@ -24,6 +25,11 @@ export async function POST(request: NextRequest) {
   if (!auth) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  // 停止/凍結ユーザーはプッシュ疎通も止める（フェイルオープン）。
+  const suspended = await assertActiveOr403(auth.sb, auth.userId);
+  if (suspended) return suspended;
+
   try {
     const result = await sendToUser(auth.userId, {
       title: "Curlew テスト通知",
