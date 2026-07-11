@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   IconLayoutDashboard,
   IconUsers,
+  IconChartBar,
   IconShieldLock,
   IconAlertTriangle,
   IconLogout,
@@ -30,6 +31,7 @@ type NavItem = {
 const NAV: NavItem[] = [
   { href: "/admin", label: "ダッシュボード", Icon: IconLayoutDashboard },
   { href: "/admin/users", label: "利用者", Icon: IconUsers, matchPrefix: true },
+  { href: "/admin/analytics", label: "集計・広告", Icon: IconChartBar, matchPrefix: true },
   { href: "/admin/abuse", label: "違反検知", Icon: IconAlertTriangle, matchPrefix: true },
   { href: "/admin/security", label: "セキュリティ", Icon: IconShieldLock, matchPrefix: true },
 ];
