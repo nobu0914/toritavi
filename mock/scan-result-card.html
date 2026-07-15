@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>toritavi — 読み取り結果カード（概要＋アコーディオン編集）</title>
+<style>
+  /* ===================================================================
+   * Tokens (subset of design-system-v2.html — keep in sync when DS v2
+   * values change. Copy pasted here so this mock renders standalone.)
+   * =================================================================== */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --ink-700: #17233A; --ink-800: #0F1B2D;
+    --accent-50: #FFF0EC; --accent-300: #FF9976; --accent-500: #FF5722; --accent-700: #C93A14;
+    --n-0: #FFFFFF; --n-50: #F7F8FA; --n-100: #EEF0F4; --n-200: #E2E6EC; --n-300: #C9CFD9; --n-500: #8891A1; --n-700: #4A5364;
+    --success-50: #E9F8EF; --success-700: #1E8A57;
+    --warn-50: #FFF5E0; --warn-500: #F5B041; --warn-700: #C48012;
+    --danger-500: #E74C3C;
+    --tint-plane: #D6E4FF; --tint-train: #D4EDDA; --tint-lodging: #FFE5B4; --tint-meeting: #E0F2F1;
+    --infer-bg: var(--accent-50); --infer-fg: var(--accent-700); --infer-border: var(--accent-300);
+    --empty-border: #F4C7C0; --empty-fg: #B7231C;
+    --font-sans: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Yu Gothic UI', 'Segoe UI', Roboto, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+    --bg: var(--n-50); --surface: var(--n-0); --text: var(--ink-800); --text-dim: var(--n-500); --border: var(--n-200);
+    --r-sm: 8px; --r-md: 14px; --r-lg: 20px; --r-pill: 999px;
+    --shadow-sm: 0 2px 8px rgba(15,27,45,0.06); --shadow-md: 0 6px 18px rgba(15,27,45,0.08);
+  }
+
+  body { font-family: var(--font-sans); background: #FAFBFD; color: var(--text); -webkit-font-smoothing: antialiased; padding: 48px 24px 96px; }
+  .page { max-width: 1040px; margin: 0 auto; }
+
+  /* Hero */
+  .hero { margin-bottom: 32px; }
+  .hero-tag { display: inline-block; background: var(--warn-50); color: var(--warn-700); font-size: 11px; font-weight: 800; letter-spacing: 0.5px; padding: 4px 10px; border-radius: var(--r-pill); margin-bottom: 12px; }
+  .hero h1 { font-size: 26px; font-weight: 800; letter-spacing: -0.3px; }
+  .hero .lead { color: var(--text-dim); margin-top: 8px; font-size: 15px; max-width: 760px; line-height: 1.75; }
+  .pill-row { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+  .pill-note { background: var(--n-100); color: var(--n-700); padding: 6px 12px; border-radius: var(--r-pill); font-size: 12px; font-weight: 600; }
+
+  /* Layout: device + spec */
+  .layout { display: grid; grid-template-columns: 400px 1fr; gap: 40px; margin-top: 36px; align-items: start; }
+  @media (max-width: 880px) { .layout { grid-template-columns: 1fr; } }
+
+  /* Device frame */
+  .device { width: 380px; max-width: 100%; margin: 0 auto; border-radius: 34px; border: 9px solid #111; background: var(--bg); overflow: hidden; box-shadow: var(--shadow-md); }
+  .scr-bar { background: var(--surface); border-bottom: 1px solid var(--border); text-align: center; font-size: 15px; font-weight: 700; padding: 14px 0 12px; }
+  .scr-body { padding: 14px 14px 20px; max-height: 720px; overflow-y: auto; }
+  .scr-hint { text-align: center; font-size: 11px; color: var(--text-dim); margin-bottom: 14px; }
+  .stepno { font-size: 11px; font-weight: 700; color: var(--text-dim); margin: 0 2px 6px; }
+
+  /* === Scan Result Card (summary + accordion edit) — the proposal === */
+  .sr-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-sm); overflow: hidden; margin-bottom: 12px; }
+  .sr-head { display: grid; grid-template-columns: 44px 1fr auto; gap: 12px; align-items: center; padding: 12px 14px; cursor: pointer; }
+  .sr-thumb { width: 44px; height: 44px; border-radius: var(--r-md); display: flex; align-items: center; justify-content: center; color: var(--ink-700); }
+  .sr-thumb svg { width: 22px; height: 22px; }
+  .sr-body { min-width: 0; }
+  .sr-name { font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sr-meta { font-size: 11px; color: var(--text-dim); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sr-meta .m { font-family: var(--font-mono); }
+  .sr-aside { display: flex; align-items: center; gap: 8px; }
+  .sr-flag { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: var(--r-pill); background: var(--warn-50); color: var(--warn-700); }
+  .sr-flag svg { width: 11px; height: 11px; }
+  .sr-chev { width: 18px; height: 18px; color: var(--text-dim); transition: transform 0.2s; }
+  .sr-card.open .sr-chev { transform: rotate(180deg); }
+  .sr-detail { display: none; border-top: 1px solid var(--border); background: var(--n-50); padding: 12px 14px 14px; }
+  .sr-card.open .sr-detail { display: block; }
+  .sr-cat { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; color: var(--ink-700); background: var(--tint-meeting); padding: 5px 10px; border-radius: var(--r-pill); margin-bottom: 10px; }
+  .sr-cat svg { width: 13px; height: 13px; }
+
+  /* Reused: OCR form fields (mirror .ocr-form-* in DS v2) */
+  .ocr-form { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm); overflow: hidden; }
+  .ocr-row { padding: 9px 12px; border-bottom: 1px solid var(--n-100); }
+  .ocr-row:last-child { border-bottom: none; }
+  .ocr-label { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; margin-bottom: 4px; }
+  .ocr-input { width: 100%; padding: 8px 10px; border-radius: var(--r-sm); border: 1.5px solid var(--n-300); background: var(--n-50); color: var(--text); font-size: 14px; font-weight: 600; font-family: inherit; }
+  .ocr-input:focus { outline: none; border-color: var(--ink-800); background: var(--surface); }
+  .ocr-input.mono { font-family: var(--font-mono); }
+  .ocr-input.inferred { border-color: var(--infer-border); }
+  .ocr-input.empty { border-style: dashed; border-color: var(--empty-border); background: var(--surface); }
+  .ocr-input.empty::placeholder { color: var(--empty-fg); opacity: 1; }
+  .badge-infer { font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; background: var(--infer-bg); color: var(--infer-fg); }
+  .ocr-seclabel { font-size: 11px; color: var(--text-dim); font-weight: 700; letter-spacing: 0.5px; margin: 14px 0 6px; }
+
+  .reg-btn { width: 100%; margin-top: 14px; padding: 13px; border: none; border-radius: var(--r-md); background: var(--accent-500); color: #fff; font-size: 14px; font-weight: 700; font-family: inherit; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; }
+  .reg-btn svg { width: 16px; height: 16px; }
+
+  /* Spec panel */
+  .spec h2 { font-size: 18px; font-weight: 800; margin-bottom: 4px; }
+  .spec .sub { font-size: 13px; color: var(--text-dim); line-height: 1.7; margin-bottom: 18px; }
+  .spec h3 { font-size: 13px; font-weight: 800; letter-spacing: 0.4px; color: var(--ink-700); margin: 20px 0 8px; }
+  .spec ul { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+  .spec li { display: grid; grid-template-columns: 20px 1fr; gap: 8px; font-size: 13px; color: var(--n-700); line-height: 1.6; }
+  .spec li .k { color: var(--accent-700); font-weight: 800; }
+  .legend { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+  .legend-item { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--n-700); }
+  .swatch { flex-shrink: 0; width: 120px; }
+  .demo-input { width: 100%; padding: 6px 9px; border-radius: var(--r-sm); border: 1.5px solid var(--n-300); background: var(--n-50); font-size: 12px; font-weight: 600; font-family: inherit; color: var(--text); }
+  .demo-input.inferred { border-color: var(--infer-border); }
+  .demo-input.empty { border-style: dashed; border-color: var(--empty-border); background: var(--surface); color: var(--empty-fg); }
+  .flag-demo { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: var(--r-pill); background: var(--warn-50); color: var(--warn-700); }
+  .flag-demo svg { width: 11px; height: 11px; }
+  .reuse { font-size: 12px; color: var(--n-700); line-height: 1.7; background: var(--n-100); border-radius: var(--r-md); padding: 12px 14px; margin-top: 8px; }
+  .reuse code { font-family: var(--font-mono); font-size: 11px; background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="hero">
+    <span class="hero-tag">検討中 · Scan / OCR</span>
+    <h1>読み取り結果カード（概要＋アコーディオン編集）</h1>
+    <p class="lead">
+      読み取り結果を「1 予定 = 1 カード」で表示。たたんだ状態は
+      <strong>カテゴリ・タイトル・要点 1 行・要確認フラグ</strong>の概要だけを見せ、
+      タップで詳細フォーム（既存の OCR エディタ）をアコーディオン展開して修正できる。
+      全項目を平置きしていた従来の縦長フォームを、ざっと確認しやすい概要中心に畳んだ案。
+    </p>
+    <div class="pill-row">
+      <span class="pill-note">概要は開かず確認</span>
+      <span class="pill-note">詳細はタップで編集</span>
+      <span class="pill-note">要確認カードは一目で判別</span>
+      <span class="pill-note">既存 .ocr-form を流用</span>
+    </div>
+  </div>
+
+  <div class="layout">
+
+    <!-- Device -->
+    <div class="device">
+      <div class="scr-bar">読み取り結果</div>
+      <div class="scr-body">
+        <div class="scr-hint">カードをタップすると詳細を編集できます</div>
+
+        <div class="stepno">予定 1 / 3</div>
+        <div class="sr-card">
+          <div class="sr-head" onclick="this.parentElement.classList.toggle('open')">
+            <div class="sr-thumb" style="background:var(--tint-plane)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15l-8-4V4.6a1.6 1.6 0 0 0-3.2 0V11l-8 4v2.2l8-2.5V19l-2.2 1.6v1.6L12 20.5l4.4 1.3v-1.6L14.2 18.7V14.5z"/></svg></div>
+            <div class="sr-body">
+              <div class="sr-name">JAL 101</div>
+              <div class="sr-meta">4/20（日）・ <span class="m">HND → ITM</span> ・ 09:30 発</div>
+            </div>
+            <div class="sr-aside"><svg class="sr-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 9 12 16 19 9"/></svg></div>
+          </div>
+          <div class="sr-detail">
+            <span class="sr-cat" style="background:var(--tint-plane)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15l-8-4V4.6a1.6 1.6 0 0 0-3.2 0V11l-8 4v2.2l8-2.5V19l-2.2 1.6v1.6L12 20.5l4.4 1.3v-1.6L14.2 18.7V14.5z"/></svg>飛行機</span>
+            <div class="ocr-form">
+              <div class="ocr-row"><div class="ocr-label">便名</div><input class="ocr-input" value="JAL 101"></div>
+              <div class="ocr-row"><div class="ocr-label">出発空港</div><input class="ocr-input" value="HND（羽田）"></div>
+              <div class="ocr-row"><div class="ocr-label">到着空港</div><input class="ocr-input" value="ITM（伊丹）"></div>
+              <div class="ocr-row"><div class="ocr-label">出発時刻</div><input class="ocr-input" value="09:30"></div>
+              <div class="ocr-row"><div class="ocr-label">確認番号 <span class="badge-infer">推定</span></div><input class="ocr-input inferred mono" value="JL-A8X9KQ"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="stepno">予定 2 / 3</div>
+        <div class="sr-card open">
+          <div class="sr-head" onclick="this.parentElement.classList.toggle('open')">
+            <div class="sr-thumb" style="background:var(--tint-lodging)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18V7"/><path d="M3 13h18v5"/><path d="M7 13v-2a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v2"/><path d="M12 10h6a3 3 0 0 1 3 3"/></svg></div>
+            <div class="sr-body">
+              <div class="sr-name">グランドホテル大阪</div>
+              <div class="sr-meta">4/20 チェックイン ・ <span class="m">2 泊</span></div>
+            </div>
+            <div class="sr-aside"><span class="sr-flag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l9 16H3z"/><line x1="12" y1="10" x2="12" y2="14"/><circle cx="12" cy="17" r="0.5" fill="currentColor"/></svg>要確認</span><svg class="sr-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 9 12 16 19 9"/></svg></div>
+          </div>
+          <div class="sr-detail">
+            <span class="sr-cat" style="background:var(--tint-lodging)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18V7"/><path d="M3 13h18v5"/><path d="M7 13v-2a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v2"/><path d="M12 10h6a3 3 0 0 1 3 3"/></svg>宿泊</span>
+            <div class="ocr-form">
+              <div class="ocr-row"><div class="ocr-label">施設名</div><input class="ocr-input" value="グランドホテル大阪"></div>
+              <div class="ocr-row"><div class="ocr-label">チェックイン</div><input class="ocr-input" value="2026-04-20"></div>
+              <div class="ocr-row"><div class="ocr-label">チェックアウト <span class="badge-infer">推定</span></div><input class="ocr-input inferred" value="2026-04-22"></div>
+              <div class="ocr-row"><div class="ocr-label">部屋タイプ</div><input class="ocr-input empty" placeholder="未取得（タップで入力）"></div>
+              <div class="ocr-row"><div class="ocr-label">確認番号</div><input class="ocr-input mono" value="GH-4471-889"></div>
+            </div>
+            <div class="ocr-seclabel">その他の読み取り情報</div>
+            <div class="ocr-form">
+              <div class="ocr-row"><div class="ocr-label">朝食</div><input class="ocr-input" value="あり（2 名分）"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="stepno">予定 3 / 3</div>
+        <div class="sr-card">
+          <div class="sr-head" onclick="this.parentElement.classList.toggle('open')">
+            <div class="sr-thumb" style="background:var(--tint-train)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="12" height="12" rx="2.5"/><path d="M6 11h12"/><path d="M8.5 16l-2 3"/><path d="M15.5 16l2 3"/><circle cx="9.2" cy="13.4" r="0.5" fill="currentColor"/><circle cx="14.8" cy="13.4" r="0.5" fill="currentColor"/></svg></div>
+            <div class="sr-body">
+              <div class="sr-name">のぞみ 245 号</div>
+              <div class="sr-meta">4/22 ・ <span class="m">新大阪 → 東京</span> ・ 18:03 発</div>
+            </div>
+            <div class="sr-aside"><svg class="sr-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 9 12 16 19 9"/></svg></div>
+          </div>
+          <div class="sr-detail">
+            <span class="sr-cat" style="background:var(--tint-train)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="12" height="12" rx="2.5"/><path d="M6 11h12"/><path d="M8.5 16l-2 3"/><path d="M15.5 16l2 3"/></svg>列車</span>
+            <div class="ocr-form">
+              <div class="ocr-row"><div class="ocr-label">列車名</div><input class="ocr-input" value="のぞみ 245 号"></div>
+              <div class="ocr-row"><div class="ocr-label">出発駅</div><input class="ocr-input" value="新大阪"></div>
+              <div class="ocr-row"><div class="ocr-label">到着駅</div><input class="ocr-input" value="東京"></div>
+              <div class="ocr-row"><div class="ocr-label">座席</div><input class="ocr-input" value="12 号車 7A"></div>
+            </div>
+          </div>
+        </div>
+
+        <button class="reg-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 12 10 18 20 6"/></svg>登録</button>
+      </div>
+    </div>
+
+    <!-- Spec -->
+    <div class="spec">
+      <h2>仕様</h2>
+      <p class="sub">たたむ = 概要で確認、開く = 詳細で修正。読み取り件数が多いほど効く。</p>
+
+      <h3>概要（たたんだ状態）に出す</h3>
+      <ul>
+        <li><span class="k">1</span>カテゴリのサムネイル（種別 tint 背景 + フラットアイコン）</li>
+        <li><span class="k">2</span>タイトル（便名 / 施設名 / 列車名 …）</li>
+        <li><span class="k">3</span>要点 1 行 = 種別ごとに最適化（交通: <span class="m" style="font-family:var(--font-mono)">日付・区間・時刻</span> / 宿泊: <span class="m" style="font-family:var(--font-mono)">チェックイン・泊数</span>）</li>
+        <li><span class="k">4</span>状態フラグ = <span class="flag-demo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l9 16H3z"/><line x1="12" y1="10" x2="12" y2="14"/></svg>要確認</span> のみ表示（問題なければ無表示でノイズを抑える）</li>
+      </ul>
+
+      <h3>詳細（開いた状態）</h3>
+      <ul>
+        <li><span class="k">◦</span>既存の <code style="font-family:var(--font-mono)">.ocr-form</code> をそのまま内包。フィールド状態も踏襲。</li>
+      </ul>
+      <div class="legend">
+        <div class="legend-item"><span class="swatch"><input class="demo-input" value="通常"></span>読み取り成功</div>
+        <div class="legend-item"><span class="swatch"><input class="demo-input inferred" value="推定値"></span>AI 推定（<span class="badge-infer">推定</span> バッジ + オレンジ枠）</div>
+        <div class="legend-item"><span class="swatch"><input class="demo-input empty" placeholder="未取得"></span>未取得（破線 + 赤系プレースホルダ）</div>
+      </div>
+
+      <h3>流用する既存コンポーネント</h3>
+      <div class="reuse">
+        <code>.ocr-form</code> / <code>.ocr-form-input</code>（inferred・empty）/ <code>.badge-infer</code> /
+        カテゴリ tint / <code>.open</code> + シェブロン 180° 回転（<code>.ocr-full</code>・<code>.j-group</code> と同じ機構）。
+        新規は概要↔詳細のガワ <code>.sr-card</code> / <code>.sr-head</code> / <code>.sr-detail</code> のみ。
+      </div>
+
+      <h3>従来との差分</h3>
+      <ul>
+        <li><span class="k">×</span>従来: 全項目を縦に平置き。件数が増えると長大で全体像が掴みにくい。</li>
+        <li><span class="k">○</span>本案: 概要で一覧確認 → 直したい 1 件だけ開く。要確認は畳んだまま判別可能。</li>
+      </ul>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>

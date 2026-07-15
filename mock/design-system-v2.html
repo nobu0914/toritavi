@@ -1523,7 +1523,7 @@
 <nav class="ds-tabnav" role="tablist" aria-label="DS セクション切替">
   <span class="ds-tabnav-label">Design System v2</span>
   <button type="button" class="ds-tab-btn active" data-target="ds-tab-adopted" role="tab" aria-selected="true">採用済み</button>
-  <button type="button" class="ds-tab-btn" data-target="ds-tab-review" role="tab" aria-selected="false">検討中<span class="ds-tab-count">1</span></button>
+  <button type="button" class="ds-tab-btn" data-target="ds-tab-review" role="tab" aria-selected="false">検討中<span class="ds-tab-count">2</span></button>
 </nav>
 
 <div id="ds-tab-adopted" class="ds-tab-panel active" role="tabpanel">
@@ -7218,12 +7218,28 @@ HND → ITM
       </div>
       <a class="open-btn" href="journey-flow-v2.html" target="_blank" rel="noopener">別タブで開く ↗</a>
     </div>
+    <div class="ds-review-item">
+      <div class="ds-review-num">2</div>
+      <div class="grow">
+        <h3>読み取り結果カード（概要＋アコーディオン編集）</h3>
+        <p>読み取り結果を 1 予定 = 1 カードで表示。概要（カテゴリ・タイトル・要点・要確認フラグ）だけ畳んで見せ、タップで詳細フォームを展開して修正。件数が多いほど確認しやすい。対応: <code class="mono">app/scan review</code></p>
+      </div>
+      <a class="open-btn" href="scan-result-card.html" target="_blank" rel="noopener">別タブで開く ↗</a>
+    </div>
   </section>
 
   <section class="ds-review-frame">
     <iframe
       src="journey-flow-v2.html"
       title="Journey 起点フロー 比較 (A/B/C)"
+      loading="lazy">
+    </iframe>
+  </section>
+
+  <section class="ds-review-frame">
+    <iframe
+      src="scan-result-card.html"
+      title="読み取り結果カード（概要＋アコーディオン編集）"
       loading="lazy">
     </iframe>
   </section>
