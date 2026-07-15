@@ -174,7 +174,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--fg);-webkit-font-s
 .t-suc{background:var(--suc-50);color:var(--suc-700)} .t-warn{background:var(--wrn-50);color:var(--wrn-700)} .t-warm{background:var(--w-50);color:var(--w-700)}
 
 /* §6 */
-.wshero{background:linear-gradient(140deg,var(--t-50),var(--surface));border:1px solid var(--t-100);border-radius:var(--r-lg);padding:18px}
+.wshero{background:linear-gradient(140deg,var(--t-50),var(--surface));border:1px solid var(--t-100);border-radius:var(--r-lg);padding:16px}
+.wshero-head{display:flex;justify-content:space-between;align-items:center}
+.wshero-date{font-size:11px;font-weight:var(--fw-m);color:var(--fg-mute)}
 .wseyebrow{font-size:11px;font-weight:var(--fw-b);letter-spacing:.1em;text-transform:uppercase;color:var(--t-700)}
 .wsstats{display:flex;gap:10px;margin:14px 0}
 .wsstat{flex:1;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:12px;text-align:center}
@@ -1884,23 +1886,27 @@ body{font-family:var(--font);background:var(--bg);color:var(--fg);-webkit-font-s
 
     <div class="comps">
 
-      <!-- 1. Workspace Hero + Focus -->
+      <!-- 1. Workspace Hero — search + stats + focus（TOP設置版） -->
       <div class="comp full">
-        <div class="lbl">Workspace Hero（stats + focus）</div>
+        <div class="lbl">Workspace Hero（search + stats + focus）</div>
         <div class="center420">
           <div class="wshero">
-            <div style="display:flex;justify-content:space-between;align-items:center">
-              <span class="wseyebrow">ジャーニー ワークスペース</span>
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="var(--fg-body)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M10 21h4"/></svg>
+            <div class="wshero-head">
+              <span class="wseyebrow">ワークスペース</span>
+              <span class="wshero-date">7月16日(木)</span>
+            </div>
+            <div class="s05-search" style="margin-top:12px">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="var(--fg-mute)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+              <input placeholder="旅程・便名・確認番号で検索">
             </div>
             <div class="wsstats">
               <div class="wsstat"><div class="n">4</div><div class="l">合計</div></div>
-              <div class="wsstat"><div class="n">2</div><div class="l">進行中</div></div>
-              <div class="wsstat"><div class="n">1</div><div class="l">次の予定</div></div>
+              <div class="wsstat"><div class="n" style="color:var(--t-700)">2</div><div class="l">進行中</div></div>
+              <div class="wsstat"><div class="n" style="color:var(--wrn-700)">1</div><div class="l">要確認</div></div>
             </div>
             <div class="focus">
-              <div class="thumb" style="background:var(--thumb-pri-bg)"><svg viewBox="0 0 24 24" fill="none" stroke="var(--t-700)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="3" width="12" height="15" rx="3"/><path d="M6 9h12M9 21l-1.5 1.5M15 21l1.5 1.5"/></svg></div>
-              <div style="flex:1"><div class="jnext nl">いま開くべき Journey</div><div style="font-size:var(--fs-md);font-weight:var(--fw-b)">大阪出張 2026/04</div><div style="font-size:11px;color:var(--fg-mute)">09:23 · 新大阪駅 乗車</div></div>
+              <div class="thumb" style="background:var(--thumb-pri-bg)"><svg viewBox="0 0 24 24" fill="none" stroke="var(--t-700)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13l2-5a2 2 0 0 1 2-1.5h10a2 2 0 0 1 2 1.5l2 5v5H3z"/><circle cx="7.5" cy="17" r="1.5"/><circle cx="16.5" cy="17" r="1.5"/></svg></div>
+              <div style="flex:1"><div class="jnext nl" style="color:var(--t-700)">次の予定</div><div style="font-size:var(--fs-md);font-weight:var(--fw-b)">大阪出張 2026/07</div><div style="font-size:11px;color:var(--fg-mute)">09:23 · のぞみ225号</div></div>
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="var(--fg-faint)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
             </div>
           </div>
