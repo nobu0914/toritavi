@@ -15,6 +15,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateRequest } from "@/lib/supabase-server";
 import { enforceAiLimits, CONCIERGE_GUARD } from "@/lib/ai-guard";
+import { recordConciergeUsage } from "@/lib/ai-usage-record";
 import { assertActiveOr403 } from "@/lib/moderation";
 import { buildConciergeContext } from "@/lib/concierge-context";
 import type { Journey, Step } from "@/lib/types";
@@ -189,10 +190,13 @@ export async function POST(request: NextRequest) {
 
   /* ---- 10) Increment usage ---- */
   const cost = estimateCostCents(assistant.tokensIn, assistant.tokensOut);
-  await sb.rpc("increment_concierge_usage", {
-    p_tokens_in: assistant.tokensIn,
-    p_tokens_out: assistant.tokensOut,
-    p_cost_cents: cost,
+  // 記録は service_role 専用 RPC 経由（利用者が PostgREST から直接叩いて
+  // 共有予算を焼き切れないようにするため）。
+  await recordConciergeUsage({
+    userId,
+    tokensIn: assistant.tokensIn,
+    tokensOut: assistant.tokensOut,
+    costCents: cost,
   });
 
   /* ---- 11) Bump thread updated_at ---- */

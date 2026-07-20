@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { buildOcrRulesPrompt } from "@/lib/ocr-rules";
 import { authenticateRequest } from "@/lib/supabase-server";
 import { enforceAiLimits, OCR_GUARD } from "@/lib/ai-guard";
+import { recordOcrUsage } from "@/lib/ai-usage-record";
 import { assertActiveOr403 } from "@/lib/moderation";
 import { ALLOWED_ORIGINS } from "@/lib/allowed-origins";
 
@@ -184,15 +185,9 @@ export async function POST(request: NextRequest) {
     const costCents = Math.ceil(
       (tokensIn * SONNET_INPUT_CENTS_PER_MTOK + tokensOut * SONNET_OUTPUT_CENTS_PER_MTOK) / 1_000_000
     );
-    try {
-      await sb.rpc("increment_ocr_usage", {
-        p_tokens_in: tokensIn,
-        p_tokens_out: tokensOut,
-        p_cost_cents: costCents,
-      });
-    } catch (e) {
-      console.error("[OCR] usage increment failed:", e);
-    }
+    // 記録は service_role 専用 RPC 経由（利用者が PostgREST から直接叩いて
+    // 共有予算を焼き切れないようにするため）。best-effort は従来どおり。
+    await recordOcrUsage({ userId, tokensIn, tokensOut, costCents });
 
     const textBlock = response.content.find((b) => b.type === "text");
     const raw = textBlock?.type === "text" ? textBlock.text : "";

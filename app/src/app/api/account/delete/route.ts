@@ -34,24 +34,43 @@ const NON_CASCADING_USER_TABLES = [
  * Remove everything under {userId}/ in the step-attachments bucket.
  * Path convention: {userId}/{stepId}/{uuid}.{ext} (two levels).
  */
+const PAGE = 1000; // Supabase Storage list() の 1 ページあたり上限
+
+/**
+ * List every entry under `prefix`, paging until the API returns a short page.
+ * A single list() call caps at 1000 entries, so a heavy user's folders would
+ * otherwise be silently left behind on account deletion.
+ */
+async function listAll(
+  bucket: ReturnType<ReturnType<typeof createServiceClient>["storage"]["from"]>,
+  prefix: string
+): Promise<string[]> {
+  const names: string[] = [];
+  for (let offset = 0; ; offset += PAGE) {
+    const { data, error } = await bucket.list(prefix, { limit: PAGE, offset });
+    if (error) throw error; // 呼び出し元で捕捉し、削除不完全を明示ログする
+    if (!data?.length) break;
+    names.push(...data.map((e) => e.name));
+    if (data.length < PAGE) break;
+  }
+  return names;
+}
+
 async function removeUserStepAttachments(
   admin: ReturnType<typeof createServiceClient>,
   userId: string
 ): Promise<void> {
   const bucket = admin.storage.from("step-attachments");
-  const { data: stepFolders, error } = await bucket.list(userId, { limit: 1000 });
-  if (error || !stepFolders?.length) return;
+  const stepFolders = await listAll(bucket, userId);
   const paths: string[] = [];
   for (const folder of stepFolders) {
-    const { data: files } = await bucket.list(`${userId}/${folder.name}`, {
-      limit: 1000,
-    });
-    for (const f of files ?? []) {
-      paths.push(`${userId}/${folder.name}/${f.name}`);
-    }
+    const files = await listAll(bucket, `${userId}/${folder}`);
+    for (const f of files) paths.push(`${userId}/${folder}/${f}`);
   }
-  if (paths.length) {
-    await bucket.remove(paths);
+  // remove() も一度に渡せる件数に上限があるためチャンクで消す。
+  for (let i = 0; i < paths.length; i += PAGE) {
+    const { error } = await bucket.remove(paths.slice(i, i + PAGE));
+    if (error) throw error;
   }
 }
 
