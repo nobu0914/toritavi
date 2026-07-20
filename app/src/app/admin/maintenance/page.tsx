@@ -48,7 +48,8 @@ type SectionMeta = {
   match: string;
   /** タブの表示名（見出しは長いので短縮名を出す）。 */
   tabLabel: string;
-  /** タブ先頭に大きく出す「状態確認」SQL。 */
+  /** タブ先頭に大きく出す「まずこれ」コマンド（見出しは statusTitle）。 */
+  statusTitle?: string;
   statusSql?: string;
   statusNote?: string;
   statusHint?: React.ReactNode;
@@ -58,6 +59,7 @@ const SECTION_META: SectionMeta[] = [
   {
     match: "スキャン画像",
     tabLabel: "ファイル削除",
+    statusTitle: "状態確認（まずこれ 1 行）",
     statusSql: "select * from public.toritavi_retention_status;",
     statusNote: "スキャン画像 自動削除の稼働状況。Supabase → SQL Editor に貼って実行。",
     statusHint: (
@@ -68,20 +70,42 @@ const SECTION_META: SectionMeta[] = [
       </>
     ),
   },
+  {
+    match: "セキュリティ運用",
+    tabLabel: "セキュリティ運用",
+    statusTitle: "定期チェック（まずこれ）",
+    statusSql: "bash tool/security_check.sh",
+    statusNote: "toritavi_app のリポジトリ直下で実行。リリース前・月次はこのフル版。",
+    statusHint: (
+      <>
+        週次・コミット前は <code style={inlineCode}>--fast</code>（静的検査のみ）·
+        判断に迷ったら <code style={inlineCode}>docs/SECURITY_MAINTENANCE.md</code> の 5 原則に従う
+      </>
+    ),
+  },
 ];
 
 function metaFor(heading: string): SectionMeta | undefined {
   return SECTION_META.find((m) => heading.includes(m.match));
 }
 
-function loadGuide(): string {
+/**
+ * タブの元になる Markdown。
+ *   - admin-maintenance-guide.md は toritavi_app 側に原本があるコピー。
+ *     再同期で上書きされるため、こちらに独自の追記はしない。
+ *   - admin-security-guide.md は原本を持たない（本リポジトリが正）。
+ * 新しいガイドを足すときはこの配列にファイル名を追加する。
+ */
+const CONTENT_FILES = [
+  "admin-maintenance-guide.md",
+  "admin-security-guide.md",
+] as const;
+
+function loadContent(file: string): string {
   try {
-    return readFileSync(
-      join(process.cwd(), "src/content/admin-maintenance-guide.md"),
-      "utf8"
-    );
+    return readFileSync(join(process.cwd(), "src/content", file), "utf8");
   } catch (e) {
-    console.error("[admin/maintenance] guide load failed", e);
+    console.error(`[admin/maintenance] load failed: ${file}`, e);
     return "";
   }
 }
@@ -96,8 +120,10 @@ export default async function AdminMaintenancePage() {
     userAgent: h.get("user-agent"),
   });
 
-  const md = loadGuide();
-  const { preamble, sections } = splitGuideByH2(md);
+  // 各ファイルを H2 で割り、出てきた順にタブへ並べる。
+  const docs = CONTENT_FILES.map((f) => splitGuideByH2(loadContent(f)));
+  const sections = docs.flatMap((d) => d.sections);
+  const preamble = docs.map((d) => d.preamble).filter(Boolean).join(" ");
   const labels = sections.map((s) => metaFor(s.heading)?.tabLabel ?? s.heading);
 
   return (
@@ -105,7 +131,7 @@ export default async function AdminMaintenancePage() {
       <section>
         <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>運用・メンテナンス</h1>
         <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--text-dim)" }}>
-          運用リファレンス（読み取り専用）。SQL は Supabase の SQL Editor で手動実行してください。
+          運用リファレンス（読み取り専用）。SQL・コマンドは手元で手動実行してください。
         </p>
       </section>
 
@@ -120,7 +146,7 @@ export default async function AdminMaintenancePage() {
           color: "var(--text-dim)",
         }}
       >
-        このページは手順の掲示のみです。削除の実行・停止などはこの画面からは行えません（シークレット漏洩防止のため、purge エンドポイントの呼び出し導線と <code style={inlineCode}>PURGE_SECRET</code> は管理画面に持ち込んでいません）。操作は Supabase の SQL Editor から手動で実施してください。
+        このページは手順の掲示のみです。削除の実行・停止やチェックの実行はこの画面からは行えません（シークレット漏洩防止のため、purge エンドポイントの呼び出し導線と <code style={inlineCode}>PURGE_SECRET</code> は管理画面に持ち込んでいません）。SQL は Supabase の SQL Editor、スクリプトは手元のターミナルから実施してください。
       </section>
 
       {sections.length === 0 ? (
@@ -147,7 +173,7 @@ export default async function AdminMaintenancePage() {
                     }}
                   >
                     <h2 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 4px" }}>
-                      状態確認（まずこれ 1 行）
+                      {meta.statusTitle ?? "状態確認（まずこれ 1 行）"}
                     </h2>
                     {meta.statusNote && (
                       <p style={{ margin: "0 0 10px", fontSize: 12, color: "var(--text-dim)" }}>
@@ -179,8 +205,11 @@ export default async function AdminMaintenancePage() {
             <br />
           </>
         )}
-        原本: <code style={inlineCode}>toritavi_app / docs/admin-maintenance-guide.md</code>
-        （差分が出た場合は原本が正）。原本の <code style={inlineCode}>##</code> 見出し 1 つがタブ 1 枚になります。
+        <code style={inlineCode}>##</code> 見出し 1 つがタブ 1 枚。「ファイル削除」の原本は{" "}
+        <code style={inlineCode}>toritavi_app / docs/admin-maintenance-guide.md</code>
+        （差分が出た場合は原本が正・再同期で上書きされるため直接追記しないこと）。
+        「セキュリティ運用」は本リポジトリの{" "}
+        <code style={inlineCode}>src/content/admin-security-guide.md</code> が正。
       </section>
     </div>
   );
