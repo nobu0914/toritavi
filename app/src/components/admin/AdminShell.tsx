@@ -8,6 +8,7 @@ import {
   IconChartBar,
   IconShieldLock,
   IconAlertTriangle,
+  IconTool,
   IconLogout,
 } from "@tabler/icons-react";
 import { useState } from "react";
@@ -34,6 +35,7 @@ const NAV: NavItem[] = [
   { href: "/admin/analytics", label: "集計・広告", Icon: IconChartBar, matchPrefix: true },
   { href: "/admin/abuse", label: "違反検知", Icon: IconAlertTriangle, matchPrefix: true },
   { href: "/admin/security", label: "セキュリティ", Icon: IconShieldLock, matchPrefix: true },
+  { href: "/admin/maintenance", label: "メンテナンス", Icon: IconTool, matchPrefix: true },
 ];
 
 const ROLE_LABEL: Record<AdminRole, string> = {

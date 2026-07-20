@@ -107,3 +107,93 @@ body[data-scroll-locked] {
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
+
+/* 管理コンソール: Markdown ガイド本文（/admin/maintenance）。
+   react-markdown の出力に対する最小限のタイポグラフィ。 */
+.admin-md {
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--text);
+}
+.admin-md h1 {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 24px 0 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.admin-md h2 {
+  font-size: 17px;
+  font-weight: 700;
+  margin: 32px 0 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--n-100, #eee);
+}
+.admin-md h3 {
+  font-size: 14px;
+  font-weight: 700;
+  margin: 22px 0 8px;
+  color: var(--text);
+}
+.admin-md p { margin: 10px 0; }
+.admin-md ul,
+.admin-md ol { margin: 10px 0; padding-left: 22px; }
+.admin-md li { margin: 4px 0; }
+.admin-md hr {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 20px 0;
+}
+.admin-md a { color: var(--accent-700, #7a3b00); }
+.admin-md code {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.92em;
+  background: var(--n-100, #eee);
+  padding: 1px 5px;
+  border-radius: 4px;
+  word-break: break-all;
+}
+.admin-md pre {
+  background: var(--ink-900, #0F1B2D);
+  color: #e8f2fb;
+  padding: 12px 14px;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 12px 0;
+}
+.admin-md pre code {
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  font-size: 12.5px;
+  word-break: normal;
+}
+.admin-md table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0;
+  font-size: 13px;
+  display: block;
+  overflow-x: auto;
+}
+.admin-md th,
+.admin-md td {
+  border: 1px solid var(--border);
+  padding: 7px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+.admin-md th {
+  background: var(--n-50);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.admin-md blockquote {
+  margin: 14px 0;
+  padding: 10px 14px;
+  border-left: 3px solid var(--accent-600, #b8860b);
+  background: var(--n-50);
+  color: var(--text-dim);
+  font-size: 13px;
+}
+.admin-md blockquote p { margin: 0; }
