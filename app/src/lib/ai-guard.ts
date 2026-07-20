@@ -63,7 +63,19 @@ function firstOfThisMonth(tz: AiMonthTz): string {
   return `${year}-${String(month).padStart(2, "0")}-01`;
 }
 
-/** UTC の今日（YYYY-MM-DD）。日次のキー。 */
+/**
+ * UTC の今日（YYYY-MM-DD）。日次のキー。
+ *
+ * ⚠️ JST 基準へ移行したいが**まだできない**。使用量を書き込む RPC
+ * `increment_ocr_usage` の定義がリポジトリに無く（本番DBに直接作成されている）、
+ * 日キーを何で作っているか確認できないため。読み(ここ)だけ JST にすると、
+ * 書きが UTC の場合に毎日 15:00-24:00 UTC(= 0:00-9:00 JST) の間だけ別キーを
+ * 参照し、**上限が全く効かなくなる**。
+ *
+ * 移行手順: (1) increment_ocr_usage の定義を確認 (2) 書き込み側を JST に統一
+ * (3) ここと nextDailyResetIso() を同時に JST 化。読み書きは必ず同時に変える。
+ * 正本: toritavi_app/docs/monetization-spec.md §2
+ */
 function utcToday(): string {
   return new Date().toISOString().slice(0, 10);
 }
@@ -76,12 +88,12 @@ export const OCR_GUARD: AiGuardConfig = {
   ), // $20
   tiers: {
     free: {
-      dailyRequests: envNum(["AI_OCR_DAILY_REQUESTS", "OCR_DAILY_REQUEST_LIMIT"], 50),
+      dailyRequests: envNum(["AI_OCR_DAILY_REQUESTS", "OCR_DAILY_REQUEST_LIMIT"], 10),
       dailyTokens: envNum(["AI_OCR_DAILY_TOKENS", "OCR_DAILY_TOKEN_LIMIT"], 500_000),
       ratePerMin: envNum(["AI_OCR_RATE_PER_MIN", "OCR_RATE_LIMIT_PER_MIN"], 5),
     },
     pro: {
-      dailyRequests: envNum(["AI_OCR_PRO_DAILY_REQUESTS"], 200),
+      dailyRequests: envNum(["AI_OCR_PRO_DAILY_REQUESTS"], 50),
       dailyTokens: envNum(["AI_OCR_PRO_DAILY_TOKENS"], 2_000_000),
       ratePerMin: envNum(["AI_OCR_PRO_RATE_PER_MIN"], 10),
     },
@@ -254,7 +266,7 @@ export async function getAiUsage(
   };
 }
 
-/** 日次のリセット時刻（次の UTC 0:00）の ISO 文字列。 */
+/** 日次のリセット時刻（次の UTC 0:00）の ISO 文字列。日キーと必ず同じ基準にする。 */
 export function nextDailyResetIso(): string {
   const d = new Date();
   const next = new Date(
