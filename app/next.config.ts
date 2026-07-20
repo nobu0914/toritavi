@@ -30,6 +30,11 @@ const nextConfig: NextConfig = {
   experimental: {
     scrollRestoration: true,
   },
+  // /admin/maintenance は src/content の Markdown を実行時に読むため、
+  // serverless バンドルへ明示的に同梱する（トレースだけでは拾われない）。
+  outputFileTracingIncludes: {
+    "/admin/maintenance": ["./src/content/**"],
+  },
   async headers() {
     return [
       {
