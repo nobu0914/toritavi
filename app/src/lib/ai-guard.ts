@@ -64,20 +64,23 @@ function firstOfThisMonth(tz: AiMonthTz): string {
 }
 
 /**
- * UTC の今日（YYYY-MM-DD）。日次のキー。
+ * 日次キーの基準タイムゾーン（JST = UTC+9）。
  *
- * ⚠️ JST 基準へ移行したいが**まだできない**。使用量を書き込む RPC
- * `increment_ocr_usage` の定義がリポジトリに無く（本番DBに直接作成されている）、
- * 日キーを何で作っているか確認できないため。読み(ここ)だけ JST にすると、
- * 書きが UTC の場合に毎日 15:00-24:00 UTC(= 0:00-9:00 JST) の間だけ別キーを
- * 参照し、**上限が全く効かなくなる**。
+ * 日本向けサービスなので「毎日 0:00 にリセット」がそのまま日本時間 0:00 を指す
+ * ようにする。UTC 基準だと日本では 9:00 リセットになり説明しづらい。
  *
- * 移行手順: (1) increment_ocr_usage の定義を確認 (2) 書き込み側を JST に統一
- * (3) ここと nextDailyResetIso() を同時に JST 化。読み書きは必ず同時に変える。
+ * ⚠️ **書き込み側と必ず一致させること。** 使用量を書く RPC increment_ocr_usage
+ * （本番DBに直接定義）が `(now() AT TIME ZONE 'Asia/Tokyo')::DATE` を day に
+ * 使っている。ここを UTC に戻すと 0:00-9:00 JST の間だけ別キーを参照し、
+ * 使用量 0 と誤認して**上限が全く効かなくなる**。
+ * 変更する場合は SQL 側 → ここ の順で（逆順は上限が無効になる時間帯を作る）。
  * 正本: toritavi_app/docs/monetization-spec.md §2
  */
-function utcToday(): string {
-  return new Date().toISOString().slice(0, 10);
+const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
+
+/** JST の今日（YYYY-MM-DD）。日次のキー。 */
+function jstToday(): string {
+  return new Date(Date.now() + JST_OFFSET_MS).toISOString().slice(0, 10);
 }
 
 export const OCR_GUARD: AiGuardConfig = {
@@ -210,7 +213,7 @@ export async function enforceAiLimits(
     .from(cfg.tables.usage)
     .select("requests_count, tokens_total")
     .eq("user_id", userId)
-    .eq("day", utcToday())
+    .eq("day", jstToday())
     .maybeSingle();
   if (usage) {
     if (usage.requests_count >= tier.dailyRequests) {
@@ -256,7 +259,7 @@ export async function getAiUsage(
     .from(cfg.tables.usage)
     .select("requests_count, tokens_total")
     .eq("user_id", userId)
-    .eq("day", utcToday())
+    .eq("day", jstToday())
     .maybeSingle();
   return {
     usedRequests: usage?.requests_count ?? 0,
@@ -266,11 +269,18 @@ export async function getAiUsage(
   };
 }
 
-/** 日次のリセット時刻（次の UTC 0:00）の ISO 文字列。日キーと必ず同じ基準にする。 */
+/** 日次のリセット時刻（次の JST 0:00）の ISO 文字列。日キーと必ず同じ基準にする。 */
 export function nextDailyResetIso(): string {
-  const d = new Date();
-  const next = new Date(
-    Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1, 0, 0, 0),
+  // JST の壁時計を UTC メソッドで読むためにオフセットを足した時刻を作る。
+  const jstNow = new Date(Date.now() + JST_OFFSET_MS);
+  const nextJstMidnight = Date.UTC(
+    jstNow.getUTCFullYear(),
+    jstNow.getUTCMonth(),
+    jstNow.getUTCDate() + 1,
+    0,
+    0,
+    0,
   );
-  return next.toISOString();
+  // 実時刻へ戻す（JST 0:00 = その UTC 表現から 9 時間前）。
+  return new Date(nextJstMidnight - JST_OFFSET_MS).toISOString();
 }
