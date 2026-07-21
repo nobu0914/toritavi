@@ -97,7 +97,8 @@ export default function AccountPlanPage() {
                 u={usage.concierge}
               />
               <Text size="10.5px" c="dimmed" style={{ padding: "0 14px 14px" }}>
-                本日分（翌 0:00 UTC にリセット）
+                OCR は今月分（翌月 1 日 0:00 JST にリセット）／ AIコンシェルジュは
+                本日分（翌 0:00 JST にリセット）
               </Text>
             </Card>
 
@@ -106,13 +107,16 @@ export default function AccountPlanPage() {
                 <SectionLabel>Curlew Pro</SectionLabel>
                 <Card>
                   <Box style={{ padding: 16 }}>
+                    {/* ⚠️ 未実装の機能を書かない（CLAUDE.md「文言が実装に先行して
+                        はならない」）。有料プランの差分は OCR 件数の解放だけ。 */}
                     <Text size="15px" fw={600} mb={6}>
-                      AI利用上限の拡張・高度な検索・エクスポート形式の拡張
+                      予定の自動登録（OCR）が月 10 件 → 月 100 件に
                     </Text>
                     <Text size="13px" c="dimmed" lh={1.6}>
-                      Curlew Pro はモバイルアプリからご登録いただけます（Apple
-                      In-App Purchase / Google Play
-                      Billing、月額自動更新）。アプリのアカウント画面からお申し込みください。
+                      月額 480 円 / 年額 4,800 円（2 か月分お得）。Curlew Pro は
+                      モバイルアプリからご登録いただけます（Apple In-App Purchase /
+                      Google Play Billing、自動更新）。アプリのアカウント画面から
+                      お申し込みください。
                     </Text>
                   </Box>
                 </Card>
