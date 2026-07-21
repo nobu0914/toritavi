@@ -10,11 +10,16 @@ import UserFilesPanel from "@/components/admin/UserFilesPanel";
 
 export const dynamic = "force-dynamic";
 
+// 旧キー（daily_*）は 021 以前に記録された行のために残す。消すと過去のログが
+// 「—」表示になり、当時なぜ弾かれたのか分からなくなる。
 const REJECTION_LABEL: Record<string, string> = {
   monthly_budget_exceeded: "月予算超過",
-  daily_request_limit: "日次上限",
-  daily_token_limit: "日次トークン上限",
+  quota_request_limit: "件数上限（OCR=月次 / コンシェルジュ=日次）",
+  quota_token_limit: "トークン上限",
+  quota_units: "残量を超える一括送信",
   rate_limit: "分間バースト",
+  daily_request_limit: "日次上限（021 以前）",
+  daily_token_limit: "日次トークン上限（021 以前）",
 };
 
 function fmtDateTime(iso: string | null) {

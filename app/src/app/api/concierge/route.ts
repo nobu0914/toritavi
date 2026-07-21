@@ -105,8 +105,9 @@ export async function POST(request: NextRequest) {
   if (suspended) return suspended;
 
   /* ---- AI 利用制限（月予算 → 日次 → 分間。@/lib/ai-guard で共通化）---- */
-  const blocked = await enforceAiLimits(sb, userId, CONCIERGE_GUARD);
-  if (blocked) return blocked;
+  // コンシェルジュは 1 リクエスト 1 件なので、通過後の件数チェックは不要。
+  const guard = await enforceAiLimits(sb, userId, CONCIERGE_GUARD);
+  if (guard instanceof NextResponse) return guard;
 
   /* ---- 4) Ensure thread ---- */
   let threadId = body.threadId;

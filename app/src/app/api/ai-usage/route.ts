@@ -1,8 +1,10 @@
 /*
- * GET /api/ai-usage — 当日の AI 利用状況（OCR / コンシェルジュ）を返す。
+ * GET /api/ai-usage — 当期の AI 利用状況（OCR / コンシェルジュ）を返す。
  *
  * - 認証必須（Cookie or Bearer = authenticateRequest）
  * - プラン（free/pro）を解決し、機能別に used/limit と次回リセット時刻を返す
+ * - 「当期」は機能で異なる（OCR=月次 / コンシェルジュ=日次）。各 feature の
+ *   period フィールドがどちらかを示す
  * - 読み取り専用（使用量は加算しない）
  */
 
@@ -13,7 +15,7 @@ import {
   CONCIERGE_GUARD,
   resolvePlan,
   getAiUsage,
-  nextDailyResetIso,
+  nextResetIso,
 } from "@/lib/ai-guard";
 import { ALLOWED_ORIGINS } from "@/lib/allowed-origins";
 
@@ -37,8 +39,14 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({
     plan,
-    resetAt: nextDailyResetIso(),
-    ocr,
-    concierge,
+    // 機能ごとにリセット単位が違う（OCR=月次 / コンシェルジュ=日次）。
+    // トップレベルの resetAt は**配布済みアプリが読んでいる**ので残す。
+    // 値は OCR のもの（バッジが表示しているのは OCR の残量）。
+    resetAt: nextResetIso(OCR_GUARD.quotaPeriod),
+    ocr: { ...ocr, resetAt: nextResetIso(OCR_GUARD.quotaPeriod) },
+    concierge: {
+      ...concierge,
+      resetAt: nextResetIso(CONCIERGE_GUARD.quotaPeriod),
+    },
   });
 }

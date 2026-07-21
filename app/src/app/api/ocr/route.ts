@@ -2,7 +2,11 @@ import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 import { buildOcrRulesPrompt } from "@/lib/ocr-rules";
 import { authenticateRequest } from "@/lib/supabase-server";
-import { enforceAiLimits, OCR_GUARD } from "@/lib/ai-guard";
+import {
+  enforceAiLimits,
+  assertUnitsWithinQuota,
+  OCR_GUARD,
+} from "@/lib/ai-guard";
 import { recordOcrUsage } from "@/lib/ai-usage-record";
 import { assertActiveOr403 } from "@/lib/moderation";
 import { ALLOWED_ORIGINS } from "@/lib/allowed-origins";
@@ -111,9 +115,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "API key not configured" }, { status: 500 });
   }
 
-  // --- AI 利用制限（月予算 → 日次 → 分間。@/lib/ai-guard で OCR/コンシェルジュ共通）---
-  const blocked = await enforceAiLimits(sb, userId, OCR_GUARD);
-  if (blocked) return blocked;
+  // --- AI 利用制限（月予算 → 月次クォータ → 分間。@/lib/ai-guard で共通）---
+  // ここではボディを読む前に判定できるものだけ。実際の枚数チェックは
+  // images.length が分かってから（下の assertUnitsWithinQuota）。
+  const guard = await enforceAiLimits(sb, userId, OCR_GUARD);
+  if (guard instanceof NextResponse) return guard;
 
   try {
     const { images } = (await request.json()) as { images: string[] };
@@ -127,6 +133,16 @@ export async function POST(request: NextRequest) {
         { status: 413 },
       );
     }
+    // 1 リクエスト＝1 件ではなく **1 ファイル＝1 件**として数える。
+    // ここを抜かすと「残り 1 件」で 10 枚送られて上限を 10 倍すり抜ける。
+    const overQuota = await assertUnitsWithinQuota(
+      userId,
+      OCR_GUARD,
+      guard,
+      images.length,
+    );
+    if (overQuota) return overQuota;
+
     let totalChars = 0;
     for (const img of images) {
       const len = typeof img === "string" ? img.length : 0;
@@ -187,7 +203,14 @@ export async function POST(request: NextRequest) {
     );
     // 記録は service_role 専用 RPC 経由（利用者が PostgREST から直接叩いて
     // 共有予算を焼き切れないようにするため）。best-effort は従来どおり。
-    await recordOcrUsage({ userId, tokensIn, tokensOut, costCents });
+    // units = ファイル数。上限は「件＝ファイル」で数えるので必ず渡す。
+    await recordOcrUsage({
+      userId,
+      tokensIn,
+      tokensOut,
+      costCents,
+      units: images.length,
+    });
 
     const textBlock = response.content.find((b) => b.type === "text");
     const raw = textBlock?.type === "text" ? textBlock.text : "";

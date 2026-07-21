@@ -21,8 +21,15 @@ type Usage = {
   costCents: number;
 };
 
+/** OCR は 1 リクエストに複数ファイルを含められるので、件数を明示して渡す。 */
+type OcrUsage = Usage & { units: number };
+
 /** 記録は best-effort。失敗してもリクエスト本体は成功させる（従来どおり）。 */
-async function record(rpc: string, u: Usage): Promise<void> {
+async function record(
+  rpc: string,
+  u: Usage,
+  extra: Record<string, number> = {},
+): Promise<void> {
   try {
     const admin = createServiceClient();
     const { error } = await admin.rpc(rpc, {
@@ -30,6 +37,7 @@ async function record(rpc: string, u: Usage): Promise<void> {
       p_tokens_in: Math.max(0, Math.trunc(u.tokensIn)),
       p_tokens_out: Math.max(0, Math.trunc(u.tokensOut)),
       p_cost_cents: Math.max(0, Math.trunc(u.costCents)),
+      ...extra,
     });
     if (error) console.error(`[ai-usage] ${rpc} failed:`, error.message);
   } catch (e) {
@@ -37,6 +45,16 @@ async function record(rpc: string, u: Usage): Promise<void> {
   }
 }
 
-export const recordOcrUsage = (u: Usage) => record("increment_ocr_usage_srv", u);
+/**
+ * ⚠️ p_units 付きの 5 引数シグネチャは 021 フェーズ1 で追加される。
+ * **SQL 適用前にこのコードをデプロイすると記録が落ちる**（該当関数が無い）。
+ * 上限判定は記録された値を読むので、記録が落ちれば上限も効かなくなる。
+ * 適用順は必ず SQL(021 フェーズ1) → デプロイ。
+ */
+export const recordOcrUsage = (u: OcrUsage) =>
+  record("increment_ocr_usage_srv", u, {
+    p_units: Math.max(1, Math.trunc(u.units)),
+  });
+
 export const recordConciergeUsage = (u: Usage) =>
   record("increment_concierge_usage_srv", u);
