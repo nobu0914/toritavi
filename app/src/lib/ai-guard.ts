@@ -313,6 +313,13 @@ export type AiFeatureUsage = {
   limitTokens: number;
   /** リセットの単位。アプリが「今月／本日」の文言を選ぶのに使う。 */
   period: QuotaPeriod;
+  /**
+   * 有料プランの件数上限。**購入画面が「月 100 件になります」と書くための値。**
+   * アプリ側にこの数字を持たせると、env で上限を変えたときに購入画面だけが
+   * 嘘をつく（端末集計を廃した ocr_quota.dart と同じ二重管理の再来で、
+   * しかも今度は課金の約束になる）。サーバが正本を返す。
+   */
+  proLimitRequests: number;
 };
 
 /** 当期の使用量と（プラン別）上限を返す。残量表示用。 */
@@ -336,6 +343,7 @@ export async function getAiUsage(
     usedTokens: usage?.tokens_total ?? 0,
     limitTokens: tier.quotaTokens,
     period: cfg.quotaPeriod,
+    proLimitRequests: cfg.tiers.pro.quotaRequests,
   };
 }
 
