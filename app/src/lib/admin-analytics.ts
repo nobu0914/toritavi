@@ -31,6 +31,12 @@ export type ProgramStat = {
   epcYen: number;
   commissionNote: string | null;
   active: boolean;
+  /**
+   * 提携承認済みか（`affiliate_programs.approved_at` 非 NULL）。
+   * **false の間はアプリが広告を出さない**ので、クリックも売上も 0 のままになる。
+   * 「設定したのに数字が動かない」の原因がこれだと画面で分かるようにする。
+   */
+  approved: boolean;
   clicks: number;
   impressions: number;
   ctr: number | null; // clicks / impressions（impressions=0 は null）
@@ -143,7 +149,8 @@ export async function fetchAnalytics(days = 30): Promise<AnalyticsData> {
     byBucketM.set(bucket, (byBucketM.get(bucket) ?? 0) + 1);
   }
 
-  // rates マップ + 全プログラム集合（rates seed ∪ 実クリックの program）
+  // プログラム集合 = 正本の一覧 ∪ 実クリックのあった program。
+  // 後者を含めるのは、正本から消した後もその期間の実績を落とさないため。
   const rateByProg = new Map(rates.map((r) => [r.program, r]));
   const allProgs = new Set<string>([...rateByProg.keys(), ...clickByProgram.keys()]);
 
@@ -158,6 +165,8 @@ export async function fetchAnalytics(days = 30): Promise<AnalyticsData> {
       epcYen,
       commissionNote: r?.commissionNote ?? null,
       active: r?.active ?? true,
+      // 正本に無い program（過去のクリックのみ）は未承認扱いにする。
+      approved: r?.approved ?? false,
       clicks: clicksN,
       impressions: imps,
       ctr: imps > 0 ? clicksN / imps : null,
@@ -224,20 +233,62 @@ type RateRow = {
   epcYen: number;
   commissionNote: string | null;
   active: boolean;
+  /** 提携承認済みか。false = 未承認 → アプリは広告を出さない。 */
+  approved: boolean;
 };
 
+/**
+ * プログラム一覧を組み立てる。
+ *
+ * **正本は `affiliate_programs`**（program / active / commission_note / approved_at）。
+ * `toritavi_affiliate_rates` からは**分析固有の EPC 単価だけ**を取る。
+ *
+ * 以前は rates 側にも program / label / active / commission_note があり、同じ属性が
+ * 2 箇所に存在していた。片方だけ更新されると管理画面の表示と実際の配信状態がずれる
+ * ため、表示のもとになる属性は正本へ一本化した。
+ * （正本仕様: toritavi_app/docs/monetization-spec.md §4）
+ */
 async function fetchRates(admin: Client): Promise<RateRow[]> {
-  const { data, error } = await admin
+  // 1) 正本: プログラムの素性と承認状態
+  const { data: progs } = await admin
+    .from("affiliate_programs")
+    .select("program, category, commission_note, active, approved_at");
+
+  // 2) 分析固有: EPC 単価のみ
+  const { data: rates } = await admin
     .from("toritavi_affiliate_rates")
-    .select("program, label, epc_yen, commission_note, active");
-  if (error || !data) return [];
-  return data.map((r) => ({
-    program: r.program as string,
-    label: (r.label as string | null) ?? null,
-    epcYen: Number(r.epc_yen ?? 0),
-    commissionNote: (r.commission_note as string | null) ?? null,
-    active: r.active !== false,
-  }));
+    .select("program, epc_yen");
+
+  const epcByProg = new Map<string, number>(
+    (rates ?? []).map((r) => [r.program as string, Number(r.epc_yen ?? 0)])
+  );
+
+  // 正本が引けないとき（テーブル未作成・障害）は EPC だけで組み立てる。
+  // 承認状態が分からないので approved=false に倒す（フェイルクローズ）。
+  if (!progs) {
+    return [...epcByProg].map(([program, epcYen]) => ({
+      program,
+      label: null,
+      epcYen,
+      commissionNote: null,
+      active: true,
+      approved: false,
+    }));
+  }
+
+  return progs.map((p) => {
+    const program = p.program as string;
+    return {
+      program,
+      // 正本に表示名の列は無いため category を補助ラベルに使う。
+      label: (p.category as string | null) ?? null,
+      epcYen: epcByProg.get(program) ?? 0,
+      commissionNote: (p.commission_note as string | null) ?? null,
+      active: p.active !== false,
+      // approved_at が入っている行だけが実際の配信対象（§4 のフェイルクローズ条件）。
+      approved: p.approved_at != null,
+    };
+  });
 }
 
 type ClickRow = { day: string; program: string; subid: string | null; surface: string };

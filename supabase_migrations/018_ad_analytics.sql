@@ -21,12 +21,21 @@
 -- ============================================================
 
 -- ---------- 1. affiliate rates (EPC 単価) ----------
+-- ⚠️ 2026-07-21 改訂（本番未適用のうちにファイル自体を修正）:
+--   当初この表は program / label / commission_note / active を持ち、プログラム一覧を
+--   seed していた。しかしプログラムの**正本は `affiliate_programs`**（承認状態
+--   `approved_at` を持ち、アプリの配信可否はそれで決まる）であり、同じ属性が 2 箇所に
+--   存在する二重管理になっていた。片方だけ更新されると「管理画面では有効に見えるのに
+--   配信されていない」というズレが出る。
+--   → 本表は**分析固有の EPC 単価だけ**を持つ。表示に使う属性（有効/手数料メモ/
+--     承認状態）は `affiliate_programs` から取る（src/lib/admin-analytics.ts の
+--     fetchRates 参照）。プログラム一覧は正本が持つので seed もしない。
+--   正本仕様: toritavi_app/docs/monetization-spec.md §4
 CREATE TABLE IF NOT EXISTS toritavi_affiliate_rates (
+  -- affiliate_programs.program と対応。FK にはしない（正本から外したプログラムの
+  -- EPC 履歴を残せるようにするため）。
   program         TEXT PRIMARY KEY,
-  label           TEXT,
   epc_yen         NUMERIC(10,2) NOT NULL DEFAULT 0 CHECK (epc_yen >= 0),
-  commission_note TEXT,
-  active          BOOLEAN NOT NULL DEFAULT TRUE,
   updated_by      UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -34,15 +43,8 @@ CREATE TABLE IF NOT EXISTS toritavi_affiliate_rates (
 ALTER TABLE toritavi_affiliate_rates ENABLE ROW LEVEL SECURITY;
 -- no policies: service-role only.
 
--- 既知プログラムを seed（EPC は 0 初期・管理画面で登録）。
-INSERT INTO toritavi_affiliate_rates (program, label, commission_note) VALUES
-  ('klook_esim',     'Klook eSIM',          'eSIM ~20%（Involve Asia）'),
-  ('tp_transfer',    '空港送迎 (Travelpayouts)', '送迎 ~9-11%'),
-  ('tp_hotel',       'ホテル (Travelpayouts/Booking)', 'ホテル 実効~5%'),
-  ('klook_activity', 'Klook アクティビティ',   'アクティビティ'),
-  ('gyg_activity',   'GetYourGuide アクティビティ', 'アクティビティ'),
-  ('insurance',      '旅行保険',             '保険（未選定）')
-ON CONFLICT (program) DO NOTHING;
+-- seed しない。一覧は affiliate_programs（正本）が持ち、EPC 行は管理画面で
+-- 単価を登録したときに upsert で作られる。
 
 -- ---------- 2. ad impressions (日次集計) ----------
 CREATE TABLE IF NOT EXISTS toritavi_ad_impressions (

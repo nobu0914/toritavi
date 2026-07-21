@@ -9,6 +9,11 @@ export type ProgramRow = {
   epcYen: number;
   commissionNote: string | null;
   active: boolean;
+  /**
+   * 提携承認済みか（affiliate_programs.approved_at 非 NULL）。
+   * false の間はアプリが広告を出さないので、EPC を入れてもクリックは 0 のまま。
+   */
+  approved: boolean;
   clicks: number;
   impressions: number;
   ctr: number | null;
@@ -94,7 +99,32 @@ export default function ProgramRatesTable({
               return (
                 <tr key={r.program} style={{ borderTop: "1px solid var(--n-100)" }}>
                   <td style={td}>
-                    <div style={{ fontWeight: 600 }}>{r.label}</div>
+                    <div
+                      style={{
+                        fontWeight: 600,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                      }}
+                    >
+                      {r.label}
+                      {/* 未承認だと配信されない＝数字が動かない。原因が一目で分かるように出す。 */}
+                      {!r.approved && (
+                        <span
+                          title="提携が未承認のため、アプリでは広告が表示されません（approved_at が未設定）"
+                          style={{
+                            fontSize: 10,
+                            fontWeight: 700,
+                            padding: "1px 6px",
+                            borderRadius: 4,
+                            color: "#7A5300",
+                            background: "#FFE3A3",
+                          }}
+                        >
+                          未承認
+                        </span>
+                      )}
+                    </div>
                     <div style={{ fontSize: 11, color: "var(--text-dim)" }}>
                       {r.program}
                       {r.commissionNote ? ` · ${r.commissionNote}` : ""}
