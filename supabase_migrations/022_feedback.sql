@@ -10,8 +10,8 @@
 --     UPDATE / DELETE のポリシーは作らない（＝誰も編集・削除できない）。
 --     苦情を送った後で本人が消せてしまうと、対応の途中で記録が消える。
 --     消す必要があるときは service-role（管理コンソール）から行う。
---   - 管理側の閲覧・返信は service-role のみ。admin_reply に
---     authenticated の write ポリシーは無い。
+--   - 管理側の閲覧・対応状況の更新は service-role のみ。status / admin_note に
+--     authenticated の write ポリシーは無い（そもそも UPDATE ポリシーが無い）。
 --   - 添付は **画像のみ・1件・5MiB**。バケット側の allowed_mime_types で
 --     止める。クライアント検証だけに頼らない（差し替え可能なため）。
 --
