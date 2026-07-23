@@ -10,6 +10,7 @@ import {
   IconAlertTriangle,
   IconTool,
   IconLogout,
+  IconMessageDots,
 } from "@tabler/icons-react";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
@@ -33,6 +34,7 @@ const NAV: NavItem[] = [
   { href: "/admin", label: "ダッシュボード", Icon: IconLayoutDashboard },
   { href: "/admin/users", label: "利用者", Icon: IconUsers, matchPrefix: true },
   { href: "/admin/analytics", label: "集計・広告", Icon: IconChartBar, matchPrefix: true },
+  { href: "/admin/feedback", label: "フィードバック", Icon: IconMessageDots, matchPrefix: true },
   { href: "/admin/abuse", label: "違反検知", Icon: IconAlertTriangle, matchPrefix: true },
   { href: "/admin/security", label: "セキュリティ", Icon: IconShieldLock, matchPrefix: true },
   { href: "/admin/maintenance", label: "メンテナンス", Icon: IconTool, matchPrefix: true },
