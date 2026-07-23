@@ -11,6 +11,7 @@ import {
   IconTool,
   IconLogout,
   IconMessageDots,
+  IconMail,
 } from "@tabler/icons-react";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
@@ -37,6 +38,7 @@ const NAV: NavItem[] = [
   { href: "/admin/feedback", label: "フィードバック", Icon: IconMessageDots, matchPrefix: true },
   { href: "/admin/abuse", label: "違反検知", Icon: IconAlertTriangle, matchPrefix: true },
   { href: "/admin/security", label: "セキュリティ", Icon: IconShieldLock, matchPrefix: true },
+  { href: "/admin/email-templates", label: "認証メール", Icon: IconMail, matchPrefix: true },
   { href: "/admin/maintenance", label: "メンテナンス", Icon: IconTool, matchPrefix: true },
 ];
 
