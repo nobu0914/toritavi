@@ -108,7 +108,7 @@ function rootStateClass(status: StepStatus | undefined): string {
 }
 
 function fileNameBase(title: string): string {
-  return (title || "Curlew").replace(/[/\\?%*:|"<>]/g, "_");
+  return (title || "JUNROS").replace(/[/\\?%*:|"<>]/g, "_");
 }
 
 /**

@@ -16,7 +16,7 @@ const securityHeaders = [
   // Override Vercel edge's default `access-control-allow-origin: *` on HTML /
   // static responses. Same-origin fetches don't consult ACAO, so restricting
   // here only affects cross-origin attempts, which we don't want to serve.
-  { key: "Access-Control-Allow-Origin", value: "https://curlew.coyoteandpowell.com" },
+  { key: "Access-Control-Allow-Origin", value: "https://junros.coyoteandpowell.com" },
   { key: "Vary", value: "Origin" },
 ];
 

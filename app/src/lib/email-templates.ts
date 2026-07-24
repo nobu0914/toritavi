@@ -1,5 +1,5 @@
 /**
- * Curlew の認証メール（Supabase Auth の Email Templates）。
+ * JUNROS の認証メール（Supabase Auth の Email Templates）。
  *
  * **このファイルが本文の正本。** 手順書（toritavi_app の
  * `docs/supabase-auth-setup.md`）は本文を持たず、このページを参照する。
@@ -37,7 +37,7 @@ export type EmailTemplate = {
  * 反映先の Supabase プロジェクト。
  *
  * **組織 `genbox` の中にプロジェクトが複数ある。`genbox2` を選ぶこと。**
- * Curlew は GenBox と `auth.users` を共有しているため、認証設定は
+ * JUNROS は GenBox と `auth.users` を共有しているため、認証設定は
  * このプロジェクトが持っている。別プロジェクトを触っても何も変わらない。
  */
 export const SUPABASE_PROJECT = {
@@ -67,15 +67,15 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
     key: "confirm_signup",
     tab: "Confirm signup",
     purpose: "新規登録時。ここを直さないと登録できた人全員に届く",
-    subject: "【Curlew】メールアドレスの確認",
+    subject: "【JUNROS】メールアドレスの確認",
     html: `<div style="font-family:-apple-system,'Hiragino Sans','Yu Gothic',sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;color:#0E1F33">
-  <div style="font-size:26px;font-weight:700;color:#0B6E8F;letter-spacing:-.02em">Curlew</div>
+  <div style="font-size:26px;font-weight:700;color:#0B6E8F;letter-spacing:-.02em">JUNROS</div>
   <div style="font-size:13px;color:#5B7088;margin-top:2px">予約票をスキャンして、旅程に</div>
 
   <div style="border:1px solid #E4EAE8;border-radius:12px;padding:24px;margin-top:24px">
     <div style="font-size:17px;font-weight:700">メールアドレスの確認</div>
     <p style="font-size:14px;line-height:1.8;color:#33485F">
-      Curlew へのご登録ありがとうございます。<br>
+      JUNROS へのご登録ありがとうございます。<br>
       下のボタンを開くと登録が完了します。
     </p>
     <p style="margin:24px 0">
@@ -93,7 +93,7 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
   </div>
 
   <p style="font-size:11px;color:#90A3B8;margin-top:20px">
-    Curlew — 株式会社コヨーテ・アンド・パウエル
+    JUNROS — 株式会社コヨーテ・アンド・パウエル
   </p>
 </div>`,
   },
@@ -101,9 +101,9 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
     key: "reset_password",
     tab: "Reset Password",
     purpose: "パスワードを忘れたとき。recovery トークンを含む",
-    subject: "【Curlew】パスワードの再設定",
+    subject: "【JUNROS】パスワードの再設定",
     html: `<div style="font-family:-apple-system,'Hiragino Sans','Yu Gothic',sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;color:#0E1F33">
-  <div style="font-size:26px;font-weight:700;color:#0B6E8F;letter-spacing:-.02em">Curlew</div>
+  <div style="font-size:26px;font-weight:700;color:#0B6E8F;letter-spacing:-.02em">JUNROS</div>
   <div style="font-size:13px;color:#5B7088;margin-top:2px">予約票をスキャンして、旅程に</div>
 
   <div style="border:1px solid #E4EAE8;border-radius:12px;padding:24px;margin-top:24px">
@@ -127,7 +127,7 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
   </div>
 
   <p style="font-size:11px;color:#90A3B8;margin-top:20px">
-    Curlew — 株式会社コヨーテ・アンド・パウエル
+    JUNROS — 株式会社コヨーテ・アンド・パウエル
   </p>
 </div>`,
   },
@@ -135,9 +135,9 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
     key: "magic_link",
     tab: "Magic Link",
     purpose: "現在アプリは未使用。空にすると旧文面が残るため直しておく",
-    subject: "【Curlew】ログイン用リンク",
+    subject: "【JUNROS】ログイン用リンク",
     html: `<div style="font-family:-apple-system,'Hiragino Sans','Yu Gothic',sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;color:#0E1F33">
-  <div style="font-size:26px;font-weight:700;color:#0B6E8F;letter-spacing:-.02em">Curlew</div>
+  <div style="font-size:26px;font-weight:700;color:#0B6E8F;letter-spacing:-.02em">JUNROS</div>
   <div style="font-size:13px;color:#5B7088;margin-top:2px">予約票をスキャンして、旅程に</div>
 
   <div style="border:1px solid #E4EAE8;border-radius:12px;padding:24px;margin-top:24px">
@@ -160,7 +160,7 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
   </div>
 
   <p style="font-size:11px;color:#90A3B8;margin-top:20px">
-    Curlew — 株式会社コヨーテ・アンド・パウエル
+    JUNROS — 株式会社コヨーテ・アンド・パウエル
   </p>
 </div>`,
   },
@@ -168,9 +168,9 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
     key: "change_email",
     tab: "Change Email Address",
     purpose: "アカウント設定でメールアドレスを変えたとき",
-    subject: "【Curlew】メールアドレス変更の確認",
+    subject: "【JUNROS】メールアドレス変更の確認",
     html: `<div style="font-family:-apple-system,'Hiragino Sans','Yu Gothic',sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;color:#0E1F33">
-  <div style="font-size:26px;font-weight:700;color:#0B6E8F;letter-spacing:-.02em">Curlew</div>
+  <div style="font-size:26px;font-weight:700;color:#0B6E8F;letter-spacing:-.02em">JUNROS</div>
   <div style="font-size:13px;color:#5B7088;margin-top:2px">予約票をスキャンして、旅程に</div>
 
   <div style="border:1px solid #E4EAE8;border-radius:12px;padding:24px;margin-top:24px">
@@ -194,7 +194,7 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
   </div>
 
   <p style="font-size:11px;color:#90A3B8;margin-top:20px">
-    Curlew — 株式会社コヨーテ・アンド・パウエル
+    JUNROS — 株式会社コヨーテ・アンド・パウエル
   </p>
 </div>`,
   },

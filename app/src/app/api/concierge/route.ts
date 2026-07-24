@@ -33,7 +33,7 @@ function estimateCostCents(tokensIn: number, tokensOut: number): number {
   return Math.ceil(inCents + outCents);
 }
 
-const SYSTEM_PROMPT_BASE = `あなたは Curlew の旅程アシスタント「コンシェルジュ」です。
+const SYSTEM_PROMPT_BASE = `あなたは JUNROS の旅程アシスタント「コンシェルジュ」です。
 ユーザーが登録している Journey / Step データを参照し、抜けチェック / 要約 / 当日動線の助言を返してください。
 
 ## 回答スタイル

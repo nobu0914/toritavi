@@ -71,7 +71,7 @@ export default async function AdminEmailTemplatesPage() {
             <code style={inlineCode}>{SUPABASE_PROJECT.project}</code> を選んでください。
           </strong>
           <br />
-          Curlew は GenBox と <code style={inlineCode}>auth.users</code> を共有していて、
+          JUNROS は GenBox と <code style={inlineCode}>auth.users</code> を共有していて、
           認証設定はこのプロジェクトが持っています。別のプロジェクトを開いても
           画面は同じように見えますが、<strong>何も反映されません</strong>。
         </p>

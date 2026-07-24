@@ -5,7 +5,7 @@ import { AdminShell } from "@/components/admin/AdminShell";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Curlew admin",
+  title: "JUNROS admin",
   robots: { index: false, follow: false },
 };
 
