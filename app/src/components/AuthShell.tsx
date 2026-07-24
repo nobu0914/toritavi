@@ -38,7 +38,7 @@ export function AuthShell({
             lineHeight: 1.1,
           }}
         >
-          Curlew
+          JUNROS
         </div>
         <div
           style={{

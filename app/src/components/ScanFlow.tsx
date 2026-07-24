@@ -1310,7 +1310,7 @@ export function ScanFlow({ chrome = "standalone", target, onComplete }: ScanFlow
                 内容を理解し、これに同意したうえでスキャンを行ってください。
               </Text>
               <Anchor
-                href="https://coyoteandpowell.com/curlew/privacy/"
+                href="https://coyoteandpowell.com/junros/privacy/"
                 target="_blank"
                 rel="noreferrer"
                 size="sm"

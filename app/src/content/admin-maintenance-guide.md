@@ -1,6 +1,6 @@
 # 管理者向け 運用・メンテナンスガイド
 
-管理画面（<https://curlew.coyoteandpowell.com/admin>）に載せる運用リファレンス。
+管理画面（<https://junros.coyoteandpowell.com/admin>）に載せる運用リファレンス。
 各機能の「何をするか／状態確認／よく使う操作／構成」を端的にまとめる。
 
 > **このファイルが原本。** 編集したら `bash tool/sync_admin_guides.sh` で

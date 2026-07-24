@@ -15,14 +15,14 @@ import "./globals.css";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Curlew",
+  title: "JUNROS",
   description: "行動を、前に進める",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     // Daylight: 白ヘッダーなので暗いテキストのステータスバー。
     statusBarStyle: "default",
-    title: "Curlew",
+    title: "JUNROS",
   },
 };
 

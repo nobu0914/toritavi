@@ -104,7 +104,7 @@ export default function AccountPlanPage() {
 
             {!isPro && (
               <>
-                <SectionLabel>Curlew Pro</SectionLabel>
+                <SectionLabel>JUNROS Pro</SectionLabel>
                 <Card>
                   <Box style={{ padding: 16 }}>
                     {/* ⚠️ 未実装の機能を書かない（CLAUDE.md「文言が実装に先行して
@@ -113,7 +113,7 @@ export default function AccountPlanPage() {
                       予定の自動登録（OCR）が月 10 件 → 月 100 件に
                     </Text>
                     <Text size="13px" c="dimmed" lh={1.6}>
-                      月額 480 円 / 年額 4,800 円（2 か月分お得）。Curlew Pro は
+                      月額 480 円 / 年額 4,800 円（2 か月分お得）。JUNROS Pro は
                       モバイルアプリからご登録いただけます（Apple In-App Purchase /
                       Google Play Billing、自動更新）。アプリのアカウント画面から
                       お申し込みください。
@@ -147,7 +147,7 @@ function PlanBadge({ isPro }: { isPro: boolean }) {
     >
       <IconCrown size={16} />
       <Text size="13px" fw={700}>
-        {isPro ? "Curlew Pro" : "Free"}
+        {isPro ? "JUNROS Pro" : "Free"}
       </Text>
     </Box>
   );

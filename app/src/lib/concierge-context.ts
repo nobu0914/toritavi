@@ -71,7 +71,7 @@ function buildPromptBlock(safe: SafeJourney[], explicitIds: string[]): string {
   const header = [
     "## ユーザーの旅程データ（PII マスク済み）",
     "",
-    "以下は Curlew に登録されている Journey とその Step のサマリ。",
+    "以下は JUNROS に登録されている Journey とその Step のサマリ。",
     "ユーザーの質問に答えるための最新コンテキストとして参照してください。",
     explicitIds.length > 0
       ? `ユーザーが明示的に参照指定している Journey: ${explicitIds.join(", ")}`

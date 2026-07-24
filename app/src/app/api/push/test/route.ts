@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const result = await sendToUser(auth.userId, {
-      title: "Curlew テスト通知",
+      title: "JUNROS テスト通知",
       body: "プッシュ通知の設定が正しく動いています。",
       data: { kind: "test" },
     });
