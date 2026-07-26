@@ -1,0 +1,17 @@
+{
+  "id": "L1_en_flight_email",
+  "lang": "ja",
+  "note": "月名つき英語日付・12時間制・日付変更線。固有名詞を訳さないことも見る。",
+  "text": "Subject: Your trip confirmation — UA 838\n\nDear Traveler,\n\nYour reservation is confirmed. Confirmation code: K3P9QW\n\nMonday, May 4, 2026\nUA 838  United Airlines\nDepart  Tokyo Narita (NRT)  Terminal 1   5:25 PM\nArrive  San Francisco (SFO)  Terminal I  10:45 AM  (same day)\n\nSeat 34K   Economy   Boarding Group 4\nBoarding begins 4:45 PM at Gate 45\n\nCheck in online 24 hours before departure.\n",
+  "expect": {
+    "steps": [{
+      "category": "飛行機", "title": "UA 838", "airline": "United Airlines",
+      "date": "2026-05-04", "startTime": "17:25", "endTime": "10:45",
+      "from": "Tokyo Narita (NRT)", "to": "San Francisco (SFO)",
+      "confNumber": "K3P9QW"
+    }],
+    "loose": ["from", "to", "airline"],
+    "tzFrom": "Asia/Tokyo", "tzTo": "America/Los_Angeles",
+    "note": "到着が出発より早い（日付変更線）。ここを「翌日」に直したら不合格。"
+  }
+}

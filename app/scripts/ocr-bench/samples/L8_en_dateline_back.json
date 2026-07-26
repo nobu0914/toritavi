@@ -1,0 +1,17 @@
+{
+  "id": "L8_en_dateline_back",
+  "lang": "ja",
+  "note": "★到着が出発より前の暦日になる実在パターン（フィジー→ハワイ）。",
+  "text": "E-TICKET ITINERARY\n\nBooking reference: FJ-8W2LP\n\nFJ 810  Fiji Airways\nDepart  Nadi (NAN)        Thu 31 Dec 2026   01:00\nArrive  Honolulu (HNL)    Wed 30 Dec 2026   11:00\n\nDuration 6h 00m  |  Economy  |  Seat 19C\nBaggage: 2 x 23kg\n",
+  "expect": {
+    "steps": [{
+      "category": "飛行機", "title": "FJ 810", "airline": "Fiji Airways",
+      "date": "2026-12-31", "endDate": "2026-12-30",
+      "startTime": "01:00", "endTime": "11:00",
+      "from": "Nadi (NAN)", "to": "Honolulu (HNL)", "confNumber": "FJ-8W2LP"
+    }],
+    "loose": ["from", "to", "airline"],
+    "tzFrom": "Pacific/Fiji", "tzTo": "Pacific/Honolulu",
+    "note": "endDate が date より前。「誤りだから直す」ことをしたら不合格。"
+  }
+}

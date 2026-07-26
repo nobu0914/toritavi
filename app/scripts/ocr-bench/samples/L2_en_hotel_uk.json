@@ -1,0 +1,15 @@
+{
+  "id": "L2_en_hotel_uk",
+  "lang": "ja",
+  "note": "数字だけの日付。同じ文書の 13/04 が 13>12 なので日先＝欧州式に決まる。",
+  "text": "BOOKING CONFIRMATION\n\nThe Bloomsbury Rooms, 42 Great Russell Street, London WC1B 3PA\nBooking reference: BR-77120\n\nArrival   05/04/2026   from 15:00\nDeparture 13/04/2026   before 11:00\n\nRoom: Superior Double, non-smoking\nGuests: 2 adults\nTotal: GBP 1,240.00\nTel: +44 20 7946 0102\n",
+  "expect": {
+    "steps": [{
+      "category": "宿泊", "title": "The Bloomsbury Rooms",
+      "date": "2026-04-05", "endDate": "2026-04-13",
+      "startTime": "15:00", "endTime": "11:00", "confNumber": "BR-77120"
+    }],
+    "loose": ["title"],
+    "note": "05/04 を 5月4日と読んだら不合格（13/04 が同じ文書にある）。"
+  }
+}

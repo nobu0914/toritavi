@@ -1,0 +1,15 @@
+{
+  "id": "L7_fr_restaurant_en_out",
+  "lang": "en",
+  "note": "★出力言語スイッチの検証。入力はフランス語・出力ラベルは英語（category の値は日本語のまま）。",
+  "text": "Confirmation de réservation\n\nLe Petit Marché\n18 rue des Abbesses, 75018 Paris\nNuméro de réservation : LPM-2291\n\nDate : samedi 4 juillet 2026\nHeure : 20h30\nNombre de personnes : 3\nMenu : Dégustation en 5 services\n\nTéléphone : +33 1 42 51 09 33\n",
+  "expect": {
+    "steps": [{
+      "category": "食事", "title": "Le Petit Marché",
+      "date": "2026-07-04", "startTime": "20:30", "confNumber": "LPM-2291"
+    }],
+    "loose": ["title"],
+    "labelLang": "en",
+    "note": "20h30 → 20:30。variable の label が英語であること。"
+  }
+}

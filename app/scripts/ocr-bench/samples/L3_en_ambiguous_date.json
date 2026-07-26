@@ -1,0 +1,15 @@
+{
+  "id": "L3_en_ambiguous_date",
+  "lang": "ja",
+  "note": "★決定性の検証。手がかりが無い 06/07/2026。null で返るべきで、実行のたびに変わってはいけない。",
+  "text": "RESERVATION VOUCHER\n\nHarbour View Bistro\nReservation ref: HV-4482\n\nDate: 06/07/2026\nTime: 19:30\nParty size: 2\n\nPlease arrive 10 minutes early.\n",
+  "expect": {
+    "steps": [{
+      "category": "食事", "title": "Harbour View Bistro",
+      "date": null, "startTime": "19:30", "confNumber": "HV-4482"
+    }],
+    "loose": ["title"],
+    "needsReview": true,
+    "note": "曜日・国・通貨・他の日付いずれの手がかりも無い。日月順を決められない。"
+  }
+}

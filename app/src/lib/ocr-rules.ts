@@ -105,8 +105,14 @@ export const SPLIT_RULES = {
   noSplit: [
     "宿泊（IN/OUTは1つのStepのdate/endDateで管理）",
     "複数日イベント（date/endDateで管理）",
-    "乗り継ぎ便（経由地は変動項目に記載、Step自体は1つ）",
+    "同じ便名のまま経由地に寄る場合（経由地は変動項目に記載、Step自体は1つ）",
   ],
+
+  // 「分割しない」の例外。**1 つの Step は便名を 1 つしか持てない。**
+  // 乗り継ぎを常に 1 つへまとめる規則にしていたため、"GA 318" と "GA 31" の
+  // 乗り継ぎで片方の便名が消えていた（搭乗券は 2 枚あるのにカードは 1 枚）。
+  splitOnDifferentVehicle:
+    "便名・列車名が変わるなら、同じ予約番号でも別の予定として分ける",
 } as const;
 
 /* ====== カテゴリ判定の優先ルール ====== */
@@ -373,6 +379,7 @@ ${Object.entries(DATE_RULES.split).map(([k, v]) => `  - ${k}: ${v}`).join("\n")}
 - ${SPLIT_RULES.roundTrip.output}
 - 分割する例: ${SPLIT_RULES.roundTrip.examples.join("、")}
 - 分割しない: ${SPLIT_RULES.noSplit.join("、")}
+- ${SPLIT_RULES.splitOnDifferentVehicle}
 
 ## カテゴリ判定
 ${CATEGORY_RULES.priority.map((r) => `- ${r}`).join("\n")}

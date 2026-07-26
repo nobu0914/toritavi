@@ -1,0 +1,14 @@
+{
+  "id": "L6_de_train",
+  "lang": "ja",
+  "note": "ドイツ語。19.04.2026 の点区切り日付と ab/an。",
+  "text": "Ihre Fahrkarte\n\nAuftragsnummer: DB-4K7T2\n\nSo, 19.04.2026\nICE 597\nab  Berlin Hbf        08:12   Gleis 11\nan  München Hbf       12:47   Gleis 20\n\nWagen 8, Platz 41, Fensterplatz\n2. Klasse, Sparpreis\nReisende: 1 Erwachsener\n",
+  "expect": {
+    "steps": [{
+      "category": "列車", "title": "ICE 597",
+      "date": "2026-04-19", "startTime": "08:12", "endTime": "12:47",
+      "from": "Berlin Hbf", "to": "München Hbf", "confNumber": "DB-4K7T2"
+    }],
+    "loose": ["from", "to"]
+  }
+}

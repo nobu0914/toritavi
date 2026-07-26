@@ -87,8 +87,8 @@ function envNum(names: string[], fallback: number): number {
  */
 const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
-/** JST の今日（YYYY-MM-DD）。日次のキー。 */
-function jstToday(): string {
+/** JST の今日（YYYY-MM-DD）。日次のキーと、OCR プロンプトの「今日」。 */
+export function jstToday(): string {
   return new Date(Date.now() + JST_OFFSET_MS).toISOString().slice(0, 10);
 }
 

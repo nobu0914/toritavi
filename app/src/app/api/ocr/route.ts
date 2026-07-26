@@ -1,126 +1,16 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
-import { buildOcrRulesPrompt } from "@/lib/ocr-rules";
 import { authenticateRequest } from "@/lib/supabase-server";
 import {
   enforceAiLimits,
   assertUnitsWithinQuota,
+  jstToday,
   OCR_GUARD,
 } from "@/lib/ai-guard";
 import { recordOcrUsage } from "@/lib/ai-usage-record";
 import { assertActiveOr403 } from "@/lib/moderation";
 import { ALLOWED_ORIGINS } from "@/lib/allowed-origins";
-
-/// 出力に使う言語。**入力言語とは別物。**
-/// 日本人が英語のバウチャーを読ませる場合、入力は英語・出力は日本語になる。
-/// 海外展開時はクライアントが自分の表示言語を送る（既定は日本語）。
-const OUTPUT_LANGS: Record<string, string> = {
-  ja: "日本語",
-  en: "English",
-  "zh-Hans": "简体中文",
-  "zh-Hant": "繁體中文",
-  ko: "한국어",
-};
-
-const buildSystemPrompt = (outputLang: string) => `あなたは旅行・予約文書の情報抽出専門家です。
-入力（画像・PDF・**貼り付けられたテキスト**のいずれか）から予約情報を読み取り、
-以下のJSON形式で返してください。どの入力形式でも規則は同じです。
-
-## カテゴリ判定
-まず文書の種類を判定してください:
-- 飛行機: 搭乗券、航空券、フライト予約
-- 列車: 新幹線、特急、鉄道予約
-- バス: バス予約、乗車券
-- 車: レンタカー予約
-- 船: フェリー・客船予約、乗船券
-- 宿泊: ホテル、旅館予約
-- 観光: チケット・イベント・コンサート・現地ツアー/アクティビティ（入場券・予約バウチャー。観光地巡りそのものは含めない）
-- 食事: レストラン予約
-- アポ: 会議・商談・打ち合わせ等のアポイント（医療機関の診察・受診予約は本サービスの対象外。診察券・受診予約票等の医療関連書類は「その他」とし、診療科・病名・受診の事実など医療に関する項目は抽出しない）
-- その他: 上記に該当しない
-
-## 出力形式（JSONのみ返すこと）
-
-往復予約など1文書に複数予定が含まれる場合はsteps配列に複数要素を返す。
-通常は1要素。
-
-{
-  "steps": [
-    {
-      "category": "飛行機|列車|バス|車|船|宿泊|観光|食事|アポ|その他",
-      "fixed": {
-        "title": "タイトル（便名/列車名/施設名等）",
-        "date": "開始日（YYYY-MM-DD）",
-        "endDate": "終了日（YYYY-MM-DD、宿泊checkout・複数日イベント等。同日ならnull）",
-        "startTime": "開始時刻（HH:MM）",
-        "endTime": "終了時刻（HH:MM）",
-        "from": "出発地・場所",
-        "to": "到着地",
-        "airline": "運行航空会社（飛行機のみ。コードシェア便は実運航キャリア名。例: ANA便名 NZ90 で Air New Zealand 運航表記あり → 'Air New Zealand'。明記なし・非飛行機はnull）",
-        "confNumber": "確認番号",
-        "timezone": "出発地のタイムゾーン。IANA ID を優先（例 Asia/Tokyo, America/Los_Angeles, Pacific/Honolulu）。判らなければ略称（JST 等）。国内線・単一地点で自明ならnull",
-        "arrivalTimezone": "到着地のタイムゾーン（同じ形式）。移動で出発地と異なる場合に必ず入れる。同じ・不明ならnull"
-      },
-      "variable": [
-        { "label": "項目名（${outputLang}で書くこと）", "value": "値" }
-      ],
-      "inferred": ["推定したフィールド名をリストで返す。確実に読み取れた値は含めない"],
-      "needsReview": true
-    }
-  ]
-}
-
-## inferred/needsReviewルール
-- inferred: 文書に明記されておらず文脈から推定した値のフィールド名を配列で返す
-  - 例: タイムゾーンを空港コードから推定 → ["timezone"]
-  - 例: 到着日を出発日+所要時間から推定 → ["endDate"]
-  - 確実に読み取れた項目は含めない
-- needsReview: 以下のいずれかに該当する場合 true
-  - 必須項目（title, date/startTime）が読み取れない
-  - 飛行機/列車/バス/車/船で出発地または到着地が不明
-  - 宿泊でチェックアウト日が不明
-  - 確認番号が見つからない
-  - 推定値が2つ以上ある
-
-${buildOcrRulesPrompt()}
-
-## 言語
-- **入力は日本語とは限らない。**英語・中国語・韓国語・欧州各言語などでも同じ規則で読み取る。
-- **category の値は上に挙げた日本語の語をそのまま使う**（アプリが文字列一致で
-  扱う内部の値であり、画面表示用ではない。表示名はアプリ側が持つ）。
-- variable の label は **${outputLang}** で書く。
-- ただし **title / from / to / airline は原文の表記を保つ**（"Los Angeles Intl" を
-  「ロサンゼルス国際空港」に訳さない）。固有名詞を訳すと、利用者が手元の原本と
-  突き合わせられなくなる。
-
-## 日付・時刻の正規化
-- 出力は必ず YYYY-MM-DD と HH:MM（24時間制）に直す。"10:30 PM" → "22:30"。
-- 月が語で書かれていれば、それに従う（"15 APR 2026" / "Apr 15, 2026" / "2026年4月15日"）。
-- **数字だけの NN/NN/NNNN は曖昧。**"05/04/2026" は米国式なら5月4日、欧州式なら4月5日。
-  文書内の他の手がかりで決められるならそれに従う:
-  - 同じ文書の別の日付に 13 以上の数がどの位置に出るか（"13/04" なら日が先）
-  - 空港コード・都市名・通貨・電話番号の国
-  - 曜日が併記されていれば、それと一致する解釈を選ぶ
-- **決められないときは、その日付を null にする。**推測で片方に決めない。
-  あわせて inferred にその項目名（"date" 等）を入れ、needsReview を true に。
-
-  「片方に決めない」を「もっともらしい方を入れて印を付ける」と解釈しないこと。
-  同じ入力で null を返したり値を入れたりすると、挙動が実行のたびに変わる。
-  **迷ったら null。**入っている日付は「読み取れた日付」でなければならない。
-  黙って決めると、1か月ずれた予定が確認の機会なく保存される。
-- 年が書かれていない場合は、**最も近い将来の同じ月日**として補い、
-  inferred に "date"（endDate も補ったなら "endDate"）と、**"year"** を入れる。
-
-  "year" は「**年そのものが文書に書かれていなかった**」ことだけを表す印で、
-  アプリはこれだけを見て年ズレ補正（過去日を次の同じ月日へ寄せる）を行う。
-  **年が文書に書かれているなら、日付が他の理由で不確かでも "year" は入れない。**
-  入れると、明記された年が勝手に翌年へ動く（"05/04/2026" の日月順が曖昧
-  というだけで 2027 年になった実例がある）。
-
-## 最終規則
-- 読み取れない固定項目はnullを返す（推測しない）
-- JSONのみ返す（説明文不要）
-`;
+import { buildSystemPrompt, OUTPUT_LANGS } from "@/lib/ocr-prompt";
 
 // Anthropic pricing for claude-sonnet-4-6 (vision):
 //   input  $3 / Mtok, output $15 / Mtok → 300/1500 cents per Mtok.
@@ -271,7 +161,10 @@ export async function POST(request: NextRequest) {
     const response = await client.messages.create({
       model: "claude-sonnet-4-6",
       max_tokens: 4096,
-      system: buildSystemPrompt(outputLang),
+      // 「今日」は JST 基準。日次/月次キーと同じ基準に揃える（説明が一つで済む）。
+      // 海外滞在中は最大 1 日ずれうるが、年の補完は最終的にアプリ側の
+      // normalizeScanYears が券の地の暦で見直すので、ここは概数で足りる。
+      system: buildSystemPrompt(outputLang, jstToday()),
       messages: [{ role: "user", content }],
     });
 
