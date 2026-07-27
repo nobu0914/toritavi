@@ -1,6 +1,6 @@
 import { requireAdmin } from "@/lib/admin-auth";
 import { recordAuditLog } from "@/lib/admin-audit";
-import { fetchAdminSummary } from "@/lib/admin-queries";
+import { fetchAdminSummary, fetchOpenDeletionFailures } from "@/lib/admin-queries";
 import { fetchRecentAuditLogs } from "@/lib/admin-audit";
 import { headers } from "next/headers";
 import Link from "next/link";
@@ -43,9 +43,10 @@ export default async function AdminDashboardPage() {
     userAgent: h.get("user-agent"),
   });
 
-  const [summary, logs] = await Promise.all([
+  const [summary, logs, deletionFailures] = await Promise.all([
     fetchAdminSummary(),
     fetchRecentAuditLogs(10),
+    fetchOpenDeletionFailures(),
   ]);
 
   const kpis: Kpi[] = [
@@ -67,6 +68,53 @@ export default async function AdminDashboardPage() {
           サービス状態の俯瞰 · 集計は UTC 当日・当月基準
         </p>
       </section>
+
+      {/*
+        退会の消し残し。**行があるということは、退会した人のデータが本番の
+        どこかに残っているということ。** 持ち主（auth.users）は既に消えている
+        ので、これが唯一の手がかりになる。
+        KPI に紛れさせず、0 件のときは何も出さない —— 常設の「0」は
+        見慣れて意味を失う。出たときだけ目に入るのが正しい。
+      */}
+      {deletionFailures.count > 0 && (
+        <section
+          style={{
+            background: "#fff4f4",
+            border: "1px solid #e3b3b3",
+            borderRadius: 10,
+            padding: 16,
+          }}
+        >
+          <h2 style={{ fontSize: 14, fontWeight: 700, margin: 0, color: "#8a1f1f" }}>
+            退会の後始末が {deletionFailures.count} 件残っています
+          </h2>
+          <p style={{ margin: "6px 0 12px", fontSize: 12, color: "var(--text-dim)" }}>
+            退会は完了していますが、下の資源を消し切れていません。
+            アカウントは既に無いため、利用者側からは再試行できません。
+            手で削除したら <code>resolved_at</code> を入れてください。
+          </p>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <thead>
+              <tr style={{ color: "var(--text-dim)", fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                <th style={th}>日時</th>
+                <th style={th}>資源</th>
+                <th style={th}>user_id</th>
+                <th style={th}>エラー</th>
+              </tr>
+            </thead>
+            <tbody>
+              {deletionFailures.rows.map((f) => (
+                <tr key={f.id} style={{ borderTop: "1px solid var(--border)" }}>
+                  <td style={td}>{fmtDateTime(f.createdAt)}</td>
+                  <td style={td}><code>{f.resource}</code></td>
+                  <td style={td}><code>{f.userId}</code></td>
+                  <td style={{ ...td, color: "var(--text-dim)" }}>{f.error ?? "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
 
       <section
         style={{

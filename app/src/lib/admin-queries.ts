@@ -471,3 +471,65 @@ export async function fetchAdminUserDetail(userId: string): Promise<AdminUserDet
     recentAuditLogs: (auditRes.data ?? []) as AdminUserDetail["recentAuditLogs"],
   };
 }
+
+/** 退会の後始末に失敗した記録（未解決のみ）。 */
+export type OpenDeletionFailure = {
+  id: string;
+  userId: string;
+  resource: string;
+  error: string | null;
+  createdAt: string;
+};
+
+export type OpenDeletionFailures = {
+  /** テーブルがまだ無い（DDL 未適用）。この場合 rows は空。 */
+  tableMissing: boolean;
+  count: number;
+  rows: OpenDeletionFailure[];
+};
+
+/**
+ * 退会で消し残したものの一覧。**ここに行があるということは、退会した人の
+ * データが本番のどこかに残っているということ。**
+ *
+ * `/api/account/delete` は「必ず出られる。ただし黙って残さない」で動く。
+ * 消し残しをこの表へ記録してから `auth.users` を消すので、**持ち主が
+ * 消えた後でも辿れる唯一の手がかり**がここになる。誰も見なければ、
+ * 記録した意味がない。
+ *
+ * **テーブルが無くてもダッシュボードを壊さない。** DDL の適用前に
+ * このコードが出ることがあり、そこで管理画面ごと落ちると本末転倒になる。
+ */
+export async function fetchOpenDeletionFailures(
+  limit = 20
+): Promise<OpenDeletionFailures> {
+  const admin = createServiceClient();
+  const { data, error, count } = await admin
+    .from("toritavi_deletion_failures")
+    .select("id, user_id, resource, error, created_at", { count: "exact" })
+    .is("resolved_at", null)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    // 42P01 = undefined_table。PostgREST は PGRST205 を返すこともある。
+    const missing =
+      error.code === "42P01" ||
+      error.code === "PGRST205" ||
+      /does not exist|schema cache/i.test(error.message ?? "");
+    if (missing) return { tableMissing: true, count: 0, rows: [] };
+    throw error; // それ以外は握りつぶさない（権限・接続の異常を隠さない）
+  }
+
+  const rows = (data ?? []).map((r) => {
+    const m = r as Record<string, unknown>;
+    return {
+      id: String(m.id),
+      userId: String(m.user_id),
+      resource: String(m.resource),
+      error: m.error == null ? null : String(m.error),
+      createdAt: String(m.created_at),
+    };
+  });
+  return { tableMissing: false, count: count ?? rows.length, rows };
+}
