@@ -15,15 +15,18 @@
 
 | 国 | 種別 | 出しているもの | 状態 |
 |---|---|---|---|
-| **AU** | `eta` | 「ETA（電子渡航許可・601…）が必要か確認」 | **未確認** |
-| **IN** | `visa` | 「観光 e-Visa（ビザ）が必要か確認」＋ 残存 6 か月 | **未確認** |
-| **NZ** | `eta` | 「NZeTA + IVL が必要か確認」＋ 残存 3 か月 | **未確認** |
-| **TH** | `none` | 入国タスクは出さないが、**残存 6 か月**を断定 | **未確認** |
-| **US** | `eta` | 「ESTA（電子渡航認証）が必要か確認」 | **未確認** |
+| **AU** | `eta` | 「ETA（電子渡航許可・601…）が必要か確認」 | **未確認**（immi.homeaffairs.gov.au が 403） |
+| **US** | `eta` | 「ESTA（電子渡航認証）が必要か確認」 | **未確認**（cbp.gov / travel.state.gov が 403） |
+| **TH** | `none` | 入国タスクは出さないが、**残存 6 か月**を断定 | **未確認**（本文が PDF 内。公式ドメインの検索結果とは一致したが、それを確認済みにはしない） |
 
-残存月数（IN 6 / NZ 3 / TH 6）は特に注意。台湾で分かったとおり、
-**規則が月数で表せない国に月数を入れると、不要な旅券更新を促す誤り**になる。
-「6 か月」が本当にその国の規定なのか、惰性で入っていないかを確認すること。
+いずれもブラウザで開ける環境なら数分で終わる。AU / US は断定的な内容を
+出している行なので優先度が高い。
+
+> **残存月数は「起算点」まで見ること。** 2026-07-27 に確認したところ、
+> 4 か国中 3 か国で「入国時の残存」が成り立っていなかった
+> （NZ = 出国予定日から / IN = 申請時に / TW = 滞在日数以上）。
+> 月数だけで書くと **当社の基準の方が緩くなり**、通してはいけない人を通す。
+> 起算点が「入国時」でないなら `passport_validity_note` に文で入れる。
 
 確認したら `verified_at` を入れる:
 
@@ -41,6 +44,8 @@ update public.entry_requirements
 |---|---|---|---|---|---|
 | GB 英国 | UK ETA | `eta` | https://www.gov.uk/eta | 2026-07-27 | ETA National List の 22 番に Japan。2025-01-08 以降の渡航が対象で、**2026-02-25 から無いと搭乗できない**。£20 / 2 年間有効 / 1 回 6 か月まで。判定は多くが数分だが最大 3 営業日 |
 | KR 韓国 | K-ETA | `none` | https://www.k-eta.go.kr/ | 2026-07-27 | **日本国籍は 2026-12-31 まで一時免除**（在韓日本国大使館 2025-12-24 告知）。`valid_until = 2026-12-31` で登録できる（列は 2026-07-27 に追加済み） |
+| NZ ニュージーランド | NZeTA + IVL | `eta` | https://www.immigration.govt.nz/new-zealand-visas/visas/visa/nzeta | 2026-07-27 | **「出国予定日から3か月以上」**（"valid for at least 3 months after the date you intend to leave"）。「入国時に3か月」と書いていたのは誤りで、当社の基準の方が緩かった → `passport_validity_note` へ。NZeTA は NZD $17〜・処理に最大 3 日 |
+| IN インド | 観光 e-Visa | `visa` | https://indianvisaonline.gov.in/evisa/tvoa.html | 2026-07-27 | **「e-Visa 申請時に6か月以上」**（"at least six months validity at the time of making application"）。「入国時に」ではない → `passport_validity_note` へ。申請は到着の**最低4日前**まで（`lead_time_days=4` と一致）、最大 120 日前から |
 | TW 台湾 | ビザ免除（90日） | `none` | https://www.roc-taiwan.org/jp_ja/post/49589.html | 2026-07-27 | 台北駐日経済文化代表処。**旅券残存は「滞在日数以上」**（2017-08-15〜）。`passport_validity_months` は整数なのでこの規則を表せない → **NULL にして公式リンクに送る**。3 と書くと 5 日の旅行に 3 か月を要求し、不要な旅券更新を促す |
 
 ## 保留（開始前・情報が確定しない）
