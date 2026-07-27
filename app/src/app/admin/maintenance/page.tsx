@@ -71,6 +71,23 @@ const SECTION_META: SectionMeta[] = [
     ),
   },
   {
+    // **見出しの部分一致。** 原本（toritavi_app 側）の `##` を変えると
+    // ここも合わせること。外れてもタブは出る（見出しがそのままタブ名になる）。
+    match: "認証メール",
+    tabLabel: "メール検査",
+    statusTitle: "検査（まずこれ）",
+    statusSql: "npx tsx scripts/check-auth-email.ts --live",
+    statusNote:
+      "このリポジトリ（toritavi/app）直下で実行。--live でもメールは 1 通も送らない。",
+    statusHint: (
+      <>
+        テンプレートの社名・ブランド・差し込み変数の数まで見る ·{" "}
+        <strong>届くか／リンクが機能するかは検査の外</strong>（人が確認）·{" "}
+        再設定リンクは<strong>申請したのと同じブラウザ</strong>で開くこと
+      </>
+    ),
+  },
+  {
     match: "セキュリティ運用",
     tabLabel: "セキュリティ運用",
     statusTitle: "定期チェック（まずこれ）",

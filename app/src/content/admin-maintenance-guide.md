@@ -201,22 +201,95 @@ bash tool/backup_schedule.sh uninstall
 |---|---|
 | 削除の可逆化 | 論理削除（`deleted_at`）＋ undo 導線。写真は削除時点では消さない |
 | 物理削除の制限 | `purge_soft_deleted()` は service_role 専用・7日未満の指定を拒否 |
-| 退避 | R2 への日次バックアップ（前のタブ参照）|
-| 検知 | `tool/data_safety_check.sh`（鮮度・容量・急減・孤児）|
+| 退避 | R2 への日次バックアップ（前のタブ参照）。**launchd 毎日 03:00** |
+| 検知 | `tool/data_safety_check.sh`（鮮度・容量・急減・孤児）。**launchd 毎日 04:00** |
 
-### 定期の確認
+退避の**後**に検知を置いている。同時刻だと、検知が今日の退避を見る前に走って鮮度を誤判定しうる。
+
+### 状態確認（これ1つ）
 
 ```bash
-bash tool/security_check.sh     # フル（上記の検知を含む）
+bash tool/backup_schedule.sh status
 ```
 
-検知は**実行して初めて機能する**。日次バックアップとは別に、週次でこのチェックを回すこと。
+見るのは **`last exit code`**。**登録されていることと動いていることは別。**
+
+> **2026-07-21〜27 の 7 日間、退避は毎晩起動して毎晩失敗していた。**
+> launchd の PATH に `/opt/homebrew/bin` が無く `rclone` が見つからず、
+> **ダンプだけ作って捨てていた**（写真は 1 枚も退避されていなかった）。
+> 手で叩くと PATH があるので通り、`--check` も ✅ を返し続けていた。
+> **ログは失敗しても増える**ので、更新時刻を見ても稼働中に見えた。
+> いまは失敗時に macOS 通知が出て、成功したときだけ
+> `tool/.backup-last-success` に時刻が書かれる。
+
+### 手動で回すもの
+
+```bash
+bash tool/security_check.sh     # セキュリティ側のフルチェック
+```
+
+こちらは自動化していない。週次で回すこと。
 
 ### まだ無い歯止め（既知の残課題）
 
 - **ステージング環境が無い** — マイグレーションが本番一発勝負。`docs/MIGRATION_GUIDE.md` のチェックリストで代替している
 - **クラウド側に強制停止は無い** — R2・Supabase とも通知止まり
 - 詳細は `docs/SAFETY_LIMITS.md`
+
+---
+
+## 認証メール・パスワード再設定の検査
+
+登録の確認メール・パスワード再設定は、**壊れていても本人が困るまで誰も気づかない**。しかも壊れるのはコードではなく、Supabase の管理画面に貼った文面や設定のほうが多い。だから検査を用意してある。
+
+### 実行
+
+```bash
+cd ~/Dev/toritavi/app
+npx tsx scripts/check-auth-email.ts          # 静的のみ。ネットワーク不要
+npx tsx scripts/check-auth-email.ts --live   # 本番の経路も叩く
+```
+
+**`--live` でもメールは 1 通も送らない。** 緑なら exit 0、赤なら exit 1。
+
+### 何を見ているか
+
+| 層 | 内容 |
+|---|---|
+| 正本テンプレート | 4 種そろっているか／件名が `【JUNROS】`／社名が `合同会社 Coyote and Powell`／`株式会社` が無い／`toritavi`・`curlew`・`GenBox` が本文に出ない／`{{ .ConfirmationURL }}` が 2 か所／閉じタグの後ろに余分な `>` が無い／`div`・`p` の開閉一致 |
+| 本番の経路（`--live`）| `/forgot-password` が開く／`/auth/callback` が code 無しを弾く／`/reset-password` が開く／旧ドメインが 307 で `junros` へ転送（POST 保持）|
+
+> **2026-07-27 に、この検査が拾うはずだったものが実際に 3 つ壊れていた。**
+> ① Supabase 側のテンプレート 4 種が **GenBox（別サービス）のまま**で、
+> 登録した人全員に「GenBox — 取引ファイル管理システム」が届いていた
+> ② 正本の社名が `株式会社コヨーテ・アンド・パウエル`。法務ページ 4 種は
+> すべて `合同会社 Coyote and Powell` で、**このファイルだけが外れていた**
+> ③ 貼り付け時にエディタが `</div>` の後ろへ `>` を 1 つ自動補完していた
+
+### この検査で分からないこと
+
+**メールが実際に届くか**と、**リンクを踏んで再設定画面に着くか**。ここは人がやる。
+
+1. `https://junros.coyoteandpowell.com/forgot-password` で自分宛に送信
+2. **申請したのと同じブラウザで**リンクを開く
+3. `/reset-password` に着けば成功
+
+> **手順 2 は「同じブラウザ」でないと必ず失敗する。**
+> いまのリンクは PKCE で、`code_verifier` が申請したブラウザにしか無い。
+> 2026-07-27 の実測では、Firefox で申請 → Chrome で開く = 失敗、
+> Firefox で完結 = 成功だった。
+>
+> **これはテスト手順の都合ではなく、利用者にも起きる。**
+> 「PC で申請 → スマホでメールを開く」が動かない。
+> `{{ .TokenHash }}` ＋ `/auth/confirm` の `verifyOtp` に寄せれば、
+> 端末をまたげるようになり、同時にこの検査で最後まで自動で追えるようになる。
+> **未対応。**
+
+### テンプレートを貼り直すとき
+
+正本は `~/Dev/toritavi/app/src/lib/email-templates.ts`。閲覧とコピーは `/admin/email-templates`。貼り付け先は Supabase → Authentication → Emails → Templates。
+
+**4 つ全部やること。** 1 つ残すとその経路だけ別の文面で届き続ける。貼ったら上の検査を回す。
 
 ---
 
