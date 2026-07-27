@@ -52,6 +52,39 @@ const nextConfig: NextConfig = {
       { source: "/ui-sample/:path*", destination: "/", permanent: false },
       { source: "/ui-sample-dads", destination: "/", permanent: false },
       { source: "/ui-sample-dads/:path*", destination: "/", permanent: false },
+
+      // ---- 一般利用者向け Web 画面（Phase 1 では提供しない）----
+      //
+      // Web UI の開発は停止している（CLAUDE.md §9）のに画面は動いていた。
+      // とくに /account/plan は **月額 480 円 / 年額 4,800 円を公開しながら、
+      // kSubscriptionEnabled=false でどこからも買えない**状態だった。
+      //
+      // **消さずに閉じる。** Phase 3 で再開する判断があり得るので、復旧は
+      // このブロックを落とすだけで済むようにしてある。`permanent: false`
+      // （307）なのも同じ理由 —— 恒久リダイレクトはブラウザに焼き付き、
+      // 戻したときに効かない。
+      { source: "/signup", destination: "/", permanent: false },
+      { source: "/trips", destination: "/", permanent: false },
+      { source: "/trips/:path*", destination: "/", permanent: false },
+      { source: "/scan", destination: "/", permanent: false },
+      { source: "/concierge", destination: "/", permanent: false },
+      { source: "/alerts", destination: "/", permanent: false },
+      { source: "/unfiled", destination: "/", permanent: false },
+      { source: "/account/plan", destination: "/", permanent: false },
+      { source: "/account/profile", destination: "/", permanent: false },
+      { source: "/account/notifications", destination: "/", permanent: false },
+      { source: "/account/help", destination: "/", permanent: false },
+
+      // ---- ここは閉じない ----
+      //
+      // /login, /account, /account/data:
+      //   **iOS アプリが未リリースなので、今いる利用者は全員 Web 登録者。**
+      //   ここを閉じると、その人たちはデータの書き出しもアカウント削除も
+      //   できなくなる。削除請求に応えられない状態を作る方が悪い。
+      // /forgot-password, /reset-password, /verify-email, /auth/callback:
+      //   アプリから送る認証メールの着地点。
+      // /admin/*, /api/*:
+      //   運用と、アプリが叩くサーバ API。
     ];
   },
 };

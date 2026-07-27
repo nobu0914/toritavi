@@ -1,13 +1,13 @@
 "use client";
 
 import { Alert, Button, Divider, PasswordInput, Stack, Text, TextInput } from "@mantine/core";
-import { IconAlertCircle, IconBrandGoogle } from "@tabler/icons-react";
+import { IconAlertCircle } from "@tabler/icons-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { AuthShell } from "@/components/AuthShell";
 import { createClient } from "@/lib/supabase-browser";
-import { disableGuestMode, enableGuestMode } from "@/lib/guest";
+import { disableGuestMode } from "@/lib/guest";
 import { clearGuestData } from "@/lib/store-guest";
 
 function LoginForm() {
@@ -45,19 +45,11 @@ function LoginForm() {
       // disableGuestMode; clearGuestData removes the actual journey data.
       disableGuestMode();
       clearGuestData();
-      router.replace("/");
+      router.replace("/account/data");
     } catch (err) {
       setError(err instanceof Error ? err.message : "ログインに失敗しました");
       setLoading(false);
     }
-  };
-
-  const handleGuest = () => {
-    // Start the guest preview from a clean slate so the current visitor
-    // doesn't inherit sample data edited by a previous guest on this device.
-    clearGuestData();
-    enableGuestMode();
-    router.replace("/");
   };
 
   return (
@@ -92,39 +84,21 @@ function LoginForm() {
         </Stack>
       </form>
 
+      {/* Web の新規登録・ゲスト体験・Google ログインは Phase 1 では出さない。
+          旅程やスキャンの画面を閉じたので、押した先に見るものが無い。
+          押せるのに何も起きない導線は、無いより悪い。 */}
       <Stack gap={4} mt="md" align="center">
         <Link href="/forgot-password" style={{ fontSize: 13, color: "var(--info-700)" }}>
           パスワードをお忘れですか？
         </Link>
-        <Text size="sm" c="dimmed" mt={4}>
-          アカウントをお持ちでない方は{" "}
-          <Link href="/signup" style={{ color: "var(--info-700)", fontWeight: 600 }}>
-            新規登録
-          </Link>
-        </Text>
       </Stack>
 
-      <Divider my="lg" label="または" labelPosition="center" />
+      <Divider my="lg" />
 
-      <Button
-        variant="default"
-        fullWidth
-        leftSection={<IconBrandGoogle size={16} />}
-        disabled
-        title="Phase 2 で対応予定"
-      >
-        Google でログイン（準備中）
-      </Button>
-
-      <Divider my="lg" label="会員登録せずに試す" labelPosition="center" />
-
-      <Button variant="light" color="gray" fullWidth onClick={handleGuest}>
-        ゲストで試す（サンプルデータ）
-      </Button>
-      <Text size="xs" c="dimmed" ta="center" mt={8} lh={1.5}>
-        サンプル旅程でアプリを体験できます。
+      <Text size="xs" c="dimmed" ta="center" lh={1.6}>
+        Web でできるのは、これまでのデータの書き出しとアカウントの削除だけです。
         <br />
-        データは端末内にのみ保存され、ログイン後は通常データと切り替わります。
+        旅程の作成・編集は iPhone アプリをご利用ください。
       </Text>
     </AuthShell>
   );

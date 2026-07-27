@@ -2,14 +2,10 @@
 
 import { Box, Button, Loader, Stack, Text } from "@mantine/core";
 import {
-  IconBell,
   IconChevronRight,
-  IconCrown,
   IconDatabase,
   IconFlask,
-  IconHelpCircle,
   IconUser,
-  IconUserCircle,
 } from "@tabler/icons-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -26,11 +22,12 @@ type MenuItem = {
 
 // 親画面は DS v2 §15 の「状態確認 + 主要導線」ロール。
 // フォーム本体 / トグル大量表示 / 破壊的操作の確認 は下層に逃がす。
+//
+// **Phase 1 では「アカウントとデータ」だけを出す。** プラン / プロフィール /
+// 通知 / ヘルプは `next.config.ts` の redirects でトップへ寄せたので、
+// 並べたままだと押しても戻ってくる**行き止まりのリンク**になる。
+// 消さずに閉じているだけなので、再開時はこの配列に戻せばよい。
 const MENU: MenuItem[] = [
-  { href: "/account/plan", label: "プラン", icon: IconCrown },
-  { href: "/account/profile", label: "プロフィール設定", icon: IconUserCircle },
-  { href: "/account/notifications", label: "通知設定", icon: IconBell },
-  { href: "/account/help", label: "ヘルプ・サポート", icon: IconHelpCircle },
   { href: "/account/data", label: "アカウントとデータ", icon: IconDatabase },
 ];
 
@@ -118,14 +115,13 @@ export default function AccountPage() {
         {isGuest && (
           <Box style={{ margin: "0 16px 16px" }}>
             <Stack gap={8}>
-              <Button component={Link} href="/signup" fullWidth>
-                無料で会員登録する
-              </Button>
+              {/* Web からの新規登録は閉じた（/signup はトップへ戻る）。
+                  出したままだと「登録する」を押して弾かれることになる。 */}
               <Button component={Link} href="/login" variant="default" fullWidth>
                 既存アカウントでログイン
               </Button>
               <Text size="xs" c="dimmed" mt={6} ta="center" lh={1.6}>
-                会員登録するとデータがクラウドに保存され、端末を超えて同期されます。
+                新規のご登録は iPhone アプリからお願いします。
               </Text>
             </Stack>
           </Box>

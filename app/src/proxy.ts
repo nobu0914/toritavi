@@ -61,7 +61,11 @@ function generateNonce(): string {
   return btoa(binary);
 }
 
+// 未ログインでも見せる。`/` を入れているのは、そこが
+// 「JUNROS は iPhone アプリです」の案内ページになったため ——
+// App Store の審査担当や初めて来た人をログイン壁で止めない。
 const PUBLIC_PATHS = [
+  "/",
   "/login",
   "/signup",
   "/verify-email",
@@ -70,15 +74,24 @@ const PUBLIC_PATHS = [
   "/auth/callback",
 ];
 
-const PROTECTED_PATHS = ["/", "/scan", "/alerts", "/unfiled", "/account", "/trips", "/concierge", "/admin"];
+const PROTECTED_PATHS = ["/scan", "/alerts", "/unfiled", "/account", "/trips", "/concierge", "/admin"];
+
+/**
+ * ログイン済みの利用者を送る先。
+ *
+ * **かつては `/` だった**が、`/` は「JUNROS は iPhone アプリです」の
+ * 案内 1 枚に変わった（`src/app/page.tsx`）。Web に残っている用は
+ * データの書き出しとアカウント削除だけなので、そこへ直接送る。
+ * `/` のままだと、案内 → ログイン → 案内、と往復して行き先が無い。
+ */
+const SIGNED_IN_HOME = "/account/data";
 
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
 
 function isProtectedPath(pathname: string): boolean {
-  if (pathname === "/") return true;
-  return PROTECTED_PATHS.some((p) => p !== "/" && (pathname === p || pathname.startsWith(`${p}/`)));
+  return PROTECTED_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
 
 /**
@@ -171,7 +184,7 @@ export async function proxy(request: NextRequest) {
     pathname !== "/reset-password"
   ) {
     const url = request.nextUrl.clone();
-    url.pathname = "/";
+    url.pathname = SIGNED_IN_HOME;
     return withSecHeaders(NextResponse.redirect(url), csp);
   }
 
