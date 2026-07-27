@@ -4,23 +4,24 @@
 1 行入れるたびに、誤りが搭乗拒否・入国拒否に直結する。**検索結果の要約を
 根拠にしない。**下の「一次情報」を人が開いて確認してから入れる。
 
-現在 **10 行**（2026-07-27 時点）。うち一次情報で裏を取ったのは 7 件。
+現在 **10 行**（2026-07-27 時点）。うち一次情報で裏を取ったのは **9 件**。
 
 ---
 
 ## ⚠ 登録済みだが未確認（`verified_at` が NULL）
 
-**ここが今いちばん危ない。** 下の 5 行は誰がいつ確認したのか分からないまま、
-**断定的な内容を画面に出している**。増やすより先にここを確認する方が価値が高い。
+残り 1 行。
 
 | 国 | 種別 | 出しているもの | 状態 |
 |---|---|---|---|
-| **AU** | `eta` | 「ETA（電子渡航許可・601…）が必要か確認」 | **未確認**（immi.homeaffairs.gov.au が 403） |
-| **US** | `eta` | 「ESTA（電子渡航認証）が必要か確認」 | **未確認**（cbp.gov / travel.state.gov が 403） |
-| **TH** | `none` | 入国タスクは出さないが、**残存 6 か月**を断定 | **未確認**（本文が PDF 内。公式ドメインの検索結果とは一致したが、それを確認済みにはしない） |
+| **TH** | `none` | 入国タスクは出さないが、**残存 6 か月**を断定 | **未確認**（本文が PDF 内。公式ドメインの検索結果とは一致したが、それを確認済みにしない） |
 
-いずれもブラウザで開ける環境なら数分で終わる。AU / US は断定的な内容を
-出している行なので優先度が高い。
+> **到達手段について（2026-07-27 の実測）。** 政府サイトの多くは
+> スクリプトからの取得を 403 で拒む（immi.homeaffairs.gov.au /
+> travel.state.gov / cbp.gov / mofa.go.jp / canada.ca）。
+> **実ブラウザ経由なら同じページが読める。** 「403 だった」を
+> 「情報が無い」と書かないこと —— 経路を変えれば取れる。
+> TH は経路の問題ではなく、本文が PDF に入っているため別の壁。
 
 > **残存月数は「起算点」まで見ること。** 2026-07-27 に確認したところ、
 > 4 か国中 3 か国で「入国時の残存」が成り立っていなかった
@@ -42,6 +43,8 @@ update public.entry_requirements
 
 | 国 | 手続き | 種別 | 一次情報 | 確認日 | 備考 |
 |---|---|---|---|---|---|
+| AU オーストラリア | ETA（subclass 601） | `eta` | https://immi.homeaffairs.gov.au/visas/getting-a-visa/visa-listing/electronic-travel-authority-601 | 2026-07-27 | 対象旅券の一覧に **Japan** あり。**申請は「Australian ETA」アプリからのみ**（"must apply for an ETA using the Australian ETA app"）—— 知らないと詰まるので `notes` へ。1 回の滞在は最大 3 か月・AUD20。**旅券残存の規定は要件一覧に無い**（健康・素行・債務・未成年のみ）ので NULL |
+| US アメリカ | ESTA（VWP） | `eta` | https://www.cbp.gov/travel/international-visitors/esta | 2026-07-27 | **e-Passport（IC チップ入り）必須**（"You must have an e-Passport to use the VWP"）→ `notes` へ。申請は渡航前ならいつでも可。旅券残存の規定は無いので NULL |
 | GB 英国 | UK ETA | `eta` | https://www.gov.uk/eta | 2026-07-27 | ETA National List の 22 番に Japan。2025-01-08 以降の渡航が対象で、**2026-02-25 から無いと搭乗できない**。£20 / 2 年間有効 / 1 回 6 か月まで。判定は多くが数分だが最大 3 営業日 |
 | KR 韓国 | K-ETA | `none` | https://www.k-eta.go.kr/ | 2026-07-27 | **日本国籍は 2026-12-31 まで一時免除**（在韓日本国大使館 2025-12-24 告知）。`valid_until = 2026-12-31` で登録できる（列は 2026-07-27 に追加済み） |
 | NZ ニュージーランド | NZeTA + IVL | `eta` | https://www.immigration.govt.nz/new-zealand-visas/visas/visa/nzeta | 2026-07-27 | **「出国予定日から3か月以上」**（"valid for at least 3 months after the date you intend to leave"）。「入国時に3か月」と書いていたのは誤りで、当社の基準の方が緩かった → `passport_validity_note` へ。NZeTA は NZD $17〜・処理に最大 3 日 |
@@ -65,15 +68,13 @@ update public.entry_requirements
 
 | 国・地域 | 障害 | 見るべき一次情報 |
 |---|---|---|
-| **AU** オーストラリア | 403 | https://immi.homeaffairs.gov.au/visas/getting-a-visa/visa-listing/electronic-travel-authority-601 |
-| **US** アメリカ | 403 | https://travel.state.gov/content/travel/en/us-visas/tourism-visit/visa-waiver-program.html |
-| **TH** タイ | 本文が PDF 内 | https://site.thaiembassy.jp/jp/visa/type/ |
+| **TH** タイ | 本文が PDF 内（経路を変えても同じ） | https://site.thaiembassy.jp/jp/visa/type/ |
 | VN ベトナム | **TLS 証明書エラー**（`evisa.gov.vn` / 在日大使館とも） | https://evisa.gov.vn/ |
 | MY マレーシア | 対象・期限が画像内 | https://imigresen-online.imi.gov.my/mdac/main |
 | PH フィリピン | 「無料」以外読めず | https://etravel.gov.ph/ |
 
-AU / US / TH は**すでに画面に断定的な内容を出している**行なので、
-新しい国を足すより優先度が高い。
+**403 は「情報が無い」ではない。** VN / MY / PH は実ブラウザ経由なら
+取れる可能性が高い（AU / US はそれで取れた）。
 
 ### まだ着手していない
 
