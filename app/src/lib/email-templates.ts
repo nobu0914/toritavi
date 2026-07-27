@@ -93,7 +93,7 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
   </div>
 
   <p style="font-size:11px;color:#90A3B8;margin-top:20px">
-    JUNROS — 株式会社コヨーテ・アンド・パウエル
+    JUNROS — 合同会社 Coyote and Powell
   </p>
 </div>`,
   },
@@ -127,7 +127,7 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
   </div>
 
   <p style="font-size:11px;color:#90A3B8;margin-top:20px">
-    JUNROS — 株式会社コヨーテ・アンド・パウエル
+    JUNROS — 合同会社 Coyote and Powell
   </p>
 </div>`,
   },
@@ -160,7 +160,7 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
   </div>
 
   <p style="font-size:11px;color:#90A3B8;margin-top:20px">
-    JUNROS — 株式会社コヨーテ・アンド・パウエル
+    JUNROS — 合同会社 Coyote and Powell
   </p>
 </div>`,
   },
@@ -194,7 +194,7 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
   </div>
 
   <p style="font-size:11px;color:#90A3B8;margin-top:20px">
-    JUNROS — 株式会社コヨーテ・アンド・パウエル
+    JUNROS — 合同会社 Coyote and Powell
   </p>
 </div>`,
   },
