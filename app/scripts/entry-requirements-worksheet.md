@@ -4,7 +4,7 @@
 1 行入れるたびに、誤りが搭乗拒否・入国拒否に直結する。**検索結果の要約を
 根拠にしない。**下の「一次情報」を人が開いて確認してから入れる。
 
-現在 **8 行**（2026-07-27 時点）。日本人の渡航先上位はまだ大きく抜けている。
+現在 **10 行**（2026-07-27 時点）。うち一次情報で裏を取ったのは 7 件。
 
 ---
 
@@ -46,6 +46,8 @@ update public.entry_requirements
 | KR 韓国 | K-ETA | `none` | https://www.k-eta.go.kr/ | 2026-07-27 | **日本国籍は 2026-12-31 まで一時免除**（在韓日本国大使館 2025-12-24 告知）。`valid_until = 2026-12-31` で登録できる（列は 2026-07-27 に追加済み） |
 | NZ ニュージーランド | NZeTA + IVL | `eta` | https://www.immigration.govt.nz/new-zealand-visas/visas/visa/nzeta | 2026-07-27 | **「出国予定日から3か月以上」**（"valid for at least 3 months after the date you intend to leave"）。「入国時に3か月」と書いていたのは誤りで、当社の基準の方が緩かった → `passport_validity_note` へ。NZeTA は NZD $17〜・処理に最大 3 日 |
 | IN インド | 観光 e-Visa | `visa` | https://indianvisaonline.gov.in/evisa/tvoa.html | 2026-07-27 | **「e-Visa 申請時に6か月以上」**（"at least six months validity at the time of making application"）。「入国時に」ではない → `passport_validity_note` へ。申請は到着の**最低4日前**まで（`lead_time_days=4` と一致）、最大 120 日前から |
+| SG シンガポール | SG Arrival Card | `eta` | https://www.ica.gov.sg/enter-depart/entry_requirements | 2026-07-27 | ICA（入国管理局）。査証は不要だが **SG Arrival Card は全員に義務**（"All travellers are required to submit the SG Arrival Card within three (3) days"）。忘れると入国審査で止まるので `eta` にしてタスクを出す。旅券残存 6 か月（"minimum validity of 6 months"）。**`lead_time_days` は NULL** —— 表示文が「**承認に**最大N日」なので、「到着3日前から提出可」を入れると意味が変わる |
+| HK 香港 | ビザ免除（90日） | `none` | https://www.immd.gov.hk/eng/services/visas/visit-transit/visit-visa-entry-permit.html | 2026-07-27 | 入境事務處の公式表に **"JAPAN \| 90 Days"**。旅券残存の記載がページに無いので NULL のまま（**書いていないものを補わない**） |
 | TW 台湾 | ビザ免除（90日） | `none` | https://www.roc-taiwan.org/jp_ja/post/49589.html | 2026-07-27 | 台北駐日経済文化代表処。**旅券残存は「滞在日数以上」**（2017-08-15〜）。`passport_validity_months` は整数なのでこの規則を表せない → **NULL にして公式リンクに送る**。3 と書くと 5 日の旅行に 3 か月を要求し、不要な旅券更新を促す |
 
 ## 保留（開始前・情報が確定しない）
@@ -58,14 +60,26 @@ update public.entry_requirements
 
 日本人の渡航先として多い順。**手続きが要る国**（`eta` / `visa`）を先に埋める。
 
+**2026-07-27 に試して到達できなかったもの。**「読めなかった」であって
+「情報が無い」ではない。ブラウザで開ける環境なら数分で終わる。
+
+| 国・地域 | 障害 | 見るべき一次情報 |
+|---|---|---|
+| **AU** オーストラリア | 403 | https://immi.homeaffairs.gov.au/visas/getting-a-visa/visa-listing/electronic-travel-authority-601 |
+| **US** アメリカ | 403 | https://travel.state.gov/content/travel/en/us-visas/tourism-visit/visa-waiver-program.html |
+| **TH** タイ | 本文が PDF 内 | https://site.thaiembassy.jp/jp/visa/type/ |
+| VN ベトナム | **TLS 証明書エラー**（`evisa.gov.vn` / 在日大使館とも） | https://evisa.gov.vn/ |
+| MY マレーシア | 対象・期限が画像内 | https://imigresen-online.imi.gov.my/mdac/main |
+| PH フィリピン | 「無料」以外読めず | https://etravel.gov.ph/ |
+
+AU / US / TH は**すでに画面に断定的な内容を出している**行なので、
+新しい国を足すより優先度が高い。
+
+### まだ着手していない
+
 | 国・地域 | 見るべき一次情報 |
 |---|---|
 | CN 中国 | https://www.china-embassy.gov.cn/jp/ |
-| HK 香港 | https://www.immd.gov.hk/ |
-| VN ベトナム | https://evisa.gov.vn/ |
-| SG シンガポール | https://eservices.ica.gov.sg/sgarrivalcard/ |
-| MY マレーシア | https://imigresen-online.imi.gov.my/mdac/main |
-| PH フィリピン | https://etravel.gov.ph/ |
 | ID インドネシア | https://evisa.imigrasi.go.id/ |
 | CA カナダ | https://www.canada.ca/en/immigration-refugees-citizenship/services/visit-canada/eta.html |
 | GU グアム | https://travel.state.gov/ ／ CNMI-Guam VWP |
@@ -88,12 +102,15 @@ https://www.mofa.go.jp/mofaj/toko/visa/tanki/novisa.html
 
    **月数で表せない規則は NULL にする。** 台湾は「滞在日数以上」で、
    3 と書くと 5 日の旅行に 3 か月を要求することになり、**不要な旅券更新を
-   促す誤り**（安全基準 §0 の後者）になる。NULL なら一般形の文言になり、
-   公式リンクが実際の規則を説明する。列が整数である以上、ここは
-   「入れない」で正しい。
-6. **期限のある措置か。** K-ETA の免除のように期限付きなら、
-   `valid_until` を入れられるようになるまで登録しない
-7. `verified_at` に確認した日を入れる
+   促す誤り**（安全基準 §0 の後者）になる。
+6. **起算点は「入国時」か。** 違うなら `passport_validity_note` に文で入れる
+   （月数より優先して表示される）。2026-07-27 の確認では 4 か国中 3 か国で
+   「入国時」が成り立たず、NZ と IN では**当社の基準の方が緩かった**。
+   これは搭乗拒否・入国拒否につながる側の誤り。
+7. **期限のある措置か。** K-ETA の免除のように期限付きなら `valid_until` に
+   最終日を入れる。翌日から自動的に表示されなくなる
+8. `verified_at` に確認した日を入れる。**「検索結果で一致した」を確認済みに
+   しない。** 一次情報の本文を読んだ日だけを入れる
 
 ## 文言
 
