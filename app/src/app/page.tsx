@@ -92,10 +92,10 @@ export default function AppOnlyPage() {
         >
           お問い合わせ:{" "}
           <a
-            href="mailto:coyoteandpowell@gmail.com"
+            href="mailto:info@coyoteandpowell.com"
             style={{ color: "var(--info-700)" }}
           >
-            coyoteandpowell@gmail.com
+            info@coyoteandpowell.com
           </a>
         </div>
       </div>

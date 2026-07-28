@@ -166,14 +166,14 @@ export default function HelpPage() {
           <Row
             icon={<IconMail size={18} color="var(--text-dim)" />}
             label="お問い合わせ"
-            sub="coyoteandpowell@gmail.com"
-            href="mailto:coyoteandpowell@gmail.com"
+            sub="info@coyoteandpowell.com"
+            href="mailto:info@coyoteandpowell.com"
           />
           <Row
             icon={<IconInfoCircle size={18} color="var(--text-dim)" />}
             label="不具合を報告"
             sub="件名に「不具合」を含めてください"
-            href="mailto:coyoteandpowell@gmail.com?subject=%E4%B8%8D%E5%85%B7%E5%90%88%E3%81%AE%E5%A0%B1%E5%91%8A"
+            href="mailto:info@coyoteandpowell.com?subject=%E4%B8%8D%E5%85%B7%E5%90%88%E3%81%AE%E5%A0%B1%E5%91%8A"
           />
           <Row
             icon={<IconShieldCheck size={18} color="var(--text-dim)" />}
