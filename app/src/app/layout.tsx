@@ -30,7 +30,9 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
-  themeColor: "#12B3AB",
+  // ブランド blue = `--t-500`（DS の `--b-500`）。ブラウザの UI 着色に出るので
+  // トークンとずれると、アドレスバーだけ旧色という形で残る。
+  themeColor: "#1184C7",
   // Required for env(safe-area-inset-*) to report real values inside the iOS
   // WebView / standalone PWA. Without it the insets are all 0, so the sticky
   // AppHeader, the bottom TabBar and the notifications stack all collide with

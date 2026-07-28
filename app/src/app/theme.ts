@@ -28,18 +28,22 @@ export const theme = createTheme({
     fontFamily: FONT,
   },
   colors: {
-    /* Daylight teal scale (50→900)。CTA=5, text/link=7 */
+    /* ブランドスケール (50→900)。CTA=5, text/link=7。
+       **キー名は `teal` のまま据え置く。** `primaryColor` と全ての
+       `color="teal"` 指定がこれを指しており、改名はリスクだけあって
+       利益がない（アプリ側で `AppColors.tealTint` を据え置いたのと同じ判断）。
+       中身は blue。正本は `~/Dev/toritavi/mock/design-tokens-Blue.css`。 */
     teal: [
-      "#ECFBFA",
-      "#D2F4F1",
-      "#A7E9E4",
-      "#6FD8D1",
-      "#2FC3BA",
-      "#12B3AB",
-      "#0E9A93",
-      "#0B7E78",
-      "#0A625E",
-      "#08433F",
+      "#EAF6FE",
+      "#CFEAFD",
+      "#A6E1FB",
+      "#54C5F8",
+      "#29B6F6",
+      "#1184C7",
+      "#0E72AE",
+      "#0C6296",
+      "#02579A",
+      "#023964",
     ],
   },
   radius: {
