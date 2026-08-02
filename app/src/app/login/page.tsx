@@ -1,6 +1,6 @@
 "use client";
 
-import { Alert, Button, Divider, PasswordInput, Stack, Text, TextInput } from "@mantine/core";
+import { Alert, Button, PasswordInput, Stack, Text, TextInput } from "@mantine/core";
 import { IconAlertCircle } from "@tabler/icons-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -93,17 +93,9 @@ function LoginForm() {
         </Link>
       </Stack>
 
-      <Divider my="lg" />
-
-      {/* **これから何をする画面なのかを先に言う。** 以前は
-          「Web でできるのは〜だけです」と、できないことから書いていた。
-          ログイン前の人には何のために来たのかが伝わらず、制限の告知だけが
-          残る（2026-07-28 に「意味が不明」と指摘を受けて書き直し）。 */}
-      <Text size="xs" c="dimmed" ta="center" lh={1.6}>
-        このページは、データの書き出しとアカウント削除のためのものです。
-        <br />
-        旅程の作成・編集は JUNROS アプリ（iPhone）で行えます。
-      </Text>
+      {/* 画面の用途説明（「このページはデータの書き出しとアカウント削除のため〜」）は
+          2026-08-02 に撤去。ログインの前に読ませる情報として要らない、という判断。
+          区切り線もここで終端していただけなので一緒に外した。 */}
     </AuthShell>
   );
 }

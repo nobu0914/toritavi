@@ -28,26 +28,32 @@ export function AuthShell({
         background: "var(--bg)",
       }}
     >
+      {/*
+        ロゴはアプリと同じ縦組みロックアップ（マーク＋ワードマーク）。
+        正本は `toritavi_app/assets/brand/junros-12/junros-12-v-primary.svg` で、
+        アプリの BrandLockup も同じファイルを使う。**文字で "JUNROS" と
+        書き起こさない** —— 以前はここだけテキストだったため、アプリには
+        マークがあるのに Web には無い、という食い違いになっていた。
+        比率 194.44 : 144 は SVG が持っているので、こちらで組み直さない。
+      */}
       <div style={{ textAlign: "center", marginBottom: 24 }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/brand/junros-12-v-primary.svg"
+          alt="JUNROS"
+          width={104}
+          height={Math.round(104 * (144 / 194.44))}
+          style={{ display: "block", margin: "0 auto" }}
+        />
         <div
           style={{
-            fontSize: 28,
-            fontWeight: "var(--fw-heavy)" as never,
-            color: "var(--info-700)",
-            letterSpacing: "-0.5px",
-            lineHeight: 1.1,
-          }}
-        >
-          JUNROS
-        </div>
-        <div
-          style={{
-            fontSize: "var(--fs-xs)",
+            fontSize: "var(--fs-sm)",
             color: "var(--text-dim)",
-            marginTop: 2,
+            marginTop: 10,
+            lineHeight: 1.5,
           }}
         >
-          行動を、前に進める
+          散らばった旅の予定を、ひとまとめに。
         </div>
       </div>
 
