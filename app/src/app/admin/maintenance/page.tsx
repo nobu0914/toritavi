@@ -7,6 +7,7 @@ import { requireAdmin } from "@/lib/admin-auth";
 import { recordAuditLog } from "@/lib/admin-audit";
 import { splitGuideByH2 } from "@/lib/guide-sections";
 import CopyableCode from "@/components/admin/CopyableCode";
+import CopyablePre from "@/components/admin/CopyablePre";
 import MaintenanceTabs from "@/components/admin/MaintenanceTabs";
 
 export const dynamic = "force-dynamic";
@@ -71,6 +72,10 @@ const SECTION_META: SectionMeta[] = [
     ),
   },
   {
+    match: "週次検査",
+    tabLabel: "週次検査",
+  },
+  {
     // **見出しの部分一致。** 原本（toritavi_app 側）の `##` を変えると
     // ここも合わせること。外れてもタブは出る（見出しがそのままタブ名になる）。
     match: "認証メール",
@@ -116,6 +121,10 @@ function metaFor(heading: string): SectionMeta | undefined {
 const CONTENT_FILES = [
   "admin-maintenance-guide.md",
   "admin-security-guide.md",
+  // 週次検査の指示文。原本は toritavi_app / docs/weekly-inspection.md。
+  // 末尾に置くのは、既存タブの並び（＝運用者の手が覚えている位置）を
+  // 動かさないため。
+  "weekly-inspection.md",
 ] as const;
 
 function loadContent(file: string): string {
@@ -207,7 +216,14 @@ export default async function AdminMaintenancePage() {
                 )}
 
                 <section className="admin-md" style={{ ...cardStyle, padding: "8px 24px 24px" }}>
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{s.body}</ReactMarkdown>
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    // コードブロックはボタン 1 つで全文コピーできるようにする
+                    // （週次検査の指示文は数十行あり、選択コピーは現実的でない）。
+                    components={{ pre: CopyablePre }}
+                  >
+                    {s.body}
+                  </ReactMarkdown>
                 </section>
               </div>
             );
