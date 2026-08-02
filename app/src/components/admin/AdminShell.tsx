@@ -93,8 +93,11 @@ export function AdminShell({ role, email, children }: Props) {
         }}
       >
         <div style={{ padding: "0 20px 20px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+          {/* **内部コード名（toritavi）を出さない。** 管理画面は内部ツールだが、
+              ドメインも製品名も JUNROS に揃っているのにここだけ旧称が残ると、
+              どちらが本当の名前か分からなくなる（CLAUDE.md §1）。 */}
           <div style={{ fontSize: 13, letterSpacing: 2, color: "rgba(255,255,255,0.5)" }}>
-            TORITAVI
+            JUNROS
           </div>
           <div style={{ fontSize: 16, fontWeight: 700, marginTop: 2 }}>
             Admin Console

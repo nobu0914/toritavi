@@ -71,10 +71,16 @@ const SECTION_META: SectionMeta[] = [
       </>
     ),
   },
-  {
-    match: "週次検査",
-    tabLabel: "週次検査",
-  },
+  // **タブ名は名詞ひとつ。** 見出しをそのまま出すと
+  // 「安全装置（課金の暴走・データ消失の歯止め）」のような長さになり、
+  // タブ列が横に溢れて右端のタブに手が届かなくなる。説明はタブを開いた
+  // 先の本文が持つ。ここは「どれを開くか」が分かる最小限にする。
+  { match: "週次検査", tabLabel: "週次検査" },
+  { match: "バックアップ", tabLabel: "バックアップ" },
+  { match: "安全装置", tabLabel: "安全装置" },
+  { match: "スキーマ変更", tabLabel: "スキーマ変更" },
+  // サイドバーの「セキュリティ」（/admin/security）と紛れないよう「運用」を残す。
+  { match: "セキュリティ運用", tabLabel: "セキュリティ運用" },
   {
     // **見出しの部分一致。** 原本（toritavi_app 側）の `##` を変えると
     // ここも合わせること。外れてもタブは出る（見出しがそのままタブ名になる）。
@@ -119,12 +125,13 @@ function metaFor(heading: string): SectionMeta | undefined {
  * 新しいガイドを足すときはこの配列にファイル名を追加する。
  */
 const CONTENT_FILES = [
+  // **週次検査を先頭に置く。** 毎週開くのはここで、障害対応の各タブは
+  // それより頻度が低い。末尾に置いていたときはタブ列の溢れで画面に
+  // 出てこず、毎週使うものが一番遠い位置にあった。
+  // 先頭 ＝ 既定で開くタブでもある（MaintenanceTabs は index 0 から）。
+  "weekly-inspection.md",
   "admin-maintenance-guide.md",
   "admin-security-guide.md",
-  // 週次検査の指示文。原本は toritavi_app / docs/weekly-inspection.md。
-  // 末尾に置くのは、既存タブの並び（＝運用者の手が覚えている位置）を
-  // 動かさないため。
-  "weekly-inspection.md",
 ] as const;
 
 function loadContent(file: string): string {
