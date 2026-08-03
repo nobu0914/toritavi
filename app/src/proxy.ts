@@ -216,6 +216,11 @@ export const config = {
      * - favicon.ico, icons/, manifest.json, sw.js, cmaps/
      * - api routes (handled inline)
      */
-    "/((?!_next/static|_next/image|favicon.ico|icons|manifest.json|sw.js|pdf.worker.min.mjs|cmaps|api|robots.txt|.well-known).*)",
+    // `brand` を足した。**ロゴ（/brand/*.svg）がプロキシを通っていた**ため、
+    // recovery セッション中は画像リクエストまで /reset-password へ
+    // リダイレクトされ、<img> が HTML を受け取って壊れた画像になっていた
+    // （2026-08-03 実機で発見）。**public 配下の静的ファイルは認証の
+    // リダイレクト対象にしない。**
+    "/((?!_next/static|_next/image|favicon.ico|icons|brand|manifest.json|sw.js|pdf.worker.min.mjs|cmaps|api|robots.txt|.well-known).*)",
   ],
 };

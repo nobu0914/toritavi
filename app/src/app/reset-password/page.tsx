@@ -10,6 +10,33 @@ import { createClient } from "@/lib/supabase-browser";
 
 const MIN_PASSWORD_LENGTH = 8;
 
+/**
+ * Supabase の英語メッセージを日本語に直す。
+ *
+ * **そのまま出さない。** 実機で "New password should be different from the
+ * old password." が赤枠に英語のまま出た（2026-08-03）。他は日本語なので、
+ * ここだけ英語だと「壊れている」と読まれる。
+ *
+ * 一致しないものは原文を捨てて汎用文にする。訳せない英語を出すくらいなら、
+ * 何が起きたか分かる日本語のほうがよい。
+ */
+function friendlyUpdateError(message: string): string {
+  const m = message.toLowerCase();
+  if (m.includes("different from the old password")) {
+    return "いま使っているパスワードと同じです。別のパスワードを入力してください。";
+  }
+  if (m.includes("should be at least") || m.includes("password is too short")) {
+    return `パスワードは${MIN_PASSWORD_LENGTH}文字以上で入力してください。`;
+  }
+  if (m.includes("expired") || m.includes("invalid")) {
+    return "再設定リンクの有効期限が切れています。もう一度リンクを発行してください。";
+  }
+  if (m.includes("weak") || m.includes("pwned")) {
+    return "推測されやすいパスワードです。別のパスワードを入力してください。";
+  }
+  return "パスワードを更新できませんでした。時間をおいて、もう一度お試しください。";
+}
+
 export default function ResetPasswordPage() {
   const router = useRouter();
   const [password, setPassword] = useState("");
@@ -51,7 +78,7 @@ export default function ResetPasswordPage() {
       const sb = createClient();
       const { error: err } = await sb.auth.updateUser({ password });
       if (err) {
-        setError(err.message);
+        setError(friendlyUpdateError(err.message));
         setLoading(false);
         return;
       }
@@ -63,7 +90,11 @@ export default function ResetPasswordPage() {
       setDone(true);
       setLoading(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "パスワード更新に失敗しました");
+      setError(
+        err instanceof Error
+          ? friendlyUpdateError(err.message)
+          : "パスワード更新に失敗しました"
+      );
       setLoading(false);
     }
   };
