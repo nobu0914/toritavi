@@ -47,6 +47,20 @@ export function useNavigateWithLoading() {
     }
   }, [pathname]);
 
+  // 🔴 **消える条件が「pathname が変わること」だけだった。**
+  // 遷移が起きなければ（同じ経路への push、プロキシに差し戻される、
+  // ルートが落ちる）オーバーレイは永遠に出たままで、画面は操作できない。
+  // 例外は出ず、ログも残らないので原因も分からない（2026-08-03 実機で発生）。
+  // **出しっぱなしにしない。** 一定時間で外し、理由をコンソールに残す。
+  useEffect(() => {
+    if (!navigating) return;
+    const t = setTimeout(() => {
+      console.warn("[nav] 遷移が完了しないため、ローディング表示を解除しました");
+      setNavigating(false);
+    }, 8000);
+    return () => clearTimeout(t);
+  }, [navigating]);
+
   const navigate = useCallback((path: string) => {
     setNavigating(true);
     router.push(path);

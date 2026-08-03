@@ -103,7 +103,7 @@ export default function ResetPasswordPage() {
     return (
       <AuthShell
         title="パスワードを再設定しました"
-        subtitle="新しいパスワードでログインしてください。"
+        subtitle="アプリに戻って、新しいパスワードでログインしてください。"
       >
         <Stack gap="md" align="center" py="md">
           <IconCircleCheck size={48} color="var(--success-500)" />
@@ -112,9 +112,23 @@ export default function ResetPasswordPage() {
             Link. After signOut we want a clean navigation — client-side
             routing was silently failing on iOS Safari post-CSP-nonce.
           */}
+          {/*
+            **アプリに戻す。** ここに来る人の大半は iOS アプリから
+            「パスワードをお忘れですか？」を押して飛んできている
+            （アプリから送ると PKCE の verifier が合わず失敗するので、
+            Web で始める設計）。それなのに導線が /login しか無かったため、
+            再設定のあとそのまま**Web版にログインしてしまう**
+            （2026-08-03 実機で判明）。Web版は開発を止めているので、
+            アプリの利用者が着地する場所ではない。
+            junros:// は iOS 側で登録済みのカスタム URL スキーム。
+          */}
+          <Button component="a" href="junros://open" fullWidth>
+            JUNROS アプリに戻る
+          </Button>
           <Button
             component="a"
             href="/login"
+            variant="subtle"
             fullWidth
             onClick={() => {
               // Belt-and-suspenders: if the anchor is swallowed by some
@@ -122,7 +136,7 @@ export default function ResetPasswordPage() {
               window.location.href = "/login";
             }}
           >
-            ログイン画面へ
+            ブラウザで続ける
           </Button>
         </Stack>
       </AuthShell>
