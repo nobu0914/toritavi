@@ -84,7 +84,7 @@ GET/POST https://hugiyycgsmzhuldewwux.functions.supabase.co/purge-scan-images?dr
 
 | 項目 | 値 |
 |---|---|
-| プロジェクト | genbox2 / `hugiyycgsmzhuldewwux` |
+| プロジェクト | JUNROS / `hugiyycgsmzhuldewwux` |
 | Edge Function | `purge-scan-images`（`--no-verify-jwt`。`x-purge-secret` で認証）|
 | cron ジョブ | `purge-scan-images-daily`（jobid=1, `20 3 * * *`）|
 | シークレット | `PURGE_SECRET`（Function Secrets ＋ Vault `purge_scan_images_secret`。**リポジトリ非保存**）|

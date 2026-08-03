@@ -15,8 +15,13 @@ import "./globals.css";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "JUNROS",
-  description: "行動を、前に進める",
+  title: "JUNROS — 散らばった旅の予定を、ひとまとめに。",
+  // 軸の一言。**アプリ名・サブタイトル・製品ページ・スクリーンショットと
+  // 一字一句そろえる**（toritavi_app の docs/app-store-listing.md §1）。
+  // 旧文言は "行動を、前に進める"。2026-08-01 に軸を確定したときに
+  // ここだけ取り残されていた。
+  description:
+    "散らばった旅の予定を、ひとまとめに。航空券やホテルの予約票を撮る／選ぶだけ。AIが読み取り、予定順に整理します。",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
