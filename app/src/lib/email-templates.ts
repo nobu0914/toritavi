@@ -15,6 +15,17 @@
  * 注意:
  *   `{{ .ConfirmationURL }}` は Supabase が用途ごとに中身を差し替える。
  *   **消さないこと。** 各テンプレートにボタンと末尾URLの2箇所ある。
+ *
+ * ロゴ（2026-08-06 に文字から画像へ）:
+ *   `https://coyoteandpowell.com/images/junros-lockup-email.png`
+ *   —— 実体は **company-site リポジトリ**（`images/junros-lockup-email.png`）。
+ *   このリポジトリには無い。**消したり名前を変えたりすると、認証メールの
+ *   ロゴだけが静かに落ちる**（メールは届き、リンクも効くので気づけない）。
+ *   - SVG は使えない。Gmail が剥がす
+ *   - PNG に白を焼き込んである。透過だと、`color-scheme` を無視して反転する
+ *     クライアント（Gmail Android など）で濃紺のワードマークが消える
+ *   - `alt="JUNROS"` に文字装飾を載せてあるのは、**画像がブロックされたときに
+ *     以前の文字ロゴに近い見た目で出す**ため。20px なのは height:35px に収めるため
  */
 
 export type EmailTemplateKey =
@@ -68,9 +79,12 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
     tab: "Confirm signup",
     purpose: "新規登録時。ここを直さないと登録できた人全員に届く",
     subject: "【JUNROS】メールアドレスの確認",
-    html: `<div style="font-family:-apple-system,'Hiragino Sans','Yu Gothic',sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;color:#0E1F33">
-  <div style="font-size:26px;font-weight:700;color:#0B6E8F;letter-spacing:-.02em">JUNROS</div>
-  <div style="font-size:13px;color:#5B7088;margin-top:2px">予約票をスキャンして、旅程に</div>
+    html: `<style>:root{color-scheme:light;supported-color-schemes:light}</style>
+<div style="font-family:-apple-system,'Hiragino Sans','Yu Gothic',sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;color:#0E1F33;background-color:#ffffff">
+  <img src="https://coyoteandpowell.com/images/junros-lockup-email.png"
+       width="110" height="35" alt="JUNROS"
+       style="display:block;border:0;width:110px;height:35px;font-size:20px;font-weight:700;color:#023964;letter-spacing:-.02em">
+  <div style="font-size:13px;color:#5B7088;margin-top:8px">散らばった旅の予定を、ひとまとめに。</div>
 
   <div style="border:1px solid #E4EAE8;border-radius:12px;padding:24px;margin-top:24px">
     <div style="font-size:17px;font-weight:700">メールアドレスの確認</div>
@@ -102,9 +116,12 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
     tab: "Reset Password",
     purpose: "パスワードを忘れたとき。recovery トークンを含む",
     subject: "【JUNROS】パスワードの再設定",
-    html: `<div style="font-family:-apple-system,'Hiragino Sans','Yu Gothic',sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;color:#0E1F33">
-  <div style="font-size:26px;font-weight:700;color:#0B6E8F;letter-spacing:-.02em">JUNROS</div>
-  <div style="font-size:13px;color:#5B7088;margin-top:2px">予約票をスキャンして、旅程に</div>
+    html: `<style>:root{color-scheme:light;supported-color-schemes:light}</style>
+<div style="font-family:-apple-system,'Hiragino Sans','Yu Gothic',sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;color:#0E1F33;background-color:#ffffff">
+  <img src="https://coyoteandpowell.com/images/junros-lockup-email.png"
+       width="110" height="35" alt="JUNROS"
+       style="display:block;border:0;width:110px;height:35px;font-size:20px;font-weight:700;color:#023964;letter-spacing:-.02em">
+  <div style="font-size:13px;color:#5B7088;margin-top:8px">散らばった旅の予定を、ひとまとめに。</div>
 
   <div style="border:1px solid #E4EAE8;border-radius:12px;padding:24px;margin-top:24px">
     <div style="font-size:17px;font-weight:700">パスワードの再設定</div>
@@ -136,9 +153,12 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
     tab: "Magic Link",
     purpose: "現在アプリは未使用。空にすると旧文面が残るため直しておく",
     subject: "【JUNROS】ログイン用リンク",
-    html: `<div style="font-family:-apple-system,'Hiragino Sans','Yu Gothic',sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;color:#0E1F33">
-  <div style="font-size:26px;font-weight:700;color:#0B6E8F;letter-spacing:-.02em">JUNROS</div>
-  <div style="font-size:13px;color:#5B7088;margin-top:2px">予約票をスキャンして、旅程に</div>
+    html: `<style>:root{color-scheme:light;supported-color-schemes:light}</style>
+<div style="font-family:-apple-system,'Hiragino Sans','Yu Gothic',sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;color:#0E1F33;background-color:#ffffff">
+  <img src="https://coyoteandpowell.com/images/junros-lockup-email.png"
+       width="110" height="35" alt="JUNROS"
+       style="display:block;border:0;width:110px;height:35px;font-size:20px;font-weight:700;color:#023964;letter-spacing:-.02em">
+  <div style="font-size:13px;color:#5B7088;margin-top:8px">散らばった旅の予定を、ひとまとめに。</div>
 
   <div style="border:1px solid #E4EAE8;border-radius:12px;padding:24px;margin-top:24px">
     <div style="font-size:17px;font-weight:700">ログイン</div>
@@ -169,9 +189,12 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
     tab: "Change Email Address",
     purpose: "アカウント設定でメールアドレスを変えたとき",
     subject: "【JUNROS】メールアドレス変更の確認",
-    html: `<div style="font-family:-apple-system,'Hiragino Sans','Yu Gothic',sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;color:#0E1F33">
-  <div style="font-size:26px;font-weight:700;color:#0B6E8F;letter-spacing:-.02em">JUNROS</div>
-  <div style="font-size:13px;color:#5B7088;margin-top:2px">予約票をスキャンして、旅程に</div>
+    html: `<style>:root{color-scheme:light;supported-color-schemes:light}</style>
+<div style="font-family:-apple-system,'Hiragino Sans','Yu Gothic',sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;color:#0E1F33;background-color:#ffffff">
+  <img src="https://coyoteandpowell.com/images/junros-lockup-email.png"
+       width="110" height="35" alt="JUNROS"
+       style="display:block;border:0;width:110px;height:35px;font-size:20px;font-weight:700;color:#023964;letter-spacing:-.02em">
+  <div style="font-size:13px;color:#5B7088;margin-top:8px">散らばった旅の予定を、ひとまとめに。</div>
 
   <div style="border:1px solid #E4EAE8;border-radius:12px;padding:24px;margin-top:24px">
     <div style="font-size:17px;font-weight:700">メールアドレスの変更</div>
