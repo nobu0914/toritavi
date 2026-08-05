@@ -47,13 +47,19 @@ export type EmailTemplate = {
 /**
  * 反映先の Supabase プロジェクト。
  *
- * **組織 `genbox` の中にプロジェクトが複数ある。`genbox2` を選ぶこと。**
+ * **正は表示名ではなく project ref（`hugiyycgsmzhuldewwux`）。**
+ * 2026-08-02 に 組織 `genbox` → `Coyote and Powell`、プロジェクト
+ * `genbox2` → `JUNROS` へ改名した。**このファイルだけ追随が漏れていた**
+ * （2026-08-06 に発見）。ref は改名で変わらないので、次に名前が変わっても
+ * URL は古くならない。
+ *
+ * **組織の中にプロジェクトが複数ある。**（もう 1 つは `Mapint`。）
  * JUNROS は GenBox と `auth.users` を共有しているため、認証設定は
  * このプロジェクトが持っている。別プロジェクトを触っても何も変わらない。
  */
 export const SUPABASE_PROJECT = {
-  org: "genbox",
-  project: "genbox2",
+  org: "Coyote and Powell",
+  project: "JUNROS",
   ref: "hugiyycgsmzhuldewwux",
   templatesUrl:
     "https://supabase.com/dashboard/project/hugiyycgsmzhuldewwux/auth/templates",
@@ -76,7 +82,7 @@ export function toPreviewDocument(html: string): string {
 export const EMAIL_TEMPLATES: EmailTemplate[] = [
   {
     key: "confirm_signup",
-    tab: "Confirm signup",
+    tab: "Confirm sign up",
     purpose: "新規登録時。ここを直さないと登録できた人全員に届く",
     subject: "【JUNROS】メールアドレスの確認",
     html: `<style>:root{color-scheme:light;supported-color-schemes:light}</style>
@@ -113,7 +119,7 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
   },
   {
     key: "reset_password",
-    tab: "Reset Password",
+    tab: "Reset password",
     purpose: "パスワードを忘れたとき。recovery トークンを含む",
     subject: "【JUNROS】パスワードの再設定",
     html: `<style>:root{color-scheme:light;supported-color-schemes:light}</style>
@@ -150,7 +156,7 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
   },
   {
     key: "magic_link",
-    tab: "Magic Link",
+    tab: "Magic link or OTP",
     purpose: "現在アプリは未使用。空にすると旧文面が残るため直しておく",
     subject: "【JUNROS】ログイン用リンク",
     html: `<style>:root{color-scheme:light;supported-color-schemes:light}</style>
@@ -186,7 +192,7 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
   },
   {
     key: "change_email",
-    tab: "Change Email Address",
+    tab: "Change email address",
     purpose: "アカウント設定でメールアドレスを変えたとき",
     subject: "【JUNROS】メールアドレス変更の確認",
     html: `<style>:root{color-scheme:light;supported-color-schemes:light}</style>
