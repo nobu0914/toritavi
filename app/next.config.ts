@@ -63,6 +63,15 @@ const nextConfig: NextConfig = {
       // このブロックを落とすだけで済むようにしてある。`permanent: false`
       // （307）なのも同じ理由 —— 恒久リダイレクトはブラウザに焼き付き、
       // 戻したときに効かない。
+      //
+      // 🔴 /signup を開けるときは、**開ける前に**同意まわりを確認すること。
+      //    画面には規約・プライバシーへの同意チェックと13歳以上の確認があり、
+      //    同意の版・時刻を signUp の options.data に入れている
+      //    （src/lib/legal-consent.ts）。Web とモバイルは同じ auth.users を
+      //    共有するので、版の定数はモバイル側の
+      //    `~/Dev/toritavi_app/lib/features/auth/domain/legal_consent.dart`
+      //    と揃っている必要がある。ずれたまま開けると、登録経路によって
+      //    メタデータの形が変わる。
       { source: "/signup", destination: "/", permanent: false },
       { source: "/trips", destination: "/", permanent: false },
       { source: "/trips/:path*", destination: "/", permanent: false },
