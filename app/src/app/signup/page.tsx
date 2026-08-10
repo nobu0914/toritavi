@@ -1,11 +1,17 @@
 "use client";
 
-import { Alert, Button, PasswordInput, Stack, Text, TextInput } from "@mantine/core";
+import { Alert, Anchor, Button, Checkbox, PasswordInput, Stack, Text, TextInput } from "@mantine/core";
 import { IconAlertCircle } from "@tabler/icons-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { AuthShell } from "@/components/AuthShell";
+import {
+  MINIMUM_AGE,
+  PRIVACY_URL,
+  TERMS_URL,
+  consentMetadata,
+} from "@/lib/legal-consent";
 import { createClient } from "@/lib/supabase-browser";
 
 const MIN_PASSWORD_LENGTH = 8;
@@ -15,6 +21,9 @@ export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
+  const [agreed, setAgreed] = useState(false);
+  // 同意した時刻。送信時刻ではなく**チェックを入れた時刻**を残す。
+  const [agreedAt, setAgreedAt] = useState<Date | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -30,6 +39,9 @@ export default function SignupPage() {
     }
     if (password !== passwordConfirm) {
       return "パスワードが一致しません";
+    }
+    if (!agreed) {
+      return `${MINIMUM_AGE}歳以上であることの確認と、利用規約・プライバシーポリシーへの同意が必要です`;
     }
     return null;
   };
@@ -49,7 +61,12 @@ export default function SignupPage() {
       const { data, error: err } = await sb.auth.signUp({
         email,
         password,
-        options: { emailRedirectTo: redirectTo },
+        options: {
+          emailRedirectTo: redirectTo,
+          // 同意の版・時刻・年齢確認を残す。モバイル側と同じ形にすること
+          // （Web と共通の auth.users を使うため）。詳細は lib/legal-consent.ts。
+          data: consentMetadata(agreedAt ?? new Date()),
+        },
       });
       if (err) {
         setError(resolveSignupError(err.message));
@@ -102,7 +119,30 @@ export default function SignupPage() {
             autoComplete="new-password"
             required
           />
-          <Button type="submit" loading={loading} fullWidth mt="xs">
+          <Checkbox
+            mt="xs"
+            checked={agreed}
+            onChange={(e) => {
+              const v = e.currentTarget.checked;
+              setAgreed(v);
+              // 外したら記録も捨てる。入れ直したときは、その時刻を残す。
+              setAgreedAt(v ? new Date() : null);
+            }}
+            label={
+              <Text size="sm">
+                {MINIMUM_AGE}歳以上であることを確認し、
+                <Anchor href={TERMS_URL} target="_blank" rel="noopener noreferrer" size="sm">
+                  利用規約
+                </Anchor>
+                {" と "}
+                <Anchor href={PRIVACY_URL} target="_blank" rel="noopener noreferrer" size="sm">
+                  プライバシーポリシー
+                </Anchor>
+                {" に同意します"}
+              </Text>
+            }
+          />
+          <Button type="submit" loading={loading} disabled={!agreed} fullWidth mt="xs">
             登録する
           </Button>
         </Stack>
