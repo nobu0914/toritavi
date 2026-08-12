@@ -128,11 +128,18 @@ export async function POST(request: NextRequest) {
   }
 
   /* ---- 5) Collect Journey context (own data, RLS scoped) ---- */
+  // 🔴 **上限を掛けない**（2026-08-12・利用者の判断）。
+  // 以前は `.limit(10)` があり、`buildConciergeContext` の 3 件と合わせて
+  // **二段構えで落ちていた**。登録してある旅程を「見当たりません」と
+  // 答える事故が起きたので、取得は全件にする。
+  // どこまで prompt に載せるかは `concierge-context.ts` が文字数で決める
+  // （全件の存在は必ず伝え、詳細だけ予算で切る）。
+  //
+  // RLS で自分の行しか返らないので、他人の旅程は入らない。
   const { data: journeyRows } = await sb
     .from("toritavi_journeys")
     .select(`*, toritavi_steps(*)`)
-    .order("updated_at", { ascending: false })
-    .limit(10);
+    .order("updated_at", { ascending: false });
   const journeys: Journey[] = (journeyRows ?? []).map(rowToJourney);
   const context = buildConciergeContext({
     allJourneys: journeys,
