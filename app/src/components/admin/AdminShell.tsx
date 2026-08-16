@@ -11,6 +11,7 @@ import {
   IconTool,
   IconLogout,
   IconMessageDots,
+  IconChecklist,
   IconMail,
 } from "@tabler/icons-react";
 import { useState } from "react";
@@ -35,6 +36,7 @@ type NavItem = {
 
 const NAV: NavItem[] = [
   { href: "/admin", label: "ダッシュボード", Icon: IconLayoutDashboard },
+  { href: "/admin/tasks", label: "課題管理", Icon: IconChecklist, matchPrefix: true },
   { href: "/admin/users", label: "利用者", Icon: IconUsers, matchPrefix: true },
   { href: "/admin/analytics", label: "集計・広告", Icon: IconChartBar, matchPrefix: true },
   { href: "/admin/feedback", label: "フィードバック", Icon: IconMessageDots, matchPrefix: true },
