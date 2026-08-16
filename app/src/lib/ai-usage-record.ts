@@ -46,15 +46,47 @@ async function record(
 }
 
 /**
+ * DB 関数 `increment_ocr_usage_srv` が 1 回で受ける件数の上限。
+ *
+ * 🔴 **021 の関数が `p_units` を 1..10 に縛り、外れると EXCEPTION を投げる。**
+ * 記録は best-effort（下の `record` が例外を握り潰す）なので、
+ * 外れたときに起きるのは失敗ではなく**計上が黙って落ちること**。
+ * 件数が増えないまま OCR は成功するので、**上限が事実上無制限になる。**
+ * 画面にもログ（Vercel console 以外）にも出ない。
+ *
+ * 以前は `route.ts` の `MAX_IMAGES = 10` と**慣習でしか揃っていなかった**。
+ * `MAX_IMAGES` だけを 20 に上げた瞬間、11 枚以上のバッチが全部この形になる。
+ * いまは下の `recordOcrUsage` が**この値で分割して呼ぶ**ので、
+ * `MAX_IMAGES` を動かしても計上は落ちない。
+ *
+ * 🔴 **この値を上げるときは SQL（関数の bound）が先。** 逆順にすると、
+ * コードが 11 を渡して関数が弾く期間ができる（`CLAUDE.md` §6
+ * 「OCR クォータキーの変更順序」と同じ罠）。
+ */
+const UNITS_PER_CALL_MAX = 10;
+
+/**
  * ⚠️ p_units 付きの 5 引数シグネチャは 021 フェーズ1 で追加される。
  * **SQL 適用前にこのコードをデプロイすると記録が落ちる**（該当関数が無い）。
  * 上限判定は記録された値を読むので、記録が落ちれば上限も効かなくなる。
  * 適用順は必ず SQL(021 フェーズ1) → デプロイ。
  */
-export const recordOcrUsage = (u: OcrUsage) =>
-  record("increment_ocr_usage_srv", u, {
-    p_units: Math.max(1, Math.trunc(u.units)),
-  });
+export async function recordOcrUsage(u: OcrUsage): Promise<void> {
+  const total = Math.max(1, Math.trunc(u.units));
+  let remaining = total;
+  // トークン・費用は**総額を 1 回だけ**計上する（分割しても二重に積まない）。
+  let carriesCost = true;
+  while (remaining > 0) {
+    const units = Math.min(remaining, UNITS_PER_CALL_MAX);
+    await record(
+      "increment_ocr_usage_srv",
+      carriesCost ? u : { ...u, tokensIn: 0, tokensOut: 0, costCents: 0 },
+      { p_units: units },
+    );
+    remaining -= units;
+    carriesCost = false;
+  }
+}
 
 export const recordConciergeUsage = (u: Usage) =>
   record("increment_concierge_usage_srv", u);

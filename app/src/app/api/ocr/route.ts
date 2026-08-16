@@ -21,6 +21,11 @@ const SONNET_OUTPUT_CENTS_PER_MTOK = 1500;
 // 1 リクエストの入力上限（コスト/DoS ガード）。日次/月次ガードは「前回までの状態」を
 // 見るため、単発の巨大リクエストはここで bound する必要がある。
 export const maxDuration = 60; // 関数の最大実行秒数
+// 🔴 この値と DB 関数の `p_units` bound（1..10）は**別々に決まる**。
+// 上げても計上は落ちない（`recordOcrUsage` が分割して呼ぶ）が、
+// 上げる前に `lib/ai-usage-record.ts` の `UNITS_PER_CALL_MAX` の注記を読むこと。
+// 以前は慣習で揃っているだけで、ここだけ上げると**計上が黙って落ちて
+// 上限が無効化**された（2026-08-16 の検査で発覚）。
 const MAX_IMAGES = 10;
 const MAX_IMAGE_CHARS = 14_000_000; // data URL 文字長 ≈ base64。約 10MB 原本相当。
 const MAX_TOTAL_CHARS = 28_000_000; // 1 リクエスト合計。
