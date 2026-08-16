@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { logAiRejection } from "@/lib/moderation";
+import { createServiceClient } from "@/lib/supabase-service";
 
 /**
  * AI 利用制限（OCR / コンシェルジュ共通）。
@@ -212,6 +213,8 @@ export type AiGuardPass = {
   plan: Plan;
   /** この期間に残っている件数（OCR はファイル数）。 */
   remaining: number;
+  /** この期間の上限件数。**原子的な予約（reserveOcrUnits）に要る。** */
+  limitRequests: number;
 };
 
 /**
@@ -284,7 +287,11 @@ export async function enforceAiLimits(
     return reject("rate_limit", cfg.messages.rateLimit(tier.ratePerMin), 429);
   }
 
-  return { plan, remaining: Math.max(0, tier.quotaRequests - used) };
+  return {
+    plan,
+    remaining: Math.max(0, tier.quotaRequests - used),
+    limitRequests: tier.quotaRequests,
+  };
 }
 
 /**
@@ -293,6 +300,83 @@ export async function enforceAiLimits(
  * /api/ocr は 1 リクエストで複数ファイルを受け付けるので、「残り 1 件」の状態で
  * 10 枚送られると上限を 10 倍すり抜ける。enforceAiLimits はボディを読む前に
  * 走るため件数を知らない。ここで塞ぐ。
+ */
+/**
+ * OCR の件数を**原子的に予約**する。
+ *
+ * 🔴 **`assertUnitsWithinQuota` は並列要求で抜けられる**（2026-08-16 の外部検査）。
+ * 「読んでから足す」形なので、無料利用者（月 10 件）が使用量 0 の状態で
+ * 10 枚入りの要求を 2 本同時に投げると、**両方が「残り 10 件」と判定して通過**し
+ * 20 枚が処理される。10 本なら 100 枚。実費は Anthropic に発生する。
+ *
+ * ここでは DB 側で `INSERT ... ON CONFLICT DO UPDATE ... WHERE` を使い、
+ * 行ロックの下で条件を評価する。同時に来た要求は直列化され、上限に当たった側は
+ * 更新されない（`supabase/ocr_quota_atomic_reserve.sql`）。
+ *
+ * **予約してから AI を呼ぶ**ので、AI が落ちた分は `release()` で戻すこと。
+ * 戻し損ねても、失うのは利用者の枠が少し減ることだけで、
+ * **上限が緩む方向には壊れない**（フェイルクローズ・`CLAUDE.md` §5）。
+ *
+ * ⚠️ 予約は件数だけを数える。成功後のトークン・コストは
+ * `recordOcrTokensOnly` で記録する（`recordOcrUsage` を併用すると**二重計上**）。
+ */
+export async function reserveOcrUnits(
+  userId: string,
+  cfg: AiGuardConfig,
+  pass: AiGuardPass,
+  units: number,
+): Promise<NextResponse | { release: () => Promise<void> }> {
+  const admin = createServiceClient();
+  const { data, error } = await admin.rpc("toritavi_reserve_ocr_units", {
+    p_user_id: userId,
+    p_units: units,
+    p_limit: pass.limitRequests,
+  });
+
+  if (error) {
+    // 🔴 **予約できないときは通さない。** ここをフェイルオープンにすると、
+    //    DB が不調な間だけ上限が消える（019 の事故と同じ形）。
+    console.error("[ai-guard] reserve failed:", error.message);
+    return NextResponse.json(
+      { error: "quota_unavailable", message: cfg.messages.rateLimit(0) },
+      { status: 503 },
+    );
+  }
+
+  const row = Array.isArray(data) ? data[0] : data;
+  const granted = row?.granted === true;
+  if (!granted) {
+    const usedAfter = Number(row?.used_after ?? pass.limitRequests);
+    const remaining = Math.max(0, pass.limitRequests - usedAfter);
+    await logAiRejection(userId, cfg.feature as "ocr" | "concierge", "quota_units");
+    return NextResponse.json(
+      {
+        error: "quota_request_limit",
+        message: cfg.messages.quotaUnits(remaining),
+        remaining,
+      },
+      { status: 429 },
+    );
+  }
+
+  return {
+    release: async () => {
+      try {
+        const { error: relErr } = await admin.rpc("toritavi_release_ocr_units", {
+          p_user_id: userId,
+          p_units: units,
+        });
+        if (relErr) console.error("[ai-guard] release failed:", relErr.message);
+      } catch (e) {
+        console.error("[ai-guard] release threw:", e);
+      }
+    },
+  };
+}
+
+/**
+ * @deprecated 並列要求で抜けられる。`reserveOcrUnits` を使うこと。
+ * コンシェルジュ側にまだ原子的な予約が無いため残してある。
  */
 export async function assertUnitsWithinQuota(
   userId: string,

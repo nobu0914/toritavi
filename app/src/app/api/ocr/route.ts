@@ -3,11 +3,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { authenticateRequest } from "@/lib/supabase-server";
 import {
   enforceAiLimits,
-  assertUnitsWithinQuota,
+  reserveOcrUnits,
   jstToday,
   OCR_GUARD,
 } from "@/lib/ai-guard";
-import { recordOcrUsage } from "@/lib/ai-usage-record";
+import { recordOcrTokensOnly } from "@/lib/ai-usage-record";
 import { assertActiveOr403 } from "@/lib/moderation";
 import { ALLOWED_ORIGINS } from "@/lib/allowed-origins";
 import { buildSystemPrompt, OUTPUT_LANGS } from "@/lib/ocr-prompt";
@@ -65,6 +65,10 @@ export async function POST(request: NextRequest) {
   const guard = await enforceAiLimits(sb, userId, OCR_GUARD);
   if (guard instanceof NextResponse) return guard;
 
+  // 予約の解放は catch からも呼ぶので、try の外で持つ。
+  // **中で宣言すると catch から見えず、失敗時に枠が返らない。**
+  let releaseReservation: (() => Promise<void>) | null = null;
+
   try {
     const body = (await request.json()) as {
       images?: string[];
@@ -103,8 +107,20 @@ export async function POST(request: NextRequest) {
     // テキストは 1 件（画像 1 枚と同じ扱い。入力トークンははるかに小さいが、
     // 利用者から見た「読み取り 1 回」の粒度を揃える）。
     const units = images.length > 0 ? images.length : 1;
-    const overQuota = await assertUnitsWithinQuota(userId, OCR_GUARD, guard, units);
-    if (overQuota) return overQuota;
+    // 🔴 **足してから見る（原子的な予約）。** 以前は assertUnitsWithinQuota が
+    //    「読んでから足す」形で、**並列要求で上限を超えられた**
+    //    （2026-08-16 の外部検査）。10 枚入りを 2 本同時に投げると、
+    //    どちらも「残り 10 件」と判定して 20 枚が処理される。
+    //    予約が取れなければ AI を呼ばない。
+    const reserved = await reserveOcrUnits(userId, OCR_GUARD, guard, units);
+    if (reserved instanceof NextResponse) return reserved;
+    // ここから先で失敗したら枠を返す（AI を呼ぶ前に予約しているため）。
+    let reservationHeld = true;
+    releaseReservation = async () => {
+      if (!reservationHeld) return;
+      reservationHeld = false;
+      await reserved.release();
+    };
 
     let totalChars = 0;
     for (const img of images) {
@@ -182,7 +198,10 @@ export async function POST(request: NextRequest) {
     // 記録は service_role 専用 RPC 経由（利用者が PostgREST から直接叩いて
     // 共有予算を焼き切れないようにするため）。best-effort は従来どおり。
     // units = ファイル数。上限は「件＝ファイル」で数えるので必ず渡す。
-    await recordOcrUsage({
+    // 件数は予約で数え済み。ここは**トークン・コストだけ**
+    //（`recordOcrUsage` を呼ぶと月次が二重に数えられる）。
+    releaseReservation = null; // AI 呼び出しは成功した。枠は返さない
+    await recordOcrTokensOnly({
       userId,
       tokensIn,
       tokensOut,
@@ -216,6 +235,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(result);
   } catch (err) {
+    // 🔴 **予約した枠を返す。** AI を呼ぶ前に確保しているので、
+    //    ここで返さないと失敗のたびに利用者の残量が減る。
+    //    返し損ねても上限が緩む方向には壊れない（フェイルクローズ）。
+    if (releaseReservation) await releaseReservation();
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });
   }

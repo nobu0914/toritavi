@@ -88,5 +88,30 @@ export async function recordOcrUsage(u: OcrUsage): Promise<void> {
   }
 }
 
+/**
+ * 予約済みの OCR について、**トークン・コストだけ**を記録する。
+ *
+ * 🔴 `recordOcrUsage` と併用しないこと。あちらは件数も足すので、
+ * `reserveOcrUnits` で数え済みの分が**二重に計上**される。
+ *
+ * 予約方式では件数が先に確定しているので、分割呼び出しも要らない
+ * （DB 側は p_units を 1..10 で bound するため、日次の計上だけ分割する）。
+ */
+export async function recordOcrTokensOnly(u: OcrUsage): Promise<void> {
+  const total = Math.max(1, Math.trunc(u.units));
+  let remaining = total;
+  let carriesCost = true;
+  while (remaining > 0) {
+    const units = Math.min(remaining, UNITS_PER_CALL_MAX);
+    await record(
+      "toritavi_record_ocr_tokens_srv",
+      carriesCost ? u : { ...u, tokensIn: 0, tokensOut: 0, costCents: 0 },
+      { p_units: units },
+    );
+    remaining -= units;
+    carriesCost = false;
+  }
+}
+
 export const recordConciergeUsage = (u: Usage) =>
   record("increment_concierge_usage_srv", u);
