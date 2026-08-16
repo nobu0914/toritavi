@@ -13,7 +13,12 @@ export async function GET() {
   }
 
   try {
-    const logs = await fetchRecentAuditLogs(200);
+    const res = await fetchRecentAuditLogs(200);
+    // 読めなかったことを 200 + 空配列で隠さない（呼び出し側が 0 件と誤読する）。
+    if (!res.ok) {
+      return NextResponse.json({ error: "audit unavailable" }, { status: 503 });
+    }
+    const logs = res.rows;
     const counts = new Map<string, number>();
     for (const l of logs) counts.set(l.action, (counts.get(l.action) ?? 0) + 1);
     const byAction = Array.from(counts.entries())

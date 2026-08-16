@@ -57,7 +57,7 @@ export async function POST(
       ip: h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
       userAgent: h.get("user-agent"),
     });
-    return NextResponse.json({ ok: true, status: result });
+    return NextResponse.json({ ok: true, status: result, auditFailed: !result.audited });
   } catch (e) {
     console.error("[api admin/users/:id/status] failed", e);
     return NextResponse.json({ error: "internal error" }, { status: 500 });

@@ -43,11 +43,14 @@ export default async function AdminDashboardPage() {
     userAgent: h.get("user-agent"),
   });
 
-  const [summary, logs, deletionFailures] = await Promise.all([
+  const [summary, logRes, deletionFailures] = await Promise.all([
     fetchAdminSummary(),
     fetchRecentAuditLogs(10),
     fetchOpenDeletionFailures(),
   ]);
+  // 🔴 **「読めなかった」を「0 件」と描かない**（`admin-audit.ts` の注記）。
+  const logs = logRes.ok ? logRes.rows : [];
+  const logsFailed = !logRes.ok;
 
   const kpis: Kpi[] = [
     kpi("総ユーザー", fmtNum(summary.totals.users)),
@@ -156,7 +159,11 @@ export default async function AdminDashboardPage() {
               すべて表示 →
             </Link>
           </div>
-          {logs.length === 0 ? (
+          {logsFailed ? (
+            <div style={{ fontSize: 13, color: "var(--danger, #c0392b)", padding: "12px 0" }}>
+              監査ログを読み込めませんでした。0 件ではありません
+            </div>
+          ) : logs.length === 0 ? (
             <div style={{ fontSize: 13, color: "var(--text-dim)", padding: "12px 0" }}>
               まだログがありません
             </div>

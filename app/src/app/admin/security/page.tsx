@@ -13,7 +13,11 @@ function fmtDateTime(iso: string | null) {
 export default async function AdminSecurityPage() {
   await requireAdmin("support_viewer");
 
-  const logs = await fetchRecentAuditLogs(200);
+  // 🔴 **「読めなかった」を「0 件」と描かない。** 監査ログが取れないときに
+  //    「まだログがありません」と出ると、監査という機能が黙って消える。
+  const res = await fetchRecentAuditLogs(200);
+  const logs = res.ok ? res.rows : [];
+  const loadFailed = !res.ok;
 
   // Lightweight derived counters from the same log window.
   const actionCounts = new Map<string, number>();
@@ -42,7 +46,14 @@ export default async function AdminSecurityPage() {
           最近の操作の内訳（ログ上位 200 件から集計）
         </h2>
         {topActions.length === 0 ? (
+          loadFailed ? (
+          <div style={{ fontSize: 13, color: "var(--danger, #c0392b)" }}>
+            監査ログを読み込めませんでした（{res.ok ? "" : res.reason}）。
+            **0 件ではありません。** 記録は残っている可能性があります
+          </div>
+        ) : (
           <div style={{ fontSize: 13, color: "var(--text-dim)" }}>まだログがありません</div>
+        )
         ) : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead>
@@ -66,7 +77,14 @@ export default async function AdminSecurityPage() {
       <section style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: 10, padding: 16 }}>
         <h2 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 10px" }}>直近の admin 操作ログ</h2>
         {logs.length === 0 ? (
+          loadFailed ? (
+          <div style={{ fontSize: 13, color: "var(--danger, #c0392b)" }}>
+            監査ログを読み込めませんでした（{res.ok ? "" : res.reason}）。
+            **0 件ではありません。** 記録は残っている可能性があります
+          </div>
+        ) : (
           <div style={{ fontSize: 13, color: "var(--text-dim)" }}>まだログがありません</div>
+        )
         ) : (
           <div style={{ overflow: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>

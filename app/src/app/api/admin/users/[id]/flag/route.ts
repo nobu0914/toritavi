@@ -39,11 +39,11 @@ export async function POST(
 
   try {
     const h = await headers();
-    await setUserFlag(ctx, id, flagged, note, {
+    const { audited } = await setUserFlag(ctx, id, flagged, note, {
       ip: h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
       userAgent: h.get("user-agent"),
     });
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, auditFailed: !audited });
   } catch (e) {
     console.error("[api admin/users/:id/flag] failed", e);
     return NextResponse.json({ error: "internal error" }, { status: 500 });

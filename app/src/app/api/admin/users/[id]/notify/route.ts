@@ -52,7 +52,8 @@ export async function POST(
       ip: h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
       userAgent: h.get("user-agent"),
     });
-    return NextResponse.json({ ok: true, ...result });
+    // audited は result に含まれる（admin-moderation）。画面が警告を出す。
+    return NextResponse.json({ ok: true, ...result, auditFailed: !result.audited });
   } catch (e) {
     console.error("[api admin/users/:id/notify] failed", e);
     return NextResponse.json({ error: "internal error" }, { status: 500 });

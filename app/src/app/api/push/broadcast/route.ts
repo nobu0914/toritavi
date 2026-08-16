@@ -90,12 +90,15 @@ export async function POST(request: Request) {
   try {
     const result = await broadcast({ title, body, data });
     // 全ユーザーへの一斉送信は最も影響の大きい admin 操作なので必ず監査する。
-    await recordAuditLog(ctx, {
+    // 🔴 **記録できなかったことを黙って捨てない。** 一斉送信は最も影響が
+    //    大きい操作で、業務は止めない設計だが「誰がやったか分からないまま
+    //    成功」は避ける。画面へ渡して警告を出させる（2026-08-16）。
+    const audited = await recordAuditLog(ctx, {
       action: "admin.push.broadcast",
       summary: `title="${title}" sent=${result.sent} failed=${result.failed}`,
       ...auditMeta,
     });
-    return NextResponse.json({ ok: true, ...result });
+    return NextResponse.json({ ok: true, ...result, auditFailed: !audited });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "broadcast failed";
     console.error("[push/broadcast] failed", e);

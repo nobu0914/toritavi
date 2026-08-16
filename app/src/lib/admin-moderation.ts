@@ -20,6 +20,8 @@ const AVATARS_BUCKET = "toritavi-avatars";
 // ---------- user status ----------
 
 export type UserStatusDetail = {
+  /** 監査ログに残せたか。false なら「記録なしで実行された」（画面で警告する）。 */
+  audited?: boolean;
   status: UserStatus;
   reason: string | null;
   note: string | null;
@@ -76,7 +78,11 @@ export async function setUserStatus(
     .single();
   if (error) throw error;
 
-  await recordAuditLog(actor, {
+  // 🔴 **記録できなかったことを黙って捨てない**（2026-08-16 の検査）。
+  //    監査失敗で業務は止めない設計（`admin-audit.ts` 冒頭）だが、
+  //    捨てると「誰がやったか分からない特権操作」が成功として返る。
+  //    呼び出し側へ渡し、画面に警告を出させる。
+  const audited = await recordAuditLog(actor, {
     action: "admin.user.status_changed",
     targetType: "user",
     targetId: userId,
@@ -91,6 +97,7 @@ export async function setUserStatus(
     note: (data.note as string | null) ?? null,
     flagged: !!data.flagged,
     updatedAt: (data.updated_at as string | null) ?? null,
+    audited,
   };
 }
 
@@ -101,7 +108,7 @@ export async function setUserFlag(
   flagged: boolean,
   note: string | null,
   meta: { ip: string | null; userAgent: string | null }
-): Promise<void> {
+): Promise<{ audited: boolean }> {
   const admin = createServiceClient();
   const { error } = await admin.from("toritavi_user_status").upsert(
     {
@@ -115,7 +122,11 @@ export async function setUserFlag(
   );
   if (error) throw error;
 
-  await recordAuditLog(actor, {
+  // 🔴 **記録できなかったことを黙って捨てない**（2026-08-16 の検査）。
+  //    監査失敗で業務は止めない設計（`admin-audit.ts` 冒頭）だが、
+  //    捨てると「誰がやったか分からない特権操作」が成功として返る。
+  //    呼び出し側へ渡し、画面に警告を出させる。
+  const audited = await recordAuditLog(actor, {
     action: "admin.user.flag_changed",
     targetType: "user",
     targetId: userId,
@@ -123,6 +134,7 @@ export async function setUserFlag(
     ip: meta.ip,
     userAgent: meta.userAgent,
   });
+  return { audited };
 }
 
 // ---------- abuse signals ----------
@@ -333,7 +345,7 @@ export async function deleteUserFile(
   bucket: string,
   path: string,
   meta: { ip: string | null; userAgent: string | null }
-): Promise<void> {
+): Promise<{ audited: boolean }> {
   if (bucket !== STEP_ATTACHMENTS_BUCKET && bucket !== AVATARS_BUCKET) {
     throw new Error("invalid bucket");
   }
@@ -344,7 +356,11 @@ export async function deleteUserFile(
   const { error } = await admin.storage.from(bucket).remove([path]);
   if (error) throw error;
 
-  await recordAuditLog(actor, {
+  // 🔴 **記録できなかったことを黙って捨てない**（2026-08-16 の検査）。
+  //    監査失敗で業務は止めない設計（`admin-audit.ts` 冒頭）だが、
+  //    捨てると「誰がやったか分からない特権操作」が成功として返る。
+  //    呼び出し側へ渡し、画面に警告を出させる。
+  const audited = await recordAuditLog(actor, {
     action: "admin.user.file_deleted",
     targetType: "user",
     targetId: userId,
@@ -352,6 +368,7 @@ export async function deleteUserFile(
     ip: meta.ip,
     userAgent: meta.userAgent,
   });
+  return { audited };
 }
 
 /** A path is owned by the user iff its first folder segment is the user id. */
@@ -373,14 +390,18 @@ export async function notifyUser(
   title: string,
   body: string,
   meta: { ip: string | null; userAgent: string | null }
-): Promise<{ sent: number; failed: number; cleaned: number }> {
+): Promise<{ sent: number; failed: number; cleaned: number; audited: boolean }> {
   const result = await sendToUser(userId, {
     title,
     body,
     data: { kind: "admin_notice" },
   });
 
-  await recordAuditLog(actor, {
+  // 🔴 **記録できなかったことを黙って捨てない**（2026-08-16 の検査）。
+  //    監査失敗で業務は止めない設計（`admin-audit.ts` 冒頭）だが、
+  //    捨てると「誰がやったか分からない特権操作」が成功として返る。
+  //    呼び出し側へ渡し、画面に警告を出させる。
+  const audited = await recordAuditLog(actor, {
     action: "admin.user.notified",
     targetType: "user",
     targetId: userId,
@@ -389,5 +410,5 @@ export async function notifyUser(
     userAgent: meta.userAgent,
   });
 
-  return result;
+  return { ...result, audited };
 }

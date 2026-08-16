@@ -33,6 +33,11 @@ export default function UserModerationPanel({
   const [note, setNote] = useState(initialNote ?? "");
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  // 🔴 **記録なしで実行された操作を黙って通さない**（2026-08-16 の検査）。
+  //    監査失敗で業務は止めない設計だが、成功表示だけ出すと
+  //    「誰がやったか分からない特権操作」が起きたことに気づけない。
+  //    msg は次の操作で上書きされるので、別の帯として残す。
+  const [auditWarn, setAuditWarn] = useState(false);
 
   // notify form
   const [nTitle, setNTitle] = useState("");
@@ -46,6 +51,7 @@ export default function UserModerationPanel({
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data?.error ?? `HTTP ${res.status}`);
+    if (data?.auditFailed) setAuditWarn(true);
     return data;
   }
 
@@ -202,6 +208,18 @@ export default function UserModerationPanel({
           </p>
         )}
       </div>
+
+      {auditWarn && (
+
+        <div style={{ fontSize: 12, color: "var(--danger, #c0392b)", marginBottom: 8 }}>
+
+          ⚠️ 直前の操作は実行されましたが、**監査ログに記録できませんでした**。
+
+          誰がいつ実行したかを後から辿れません。運用へ連絡してください
+
+        </div>
+
+      )}
 
       {msg && (
         <div style={{ marginTop: 12, fontSize: 12, color: "var(--text)" }}>{msg}</div>

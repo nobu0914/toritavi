@@ -76,14 +76,29 @@ export type AuditLogRow = {
 /**
  * Fetch the most recent audit log entries (service-role, unrestricted
  * by RLS). Only call from an already-authorised admin context.
+ *
+ * 🔴 **「取れなかった」を「0 件」にしない**（2026-08-16 の検査で発覚）。
+ * 以前はクライアント生成失敗も SELECT 失敗も `[]` を返し、画面は
+ * 「まだログがありません」と表示していた。**監査ログの読み取りが壊れている
+ * ときに、履歴が無いように見える** —— 監査という機能そのものが黙って
+ * 消える形で、このリポジトリが最も嫌う沈黙
+ * （`~/Dev/toritavi_app/CLAUDE.md` §6-1）。
+ *
+ * 呼び出し側が「0 件」と「読めなかった」を区別できるよう、結果を包んで返す。
  */
-export async function fetchRecentAuditLogs(limit = 50): Promise<AuditLogRow[]> {
+export type AuditLogResult =
+  | { ok: true; rows: AuditLogRow[] }
+  | { ok: false; reason: string };
+
+export async function fetchRecentAuditLogs(
+  limit = 50
+): Promise<AuditLogResult> {
   let admin;
   try {
     admin = createServiceClient();
   } catch (e) {
     console.error("[admin-audit] service client unavailable", e);
-    return [];
+    return { ok: false, reason: "service client unavailable" };
   }
 
   const { data, error } = await admin
@@ -94,7 +109,8 @@ export async function fetchRecentAuditLogs(limit = 50): Promise<AuditLogRow[]> {
 
   if (error) {
     console.error("[admin-audit] select failed", error);
-    return [];
+    // **画面に出すのはコードまで。** message は内部事情を含みうる。
+    return { ok: false, reason: error.code ?? "select failed" };
   }
-  return (data ?? []) as AuditLogRow[];
+  return { ok: true, rows: (data ?? []) as AuditLogRow[] };
 }

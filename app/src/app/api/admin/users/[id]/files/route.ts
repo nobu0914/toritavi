@@ -115,8 +115,8 @@ export async function DELETE(
 
   try {
     const h = await headers();
-    await deleteUserFile(ctx, id, bucket, path, reqMeta(h));
-    return NextResponse.json({ ok: true });
+    const { audited } = await deleteUserFile(ctx, id, bucket, path, reqMeta(h));
+    return NextResponse.json({ ok: true, auditFailed: !audited });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "delete failed";
     console.error("[api admin/users/:id/files DELETE] failed", e);
