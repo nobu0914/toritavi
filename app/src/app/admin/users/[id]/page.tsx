@@ -45,6 +45,10 @@ export default async function AdminUserDetailPage({
     fetchUserRejections(id, 20),
   ]);
   const canSuspend = ctx.role === "super_admin";
+  // 🔴 **閲覧専用ロールにはファイル面を出さない。** 中身は搭乗券・パスポート。
+  //    API 側も support_operator 以上に上げてあるので、出しても 403 になるだけ。
+  //    「押せるのに失敗する」より「無い」ほうが正しい（2026-08-16）。
+  const canViewFiles = ctx.role !== "support_viewer";
 
   const h = await headers();
   // PII 閲覧ログは確実に永続化したいので await する（serverless では
@@ -194,7 +198,9 @@ export default async function AdminUserDetailPage({
         </Card>
       </section>
 
-      <UserFilesPanel userId={detail.id} canDelete={canSuspend} />
+      {canViewFiles && (
+        <UserFilesPanel userId={detail.id} canDelete={canSuspend} />
+      )}
     </div>
   );
 }
