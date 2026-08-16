@@ -86,7 +86,12 @@ export async function setUserStatus(
     action: "admin.user.status_changed",
     targetType: "user",
     targetId: userId,
-    summary: `status=${status}${reason ? ` reason="${reason.slice(0, 80)}"` : ""}`,
+    // 🔴 **自由記述を監査へ写さない**（2026-08-16 の検査）。
+    //    停止理由に氏名・予約番号・病名を書く運用が起きうる。監査ログは
+    //    support_viewer にも見え、保持も長い —— **PII の複製が増える。**
+    //    理由の本文は `toritavi_user_status.reason` に一次情報として残るので、
+    //    監査には「書かれたかどうか」だけを残す。
+    summary: `status=${status} reasonLen=${reason ? reason.length : 0}`,
     ip: meta.ip,
     userAgent: meta.userAgent,
   });
@@ -364,6 +369,9 @@ export async function deleteUserFile(
     action: "admin.user.file_deleted",
     targetType: "user",
     targetId: userId,
+    // 🔴 **ここはパスを残す。** 閲覧（`files_viewed`）では件数だけにしたが、
+    //    削除は「どれを消したか」が記録の本体で、消した後は他に辿る術が無い。
+    //    頻度も低い。**同じ表に見えて要件が逆**なので、両方に理由を書いておく。
     summary: `bucket=${bucket} path=${path}`,
     ip: meta.ip,
     userAgent: meta.userAgent,
@@ -405,7 +413,8 @@ export async function notifyUser(
     action: "admin.user.notified",
     targetType: "user",
     targetId: userId,
-    summary: `push title="${title.slice(0, 60)}" sent=${result.sent} failed=${result.failed}`,
+    // 通知タイトルも自由記述。長さだけ残す（本文は通知そのものに残る）。
+    summary: `push titleLen=${title.length} sent=${result.sent} failed=${result.failed}`,
     ip: meta.ip,
     userAgent: meta.userAgent,
   });

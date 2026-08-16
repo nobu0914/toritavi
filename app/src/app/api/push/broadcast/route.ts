@@ -95,7 +95,8 @@ export async function POST(request: Request) {
     //    成功」は避ける。画面へ渡して警告を出させる（2026-08-16）。
     const audited = await recordAuditLog(ctx, {
       action: "admin.push.broadcast",
-      summary: `title="${title}" sent=${result.sent} failed=${result.failed}`,
+      // 自由記述は長さだけ（`admin-moderation.ts` の notifyUser と同じ理由）。
+      summary: `titleLen=${title.length} sent=${result.sent} failed=${result.failed}`,
       ...auditMeta,
     });
     return NextResponse.json({ ok: true, ...result, auditFailed: !audited });
@@ -104,7 +105,7 @@ export async function POST(request: Request) {
     console.error("[push/broadcast] failed", e);
     await recordAuditLog(ctx, {
       action: "admin.push.broadcast",
-      summary: `FAILED title="${title}" error=${msg.slice(0, 120)}`,
+      summary: `FAILED titleLen=${title.length} error=${msg.slice(0, 120)}`,
       ...auditMeta,
     });
     return NextResponse.json({ error: msg }, { status: 500 });
