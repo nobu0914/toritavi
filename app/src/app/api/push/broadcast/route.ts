@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { AdminAuthError, requireAdmin } from "@/lib/admin-auth";
 import { recordAuditLog } from "@/lib/admin-audit";
-import { ALLOWED_ORIGINS } from "@/lib/allowed-origins";
+import { rejectWriteOrigin } from "@/lib/allowed-origins";
 import { broadcast } from "@/lib/fcm";
+import { PUSH_BODY_MAX, PUSH_TITLE_MAX } from "@/lib/push-limits";
 
 /**
  * POST /api/push/broadcast
@@ -22,8 +23,9 @@ const DATA_MAX_VALUE_LEN = 512;
 export async function POST(request: Request) {
   // Reject cross-site browser callers. Origin is absent on native (mobile)
   // requests, so skip the check when it is not present.
-  const origin = request.headers.get("origin");
-  if (origin && !ALLOWED_ORIGINS.has(origin)) {
+  // 管理コンソールはブラウザ専用。**Origin が無い書き込みも拒否する**
+  // （検査 L-3。以前は付けなければ素通りだった）。
+  if (rejectWriteOrigin(request)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -49,6 +51,15 @@ export async function POST(request: Request) {
   if (!title || !body) {
     return NextResponse.json(
       { error: "title and body are required" },
+      { status: 400 }
+    );
+  }
+  // 🔴 **全員宛のほうが緩かった。** 個別通知は 80/300 で弾いていたのに、
+  //    一斉送信には検証が 1 つも無く、画面も無いので誰も気づけなかった
+  //    （2026-08-16 の検査 L-6）。影響が大きい経路ほど厳しくする。
+  if (title.length > PUSH_TITLE_MAX || body.length > PUSH_BODY_MAX) {
+    return NextResponse.json(
+      { error: "title or body too long" },
       { status: 400 }
     );
   }

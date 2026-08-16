@@ -12,5 +12,30 @@ export const ALLOWED_ORIGINS = new Set([
   // 診断しにくい壊れ方をする。
   "https://toritavi.com",
   "https://app-lime-seven-80.vercel.app",
-  "http://localhost:3000",
+  // 🔴 **本番では localhost を許可しない。** 検査 L-3。開発機からの直叩きを
+  //    通す必要は本番に無く、残っていると「許可された origin」の面が
+  //    広いままなのに誰も気づけない。
+  ...(process.env.NODE_ENV === "production" ? [] : ["http://localhost:3000"]),
 ]);
+
+/**
+ * **ブラウザからしか呼ばれない面**（管理コンソール・push）の書き込みで使う。
+ *
+ * 🔴 **Origin が無いリクエストを通さない。** 各 route は
+ * `if (origin && !ALLOWED_ORIGINS.has(origin))` と書いていたので、
+ * **ヘッダを付けなければ素通り**した（2026-08-16 の検査 L-3）。
+ *
+ * アプリ（ネイティブ）は Origin を送らないので、アプリが叩く
+ * `/api/ocr` `/api/concierge` `/api/ai-usage` `/api/account/delete` には
+ * この緩さが要る。**管理コンソールにネイティブの呼び出し元は無い。**
+ *
+ * ブラウザは **GET/HEAD 以外**なら同一オリジンでも Origin を送るので、
+ * 書き込み（POST / DELETE）に限ればこの検査は成立する。
+ * GET に使うと、同一オリジンの GET が Origin 無しで来て壊れる。
+ *
+ * @returns 拒否すべきなら true
+ */
+export function rejectWriteOrigin(request: Request): boolean {
+  const origin = request.headers.get("origin");
+  return !origin || !ALLOWED_ORIGINS.has(origin);
+}

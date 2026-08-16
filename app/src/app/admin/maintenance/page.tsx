@@ -144,7 +144,15 @@ function loadContent(file: string): string {
 }
 
 export default async function AdminMaintenancePage() {
-  const ctx = await requireAdmin("support_viewer");
+  // 🔴 **support_viewer には出さない**（2026-08-16 の検査 L-7）。
+  //
+  // ここに並ぶのは運用の手順書で、週次検査・障害対応・削除ジョブの
+  // 手動実行までを含む。中には vault から purge の secret を引く SQL も
+  // 載っている（**値そのものは出ないし、実行には SQL Editor の権限が要る**
+  // ので漏洩ではないが、読み取り専用の支援担当に見せる内容ではない）。
+  //
+  // 権限と内容の対象読者を揃える。閲覧はこれまでどおり監査に残す。
+  const ctx = await requireAdmin("support_operator");
 
   const h = await headers();
   await recordAuditLog(ctx, {

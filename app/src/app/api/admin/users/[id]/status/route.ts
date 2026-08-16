@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { AdminAuthError, requireAdmin } from "@/lib/admin-auth";
-import { ALLOWED_ORIGINS } from "@/lib/allowed-origins";
+import { rejectWriteOrigin } from "@/lib/allowed-origins";
 import { setUserStatus } from "@/lib/admin-moderation";
 import type { UserStatus } from "@/lib/moderation";
 
@@ -15,8 +15,9 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const origin = request.headers.get("origin");
-  if (origin && !ALLOWED_ORIGINS.has(origin)) {
+  // 管理コンソールはブラウザ専用。**Origin が無い書き込みも拒否する**
+  // （検査 L-3。以前は付けなければ素通りだった）。
+  if (rejectWriteOrigin(request)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

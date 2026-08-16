@@ -42,9 +42,14 @@ export async function GET(
       userAgent: h.get("user-agent"),
     });
 
-    // API response strips the raw email to keep API callers aligned with
-    // the list endpoint (which also masks). The UI's server component
-    // uses the detail directly and can surface the email there.
+    // API response strips the raw email. The UI's server component uses the
+    // detail directly and can surface the email there.
+    //
+    // 🔴 The list endpoint no longer masks — it returns both `email` and
+    // `emailMasked` (`admin-queries.ts`). The old comment said it "also
+    // masks", which was the reverse of the code (2026-08-16 audit L-2).
+    // Keeping this route's response email-free is still right: it narrows
+    // where raw PII can travel.
     return NextResponse.json({
       id: detail.id,
       // Raw email intentionally NOT included in API response.

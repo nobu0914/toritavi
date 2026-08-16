@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateRequest } from "@/lib/supabase-server";
-import { ALLOWED_ORIGINS } from "@/lib/allowed-origins";
+import { rejectWriteOrigin } from "@/lib/allowed-origins";
 import { assertActiveOr403 } from "@/lib/moderation";
 import { sendToUser } from "@/lib/fcm";
 
@@ -16,8 +16,9 @@ import { sendToUser } from "@/lib/fcm";
 export async function POST(request: NextRequest) {
   // Reject cross-site browser callers. Origin is absent on native (mobile)
   // requests, so skip the check when it is not present.
-  const origin = request.headers.get("origin");
-  if (origin && !ALLOWED_ORIGINS.has(origin)) {
+  // 管理コンソールはブラウザ専用。**Origin が無い書き込みも拒否する**
+  // （検査 L-3。以前は付けなければ素通りだった）。
+  if (rejectWriteOrigin(request)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

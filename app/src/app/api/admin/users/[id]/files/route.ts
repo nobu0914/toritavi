@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { AdminAuthError, requireAdmin } from "@/lib/admin-auth";
 import { recordAuditLog } from "@/lib/admin-audit";
-import { ALLOWED_ORIGINS } from "@/lib/allowed-origins";
+import { rejectWriteOrigin } from "@/lib/allowed-origins";
 import { fetchUserFiles, signUserFile, deleteUserFile } from "@/lib/admin-moderation";
 
 function reqMeta(h: Headers) {
@@ -85,8 +85,10 @@ export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const origin = request.headers.get("origin");
-  if (origin && !ALLOWED_ORIGINS.has(origin)) {
+  // DELETE は書き込み。**Origin が無いものも拒否する**（検査 L-3）。
+  // GET 側は同一オリジンでもブラウザが Origin を送らないので、
+  // あちらは従来どおり「あれば検査する」に留める。
+  if (rejectWriteOrigin(request)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

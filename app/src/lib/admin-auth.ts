@@ -19,13 +19,10 @@
 import "server-only";
 import { createClient } from "@/lib/supabase-server";
 
-export type AdminRole = "support_viewer" | "support_operator" | "super_admin";
-
-const ROLE_RANK: Record<AdminRole, number> = {
-  support_viewer: 10,
-  support_operator: 20,
-  super_admin: 30,
-};
+// 役割と序列は画面側とも共有する（`admin-roles.ts`）。ここに 2 つ目を
+// 書くと、片方だけ動かしたときに「押せるのにエラー」が生まれる。
+export type { AdminRole } from "@/lib/admin-roles";
+import { hasRank, ROLE_RANK, type AdminRole } from "@/lib/admin-roles";
 
 export type AdminContext = {
   userId: string;
@@ -39,10 +36,6 @@ export class AdminAuthError extends Error {
     super(message);
     this.status = status;
   }
-}
-
-function hasRank(role: AdminRole, min: AdminRole): boolean {
-  return ROLE_RANK[role] >= ROLE_RANK[min];
 }
 
 /**

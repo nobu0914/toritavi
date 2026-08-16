@@ -16,7 +16,7 @@ import {
 import { useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
 import { useRouter } from "next/navigation";
-import type { AdminRole } from "@/lib/admin-auth";
+import { hasRank, type AdminRole } from "@/lib/admin-roles";
 
 type Props = {
   role: AdminRole;
@@ -29,6 +29,8 @@ type NavItem = {
   label: string;
   Icon: React.ComponentType<{ size?: number }>;
   matchPrefix?: boolean;
+  /** この役割未満には**リンクごと出さない**。省略＝全員に出す。 */
+  minRole?: AdminRole;
 };
 
 const NAV: NavItem[] = [
@@ -39,7 +41,16 @@ const NAV: NavItem[] = [
   { href: "/admin/abuse", label: "違反検知", Icon: IconAlertTriangle, matchPrefix: true },
   { href: "/admin/security", label: "セキュリティ", Icon: IconShieldLock, matchPrefix: true },
   { href: "/admin/email-templates", label: "認証メール", Icon: IconMail, matchPrefix: true },
-  { href: "/admin/maintenance", label: "メンテナンス", Icon: IconTool, matchPrefix: true },
+  // 🔴 **ページの権限と揃える**（`admin/maintenance/page.tsx` は
+  //    support_operator 以上）。ここだけ全員に出すと、閲覧の担当者が
+  //    押してエラー画面に着く —— 権限が無いことは「押せない」で伝える。
+  {
+    href: "/admin/maintenance",
+    label: "メンテナンス",
+    Icon: IconTool,
+    matchPrefix: true,
+    minRole: "support_operator",
+  },
 ];
 
 const ROLE_LABEL: Record<AdminRole, string> = {
@@ -104,7 +115,7 @@ export function AdminShell({ role, email, children }: Props) {
           </div>
         </div>
         <nav style={{ padding: "12px 8px", flex: 1 }}>
-          {NAV.map((item) => {
+          {NAV.filter((item) => !item.minRole || hasRank(role, item.minRole)).map((item) => {
             const active = isActive(item);
             const Icon = item.Icon;
             return (

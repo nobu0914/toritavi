@@ -1,7 +1,26 @@
-# Toritavi Admin Console — 設計メモ（MVP）
+# Toritavi Admin Console — 設計メモ（MVP・2026-04-20 時点の記録）
+
+> ⚠️ **これは 2026-04-20 の設計スナップショットで、現状の正本ではない。**
+> 以後に足された機能が本書に反映されておらず、**3 か所が実装と逆のことを
+> 言っている**（2026-08-16 の検査 L-1）。判断に使わないこと。
+>
+> | 本書の記述 | 2026-08-16 時点の実際 |
+> |---|---|
+> | 「危険操作は一切持たない」 | **書き込みが 5 経路**（flag / notify / status 変更 / ファイル削除 / 提携レート更新）。ファイル削除は**取り消せない** |
+> | 「4 本の API route」 | **11 本**（GET 7 / POST 4 / DELETE 1） |
+> | 「一覧は email mask」「raw email は返さない」 | 一覧は `email`（生）と `emailMasked` の**両方**を返し、画面は生を表示する。`/api/admin/users/[id]` だけが email を落とす |
+>
+> **現状の正本:**
+> - 運用手順 … `toritavi_app/docs/admin-maintenance-guide.md`
+> - 本番設定・権限 … Obsidian `Projects/Curlew/Infra/_index.md`
+> - 実装 … `app/src/app/admin/**` と `app/src/app/api/admin/**`（コードが最終的な事実）
+>
+> 週次検査のレーン 5 観点 7 が、この面をアプリと同じ重さで検査する
+> （`toritavi_app/docs/weekly-inspection.md`）。
 
 実装日: 2026-04-20
 スコープ: read-heavy / ops-light MVP。危険操作は一切持たない。
+（→ **この前提はもう成り立っていない。**上の表を参照）
 
 ---
 

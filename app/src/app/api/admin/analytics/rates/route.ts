@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { AdminAuthError, requireAdmin } from "@/lib/admin-auth";
-import { ALLOWED_ORIGINS } from "@/lib/allowed-origins";
+import { rejectWriteOrigin } from "@/lib/allowed-origins";
 import { recordAuditLog } from "@/lib/admin-audit";
 import { updateAffiliateRate } from "@/lib/admin-analytics";
 
@@ -12,8 +12,9 @@ const EPC_MAX = 100000; // ¥100,000/click 上限（誤入力ガード）
  * super_admin のみ。body: { program, epcYen }
  */
 export async function POST(request: Request) {
-  const origin = request.headers.get("origin");
-  if (origin && !ALLOWED_ORIGINS.has(origin)) {
+  // 管理コンソールはブラウザ専用。**Origin が無い書き込みも拒否する**
+  // （検査 L-3。以前は付けなければ素通りだった）。
+  if (rejectWriteOrigin(request)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

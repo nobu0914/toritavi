@@ -1,11 +1,9 @@
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { AdminAuthError, requireAdmin } from "@/lib/admin-auth";
-import { ALLOWED_ORIGINS } from "@/lib/allowed-origins";
+import { rejectWriteOrigin } from "@/lib/allowed-origins";
 import { notifyUser } from "@/lib/admin-moderation";
-
-const TITLE_MAX = 80;
-const BODY_MAX = 300;
+import { PUSH_BODY_MAX, PUSH_TITLE_MAX } from "@/lib/push-limits";
 
 /**
  * POST /api/admin/users/[id]/notify — send a targeted push to one user.
@@ -15,8 +13,9 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const origin = request.headers.get("origin");
-  if (origin && !ALLOWED_ORIGINS.has(origin)) {
+  // 管理コンソールはブラウザ専用。**Origin が無い書き込みも拒否する**
+  // （検査 L-3。以前は付けなければ素通りだった）。
+  if (rejectWriteOrigin(request)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -42,7 +41,7 @@ export async function POST(
   if (!title || !message) {
     return NextResponse.json({ error: "title and body required" }, { status: 400 });
   }
-  if (title.length > TITLE_MAX || message.length > BODY_MAX) {
+  if (title.length > PUSH_TITLE_MAX || message.length > PUSH_BODY_MAX) {
     return NextResponse.json({ error: "title or body too long" }, { status: 400 });
   }
 

@@ -202,7 +202,12 @@ export async function fetchAbuseSignals(limit = 100): Promise<AbuseSignalRow[]> 
   const userIds = [...byUser.keys()];
   if (userIds.length === 0) return [];
 
-  // 3) enrich: email (masked) + today's usage
+  // 3) enrich: **raw** email + today's usage
+  //
+  // 🔴 ここは masked ではない（2026-08-16 の検査 L-2。コメントが実装と
+  //    逆を言っていた）。乱用調査では宛先を突き合わせる必要があるため
+  //    生のまま返す。**返す先が管理コンソールだけであることが前提**で、
+  //    ここを外部へ出す面に繋ぐときは masked へ変えること。
   const today = new Date().toISOString().slice(0, 10);
   const [ocrRes, conciergeRes] = await Promise.all([
     admin

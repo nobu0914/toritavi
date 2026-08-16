@@ -1,6 +1,7 @@
 import { requireAdmin } from "@/lib/admin-auth";
 import { fetchAdminUserList } from "@/lib/admin-queries";
 import Link from "next/link";
+import { clearUserSearch, currentUserSearch, setUserSearch } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +19,11 @@ function fmtDate(iso: string | null) {
   });
 }
 
-type SearchParams = Promise<{ q?: string; page?: string; perPage?: string }>;
+// 🔴 **`q` は URL に置かない。** 検索語は利用者のメールアドレスで、
+// クエリに載せるとアクセスログ・履歴・Referer に残る（検査 L-4）。
+// Server Action が Cookie に持ち、ここから読む（`./actions.ts`）。
+// ページ番号は個人情報ではないので従来どおり URL。
+type SearchParams = Promise<{ page?: string; perPage?: string }>;
 
 export default async function AdminUsersPage({
   searchParams,
@@ -30,7 +35,7 @@ export default async function AdminUsersPage({
 
   const page = Math.max(parseInt(sp.page ?? "1", 10) || 1, 1);
   const perPage = Math.min(Math.max(parseInt(sp.perPage ?? "100", 10) || 100, 1), 200);
-  const query = (sp.q ?? "").trim();
+  const query = await currentUserSearch();
 
   const result = await fetchAdminUserList({ page, perPage, query });
   const totalPages = perPage > 0 ? Math.max(Math.ceil(result.total / perPage), 1) : 1;
@@ -45,8 +50,7 @@ export default async function AdminUsersPage({
       </section>
 
       <form
-        action="/admin/users"
-        method="get"
+        action={setUserSearch}
         style={{
           display: "flex",
           gap: 8,
@@ -71,7 +75,6 @@ export default async function AdminUsersPage({
             background: "#fff",
           }}
         />
-        <input type="hidden" name="perPage" value={String(perPage)} />
         <button
           type="submit"
           style={{
@@ -87,21 +90,28 @@ export default async function AdminUsersPage({
         >
           検索
         </button>
-        {query && (
-          <Link
-            href="/admin/users"
+      </form>
+
+      {query && (
+        // **消せる導線を必ず出す。** Cookie は 10 分で失効するが、
+        // 調べ終わったその場で消せないと「残っている」ことに気づけない。
+        <form action={clearUserSearch} style={{ marginTop: -8 }}>
+          <button
+            type="submit"
             style={{
-              padding: "8px 12px",
-              fontSize: 13,
+              padding: "6px 12px",
+              fontSize: 12,
               color: "var(--text-dim)",
+              background: "#fff",
               border: "1px solid var(--border)",
               borderRadius: 8,
+              cursor: "pointer",
             }}
           >
-            クリア
-          </Link>
-        )}
-      </form>
+            検索条件をクリア（{query.length} 文字）
+          </button>
+        </form>
+      )}
 
       <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", borderBottom: "1px solid var(--n-100)", fontSize: 12, color: "var(--text-dim)" }}>
@@ -159,11 +169,11 @@ export default async function AdminUsersPage({
         </div>
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", borderTop: "1px solid var(--n-100)", fontSize: 13 }}>
-          <PageLink label="← 前へ" targetPage={page - 1} disabled={page <= 1} query={query} perPage={perPage} />
+          <PageLink label="← 前へ" targetPage={page - 1} disabled={page <= 1} perPage={perPage} />
           <span style={{ color: "var(--text-dim)", fontSize: 12 }}>
             {perPage} 件/ページ
           </span>
-          <PageLink label="次へ →" targetPage={page + 1} disabled={page >= totalPages} query={query} perPage={perPage} />
+          <PageLink label="次へ →" targetPage={page + 1} disabled={page >= totalPages} perPage={perPage} />
         </div>
       </div>
     </div>
@@ -174,20 +184,18 @@ function PageLink({
   label,
   targetPage,
   disabled,
-  query,
   perPage,
 }: {
   label: string;
   targetPage: number;
   disabled: boolean;
-  query: string;
   perPage: number;
 }) {
   if (disabled) {
     return <span style={{ color: "var(--n-300)" }}>{label}</span>;
   }
+  // 検索語は Cookie 側。ここに混ぜると URL へ戻ってしまう（検査 L-4）。
   const params = new URLSearchParams();
-  if (query) params.set("q", query);
   params.set("page", String(targetPage));
   params.set("perPage", String(perPage));
   return (

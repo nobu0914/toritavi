@@ -92,6 +92,18 @@ export default function UserModerationPanel({
       setMsg("通知のタイトルと本文を入力してください");
       return;
     }
+    // 🔴 **取り消せない操作には確認を挟む。** 停止・ファイル削除には confirm が
+    // あるのに、通知だけ 1 クリックで実機に着弾していた（2026-08-16 の検査 L-5）。
+    // 送ってしまった通知は消せない —— 誤送信の重さは停止と変わらない。
+    // 中身も見せる（何を送るのか目で確認してから押す）。
+    if (
+      !confirm(
+        "この利用者の端末へ通知を送ります。送信後は取り消せません。\n\n" +
+          `件名: ${nTitle.trim()}\n本文: ${nBody.trim()}`
+      )
+    ) {
+      return;
+    }
     setBusy("notify");
     setMsg(null);
     try {
