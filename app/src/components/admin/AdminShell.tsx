@@ -11,7 +11,6 @@ import {
   IconTool,
   IconLogout,
   IconMessageDots,
-  IconChecklist,
   IconMail,
 } from "@tabler/icons-react";
 import { useState } from "react";
@@ -36,7 +35,11 @@ type NavItem = {
 
 const NAV: NavItem[] = [
   { href: "/admin", label: "ダッシュボード", Icon: IconLayoutDashboard },
-  { href: "/admin/tasks", label: "課題管理", Icon: IconChecklist, matchPrefix: true },
+  // 🔴 **課題管理をここに置かない。** 2026-08-17 に畳んだ。
+  //    正本は「修正管理」アプリ（Cloudflare Workers・~/Dev/fix-request-app）。
+  //    スマホから登録でき、AI が API 経由で読み書きする。ここに作った版は
+  //    テーブルを作る前に役割の重複が分かったので、痕跡を残さず消した。
+  //    作り直す前に、二重管理にならないか確かめること。
   { href: "/admin/users", label: "利用者", Icon: IconUsers, matchPrefix: true },
   { href: "/admin/analytics", label: "集計・広告", Icon: IconChartBar, matchPrefix: true },
   { href: "/admin/feedback", label: "フィードバック", Icon: IconMessageDots, matchPrefix: true },
