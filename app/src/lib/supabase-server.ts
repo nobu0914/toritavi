@@ -38,7 +38,7 @@ export async function createClient() {
  */
 export async function authenticateRequest(
   request: Request
-): Promise<{ sb: SupabaseClient; userId: string } | null> {
+): Promise<{ sb: SupabaseClient; userId: string; isAnonymous: boolean } | null> {
   const authHeader = request.headers.get("authorization");
   if (authHeader?.toLowerCase().startsWith("bearer ")) {
     const token = authHeader.slice(7).trim();
@@ -48,10 +48,20 @@ export async function authenticateRequest(
     });
     const { data } = await sb.auth.getUser(token);
     if (!data.user) return null;
-    return { sb: sb as unknown as SupabaseClient, userId: data.user.id };
+    // 匿名（ゲスト）かどうかは **JWT を検証したあとのユーザー**から取る。
+    // クライアントの申告を信じない（Phase 3 でゲスト枠の分岐に使う）。
+    return {
+      sb: sb as unknown as SupabaseClient,
+      userId: data.user.id,
+      isAnonymous: data.user.is_anonymous === true,
+    };
   }
   const sb = await createClient();
   const { data } = await sb.auth.getUser();
   if (!data.user) return null;
-  return { sb: sb as unknown as SupabaseClient, userId: data.user.id };
+  return {
+    sb: sb as unknown as SupabaseClient,
+    userId: data.user.id,
+    isAnonymous: data.user.is_anonymous === true,
+  };
 }

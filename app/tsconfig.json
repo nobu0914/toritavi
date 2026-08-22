@@ -6,6 +6,9 @@
     "skipLibCheck": true,
     "strict": true,
     "noEmit": true,
+    // node --test が TypeScript を素で実行するために拡張子付きの相対 import を許す
+    // （ESM は拡張子を要求する）。noEmit: true なので tsc の出力には影響しない。
+    "allowImportingTsExtensions": true,
     "esModuleInterop": true,
     "module": "esnext",
     "moduleResolution": "bundler",

@@ -458,3 +458,191 @@ export function nextResetIso(period: QuotaPeriod): string {
   // 実時刻へ戻す（JST 0:00 = その UTC 表現から 9 時間前）。
   return new Date(next - JST_OFFSET_MS).toISOString();
 }
+
+// ===========================================================================
+// Phase 1（2026-08-22）— 原子的な予約・精算と冪等性
+//
+// 🔴 上の `enforceAiLimits` / `reserveOcrUnits` は**コンシェルジュが使い続ける**
+//    ので残す。OCR はこちらへ移した。混在させないこと。
+// ===========================================================================
+
+/** 予算を分ける単位。**ゲスト攻撃で会員が止まらないようにするための軸。** */
+export type Audience = "guest" | "free" | "pro";
+
+/**
+ * 匿名（ゲスト）かどうかは JWT の `is_anonymous` を正本にする。
+ * Phase 3 で匿名認証を開けるまでは常に false。
+ */
+export function audienceOf(plan: Plan, isAnonymous: boolean): Audience {
+  if (isAnonymous) return "guest";
+  return plan;
+}
+
+/**
+ * 分間バースト。**`toritavi_ocr_events` を読む。**
+ *
+ * 🔴 この表に書く経路は 2026-08-16〜08-22 のあいだ存在しなかった
+ *    （記録用 RPC を差し替えたときに INSERT が移らなかった）。
+ *    書き戻しは `toritavi_ocr_begin_request` の中にある。
+ *    **読む側だけを直しても意味が無い。**
+ */
+export async function checkMinuteRate(
+  sb: SupabaseClient,
+  userId: string,
+  cfg: AiGuardConfig,
+  plan: Plan,
+): Promise<NextResponse | null> {
+  const perMin = cfg.tiers[plan].ratePerMin;
+  const since = new Date(Date.now() - 60_000).toISOString();
+  const { count, error } = await sb
+    .from(cfg.tables.events)
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .gte("created_at", since);
+  if (error) {
+    // 読めないときは通す。**件数と予算は別の層で原子的に守られている**ので、
+    // ここでフェイルクローズにすると RLS の綻び 1 つで全停止になる。
+    console.error("[ai-guard] minute rate read failed:", error.message);
+    return null;
+  }
+  if ((count ?? 0) >= perMin) {
+    await logAiRejection(userId, cfg.feature as "ocr" | "concierge", "rate_limit");
+    return NextResponse.json(
+      { error: "rate_limit", message: cfg.messages.rateLimit(perMin) },
+      { status: 429 },
+    );
+  }
+  return null;
+}
+
+export type BeginOk = {
+  kind: "granted";
+  usedAfter: number;
+};
+export type BeginDuplicate = {
+  kind: "duplicate";
+  /** 期限内なら前回の結果。期限切れ・実行中なら null。 */
+  cached: unknown | null;
+  inFlight: boolean;
+};
+
+/**
+ * OCR 1 リクエストの開始。**冪等性・件数・予算・分間イベントを 1 回で確保する。**
+ *
+ * 途中で失敗した半端な状態（件数だけ取れて予算は取れていない等）は
+ * DB 関数側が 1 トランザクションで面倒を見る。
+ */
+export async function beginOcrRequest(args: {
+  requestId: string;
+  userId: string;
+  audience: Audience;
+  units: number;
+  limitUnits: number;
+  estCostCents: number;
+}): Promise<NextResponse | BeginOk | BeginDuplicate> {
+  const admin = createServiceClient();
+  const { data, error } = await admin.rpc("toritavi_ocr_begin_request", {
+    p_request_id: args.requestId,
+    p_user_id: args.userId,
+    p_audience: args.audience,
+    p_units: args.units,
+    p_limit_units: args.limitUnits,
+    p_est_cost_cents: args.estCostCents,
+  });
+
+  if (error) {
+    // 🔴 **通さない。** ここをフェイルオープンにすると、DB が不調な間だけ
+    //    上限も予算も消える（019 の事故と同じ形）。
+    console.error("[ai-guard] begin failed:", error.message);
+    return NextResponse.json(
+      { error: "quota_unavailable", message: "混み合っています。しばらくしてからお試しください。" },
+      { status: 503 },
+    );
+  }
+
+  const row = (Array.isArray(data) ? data[0] : data) as
+    | { status?: string; used_after?: number; cached?: unknown }
+    | undefined;
+  const status = row?.status;
+
+  if (status === "granted") {
+    return { kind: "granted", usedAfter: Number(row?.used_after ?? 0) };
+  }
+  if (status === "duplicate_done") {
+    return { kind: "duplicate", cached: row?.cached ?? null, inFlight: false };
+  }
+  if (status === "duplicate_in_flight") {
+    return { kind: "duplicate", cached: null, inFlight: true };
+  }
+  if (status === "quota_exceeded") {
+    const used = Number(row?.used_after ?? args.limitUnits);
+    const remaining = Math.max(0, args.limitUnits - used);
+    await logAiRejection(args.userId, "ocr", "quota_units");
+    return NextResponse.json(
+      {
+        error: "quota_request_limit",
+        message: OCR_GUARD.messages.quotaUnits(remaining),
+        remaining,
+      },
+      { status: 429 },
+    );
+  }
+  if (status === "budget_exceeded") {
+    await logAiRejection(args.userId, "ocr", "budget_exceeded");
+    return NextResponse.json(
+      { error: "monthly_budget_exceeded", message: OCR_GUARD.messages.budgetExceeded },
+      { status: 503 },
+    );
+  }
+  console.error("[ai-guard] begin returned unknown status:", status);
+  return NextResponse.json({ error: "quota_unavailable" }, { status: 503 });
+}
+
+/** 成功の精算（実費で確定し、結果を短期だけ保持する）。 */
+export async function settleOcrSuccess(args: {
+  requestId: string;
+  userId: string;
+  tokensIn: number;
+  tokensOut: number;
+  costCents: number;
+  result: unknown;
+}): Promise<void> {
+  try {
+    const admin = createServiceClient();
+    const { error } = await admin.rpc("toritavi_ocr_settle_success", {
+      p_request_id: args.requestId,
+      p_user_id: args.userId,
+      p_tokens_in: args.tokensIn,
+      p_tokens_out: args.tokensOut,
+      p_cost_cents: args.costCents,
+      p_result: args.result,
+    });
+    if (error) console.error("[ai-guard] settle success failed:", error.message);
+  } catch (e) {
+    console.error("[ai-guard] settle success threw:", e);
+  }
+}
+
+/**
+ * 失敗の精算（件数と予算を戻す）。
+ *
+ * 🔴 **予約後に失敗するすべての経路から呼ぶ。** 呼び忘れた分は
+ *    `toritavi_ocr_sweep` が 15 分後に拾うが、それは保険であって手当てではない。
+ */
+export async function settleOcrFailure(args: {
+  requestId: string;
+  userId: string;
+  reason: string;
+}): Promise<void> {
+  try {
+    const admin = createServiceClient();
+    const { error } = await admin.rpc("toritavi_ocr_settle_failure", {
+      p_request_id: args.requestId,
+      p_user_id: args.userId,
+      p_reason: args.reason,
+    });
+    if (error) console.error("[ai-guard] settle failure failed:", error.message);
+  } catch (e) {
+    console.error("[ai-guard] settle failure threw:", e);
+  }
+}
