@@ -1,0 +1,83 @@
+{
+  "id": "M1_multi_eu_roundtrip",
+  "lang": "ja",
+  "group": "多区間(合成)",
+  "note": "欧州往復＋乗継＋宿2。**出力が最も長くなる形**。max_tokens の切れを見るための合成データ（実在の予約ではない）。",
+  "text": "Subject: eチケットお客様控 / e-Ticket Itinerary Receipt — 予約番号 7QK4ZP\n\nYAMADA/TARO MR\n\n【往路 / Outbound】\n2027年3月10日(水)\nNH 217  全日本空輸 (ANA)\n東京/羽田 (HND) 第3ターミナル  01:45 発\nミュンヘン (MUC) ターミナル2    06:20 着\n座席 42A  エコノミー  受託手荷物 2個まで\n\n2027年3月10日(水)\nLH 1892  ルフトハンザ ドイツ航空\nミュンヘン (MUC) ターミナル2           09:35 発\nローマ/フィウミチーノ (FCO) ターミナル1  11:15 着\n座席 18C  エコノミー\n\n【宿泊 1】\nホテル・ソラーレ・ローマ\nVia del Corso 118, 00186 Roma RM, Italy\nチェックイン  2027年3月10日 15:00\nチェックアウト 2027年3月13日 11:00\n確認番号 HTL-RM-558214\nデラックスツイン / 朝食付 / 市税 別途 €6.00 per person per night\n\n【復路 / Return】\n2027年3月13日(土)\nLH 1845  ルフトハンザ ドイツ航空\nローマ/フィウミチーノ (FCO) ターミナル1  13:40 発\nミュンヘン (MUC) ターミナル2           15:25 着\n座席 21F\n\n【宿泊 2】\nモーベンピック ホテル ミュンヘン エアポート\nNordallee 3, 85356 Muenchen-Flughafen, Germany\nチェックイン  2027年3月13日 16:00\nチェックアウト 2027年3月14日 10:00\n確認番号 HTL-MU-903771\nスーペリアキング / 朝食別\n\n2027年3月14日(日)\nNH 218  全日本空輸 (ANA)\nミュンヘン (MUC) ターミナル2  13:25 発\n東京/羽田 (HND) 第3ターミナル  08:35 着 (翌日到着)\n座席 45K\n\nお問い合わせ: ANA 国際線予約センター\n",
+  "expect": {
+    "steps": [
+      {
+        "category": "飛行機",
+        "title": "NH 217",
+        "airline": "ANA",
+        "date": "2027-03-10",
+        "startTime": "01:45",
+        "endTime": "06:20",
+        "from": "HND",
+        "to": "MUC",
+        "confNumber": "7QK4ZP"
+      },
+      {
+        "category": "飛行機",
+        "title": "LH 1892",
+        "airline": "Lufthansa",
+        "date": "2027-03-10",
+        "startTime": "09:35",
+        "endTime": "11:15",
+        "from": "MUC",
+        "to": "FCO",
+        "confNumber": "7QK4ZP"
+      },
+      {
+        "category": "宿泊",
+        "title": "ホテル・ソラーレ・ローマ",
+        "date": "2027-03-10",
+        "endDate": "2027-03-13",
+        "startTime": "15:00",
+        "endTime": "11:00",
+        "from": "Via del Corso 118",
+        "confNumber": "HTL-RM-558214"
+      },
+      {
+        "category": "飛行機",
+        "title": "LH 1845",
+        "airline": "Lufthansa",
+        "date": "2027-03-13",
+        "startTime": "13:40",
+        "endTime": "15:25",
+        "from": "FCO",
+        "to": "MUC",
+        "confNumber": "7QK4ZP"
+      },
+      {
+        "category": "宿泊",
+        "title": "モーベンピック ホテル ミュンヘン エアポート",
+        "date": "2027-03-13",
+        "endDate": "2027-03-14",
+        "startTime": "16:00",
+        "endTime": "10:00",
+        "from": "Nordallee 3",
+        "confNumber": "HTL-MU-903771"
+      },
+      {
+        "category": "飛行機",
+        "title": "NH 218",
+        "airline": "ANA",
+        "date": "2027-03-14",
+        "startTime": "13:25",
+        "endTime": "08:35",
+        "from": "MUC",
+        "to": "HND",
+        "confNumber": "7QK4ZP"
+      }
+    ],
+    "loose": [
+      "from",
+      "to",
+      "airline",
+      "title"
+    ],
+    "stepCount": 6,
+    "note": "6 予定。**出力長の上界を測るための本命**。切れると後ろの予定が黙って消える。"
+  }
+}

@@ -1,0 +1,88 @@
+{
+  "id": "M5_multi_asia_hop",
+  "lang": "en",
+  "group": "多区間(合成)",
+  "note": "英語・多都市・船を含む 7 予定。日付が DD MMM YYYY 表記。合成データ。",
+  "text": "ITINERARY CONFIRMATION — Booking Reference: 9HJ2LM\nPassenger: YAMADA/TARO MR\n\n------------------------------------------------------------\nSEGMENT 1 — AIR\n02 NOV 2027   SQ 637  Singapore Airlines\nDepart  Tokyo Haneda (HND) Terminal 3      23:55\nArrive  Singapore Changi (SIN) Terminal 3  06:20  (+1 day)\nSeat 51K  Economy\n\nSEGMENT 2 — HOTEL\nMarina Bay Crest Hotel\n10 Bayfront Avenue, Singapore 018956\nCheck-in   03 NOV 2027  14:00\nCheck-out  06 NOV 2027  12:00\nConfirmation: MBC-2027-88410\nDeluxe King, 3 nights, breakfast included\n\nSEGMENT 3 — FERRY\nBatam Fast Ferry\nHarbourFront Centre, 1 Maritime Square, Singapore 099253\n04 NOV 2027   09:20  ->  10:15\nReturn same day 18:40 -> 19:35\nBooking: BF-449021\n\nSEGMENT 4 — AIR\n06 NOV 2027   TR 2568  Scoot\nDepart  Singapore Changi (SIN) Terminal 1  15:10\nArrive  Bangkok Don Mueang (DMK)           16:40\nSeat 22D\n\nSEGMENT 5 — HOTEL\nSukhumvit Garden Residence\n88 Sukhumvit Soi 24, Khlong Toei, Bangkok 10110\nCheck-in   06 NOV 2027  18:00\nCheck-out  09 NOV 2027  11:00\nConfirmation: SGR-771205\n\nSEGMENT 6 — TOUR\nGrand Palace & Wat Pho Half-Day Tour\nMeeting point: Tha Chang Pier, Phra Nakhon, Bangkok 10200\n07 NOV 2027   08:00 - 12:30\nBooking: GP-330918\n\nSEGMENT 7 — AIR\n09 NOV 2027   NH 848  All Nippon Airways\nDepart  Bangkok Suvarnabhumi (BKK)          23:20\nArrive  Tokyo Haneda (HND) Terminal 3       07:15  (+1 day)\nSeat 34A\n------------------------------------------------------------\n",
+  "expect": {
+    "steps": [
+      {
+        "category": "飛行機",
+        "title": "SQ 637",
+        "airline": "Singapore Airlines",
+        "date": "2027-11-02",
+        "startTime": "23:55",
+        "endTime": "06:20",
+        "from": "HND",
+        "to": "SIN",
+        "confNumber": "9HJ2LM"
+      },
+      {
+        "category": "宿泊",
+        "title": "Marina Bay Crest Hotel",
+        "date": "2027-11-03",
+        "endDate": "2027-11-06",
+        "startTime": "14:00",
+        "endTime": "12:00",
+        "from": "10 Bayfront Avenue",
+        "confNumber": "MBC-2027-88410"
+      },
+      {
+        "category": "船",
+        "title": "Batam Fast Ferry",
+        "date": "2027-11-04",
+        "startTime": "09:20",
+        "endTime": "10:15",
+        "confNumber": "BF-449021"
+      },
+      {
+        "category": "飛行機",
+        "title": "TR 2568",
+        "airline": "Scoot",
+        "date": "2027-11-06",
+        "startTime": "15:10",
+        "endTime": "16:40",
+        "from": "SIN",
+        "to": "DMK",
+        "confNumber": "9HJ2LM"
+      },
+      {
+        "category": "宿泊",
+        "title": "Sukhumvit Garden Residence",
+        "date": "2027-11-06",
+        "endDate": "2027-11-09",
+        "startTime": "18:00",
+        "endTime": "11:00",
+        "from": "88 Sukhumvit Soi 24",
+        "confNumber": "SGR-771205"
+      },
+      {
+        "category": "観光",
+        "title": "Grand Palace & Wat Pho Half-Day Tour",
+        "date": "2027-11-07",
+        "startTime": "08:00",
+        "endTime": "12:30",
+        "from": "Tha Chang Pier",
+        "confNumber": "GP-330918"
+      },
+      {
+        "category": "飛行機",
+        "title": "NH 848",
+        "airline": "All Nippon Airways",
+        "date": "2027-11-09",
+        "startTime": "23:20",
+        "endTime": "07:15",
+        "from": "BKK",
+        "to": "HND",
+        "confNumber": "9HJ2LM"
+      }
+    ],
+    "loose": [
+      "from",
+      "to",
+      "airline",
+      "title"
+    ],
+    "note": "7 予定。**往復のフェリーを 1 予定に畳むか 2 予定に割るかは決めていない**ので stepCount は見ない。出力長の測定が目的。"
+  }
+}

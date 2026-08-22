@@ -299,7 +299,10 @@ def main() -> int:
             spec = json.loads(p.read_text(encoding="utf-8"))
             txt = files / f"{spec['id']}.txt"
             txt.write_text(spec["text"], encoding="utf-8")
-            cases.append({"id": spec["id"], "group": "多言語(自作)", "kind": "text",
+            # group は spec 側で上書きできる。多区間・変動項目多などを
+            # 別グループとして数えたいため（既定は従来どおり）。
+            cases.append({"id": spec["id"], "group": spec.get("group", "多言語(自作)"),
+                          "kind": "text",
                           "src": str(txt), "lang": spec.get("lang", "ja"),
                           "expect": spec["expect"]})
 

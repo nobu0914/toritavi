@@ -1,0 +1,78 @@
+{
+  "id": "M3_multi_family_hawaii",
+  "lang": "ja",
+  "group": "多区間(合成)",
+  "note": "往復＋宿＋レンタカー＋観光2。カテゴリが 5 種類に散る形。合成データ。",
+  "text": "ご旅行確認書 / TRAVEL CONFIRMATION\nツアー番号 TP-88213-HNL\n\nご一行: 山田 太郎 様 他3名\n\n--------------------------------------------------\n[1] 航空 往路\n2027年7月20日(火)\nJL 74  日本航空 (Japan Airlines)\n東京/成田 (NRT) 第2ターミナル 20:55 発\nホノルル (HNL) 09:20 着 (同日)\n予約番号 4RTM8Q\n\n[2] レンタカー\nAloha Wheels Rent-A-Car / ホノルル空港営業所\n300 Rodgers Blvd, Honolulu, HI 96819\n貸出 2027年7月21日 10:30\n返却 2027年7月26日 08:00\n車種 中型SUV (Jeep Compass 相当)\n予約番号 AWR-660914\n\n[3] 宿泊\nワイキキ・サンリーフ・リゾート\n2570 Kalakaua Ave, Honolulu, HI 96815\nチェックイン 2027年7月21日 15:00\nチェックアウト 2027年7月26日 11:00\n確認番号 WSR-2027-0451\nオーシャンビュー 2ベッドルーム / 5泊\n\n[4] 観光\nダイヤモンドヘッド州立記念公園 入園予約\nDiamond Head Rd, Honolulu, HI 96815\n2027年7月22日 07:00 - 09:00\n予約番号 DH-115523\n※ 入園は予約時間の30分前から\n\n[5] 観光\nポリネシア・カルチャー・センター\n55-370 Kamehameha Hwy, Laie, HI 96762\n2027年7月24日 12:00 - 21:00\n予約番号 PCC-773301\nルアウディナー付きプラン\n\n[6] 航空 復路\n2027年7月26日(日)\nJL 73  日本航空 (Japan Airlines)\nホノルル (HNL) 11:35 発\n東京/成田 (NRT) 第2ターミナル 15:05 着 (翌日)\n予約番号 4RTM8Q\n--------------------------------------------------\n",
+  "expect": {
+    "steps": [
+      {
+        "category": "飛行機",
+        "title": "JL 74",
+        "airline": "Japan Airlines",
+        "date": "2027-07-20",
+        "startTime": "20:55",
+        "endTime": "09:20",
+        "from": "NRT",
+        "to": "HNL",
+        "confNumber": "4RTM8Q"
+      },
+      {
+        "category": "車",
+        "title": "Aloha Wheels Rent-A-Car",
+        "date": "2027-07-21",
+        "endDate": "2027-07-26",
+        "startTime": "10:30",
+        "endTime": "08:00",
+        "confNumber": "AWR-660914"
+      },
+      {
+        "category": "宿泊",
+        "title": "ワイキキ・サンリーフ・リゾート",
+        "date": "2027-07-21",
+        "endDate": "2027-07-26",
+        "startTime": "15:00",
+        "endTime": "11:00",
+        "from": "2570 Kalakaua Ave",
+        "confNumber": "WSR-2027-0451"
+      },
+      {
+        "category": "観光",
+        "title": "ダイヤモンドヘッド州立記念公園",
+        "date": "2027-07-22",
+        "startTime": "07:00",
+        "endTime": "09:00",
+        "from": "Diamond Head Rd",
+        "confNumber": "DH-115523"
+      },
+      {
+        "category": "観光",
+        "title": "ポリネシア・カルチャー・センター",
+        "date": "2027-07-24",
+        "startTime": "12:00",
+        "endTime": "21:00",
+        "from": "55-370 Kamehameha Hwy",
+        "confNumber": "PCC-773301"
+      },
+      {
+        "category": "飛行機",
+        "title": "JL 73",
+        "airline": "Japan Airlines",
+        "date": "2027-07-26",
+        "startTime": "11:35",
+        "endTime": "15:05",
+        "from": "HNL",
+        "to": "NRT",
+        "confNumber": "4RTM8Q"
+      }
+    ],
+    "loose": [
+      "from",
+      "to",
+      "airline",
+      "title"
+    ],
+    "stepCount": 6,
+    "note": "6 予定・5 カテゴリ。レンタカーの返却が別日（endDate）。"
+  }
+}
