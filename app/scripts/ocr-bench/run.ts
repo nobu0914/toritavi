@@ -26,6 +26,18 @@ type Case = {
 };
 
 const args = process.argv.slice(2);
+
+/** 出力の上限。**採算の支配項なので、下げたときに切れないかを測る。** */
+const MAX_TOKENS = (() => {
+  const i = args.indexOf("--max-tokens");
+  if (i < 0) return 4096;
+  const n = Number(args[i + 1]);
+  if (!Number.isFinite(n) || n < 64) {
+    console.error("--max-tokens が不正");
+    process.exit(1);
+  }
+  return n;
+})();
 const positional = args.filter((a) => !a.startsWith("--"));
 const flag = (name: string, dflt?: string) => {
   const i = args.indexOf(`--${name}`);
@@ -35,7 +47,9 @@ const flag = (name: string, dflt?: string) => {
 const stage = positional[0];
 const outDir = positional[1] ?? join(stage ?? ".", "out");
 if (!stage) {
-  console.error("usage: run.ts <stageDir> <outDir> [--only X] [--repeat N] [--conc N]");
+  console.error(
+    "usage: run.ts <stageDir> <outDir> [--only X] [--repeat N] [--conc N] [--max-tokens N]",
+  );
   process.exit(2);
 }
 const only = flag("only");
@@ -95,7 +109,7 @@ async function runOne(c: Case, attempt: number) {
     const outputLang = OUTPUT_LANGS[c.lang] ?? OUTPUT_LANGS.ja;
     const response = await client.messages.create({
       model: "claude-sonnet-4-6",
-      max_tokens: 4096,
+      max_tokens: MAX_TOKENS,
       system: buildSystemPrompt(outputLang, today),
       messages: [{ role: "user", content: buildContent(c) }],
     });
@@ -111,6 +125,11 @@ async function runOne(c: Case, attempt: number) {
       ms: Date.now() - t0,
       tokensIn: response.usage?.input_tokens ?? 0,
       tokensOut: response.usage?.output_tokens ?? 0,
+      // 🔴 **切れたかどうかの唯一の確かな信号。**
+      //    `"max_tokens"` なら出力が途中で止まっている。
+      //    JSON として読めてしまうこともあるので、`ok` だけでは分からない。
+      stopReason: response.stop_reason ?? null,
+      maxTokens: MAX_TOKENS,
       result: parsed,
       rawChars: raw.length,
       today,
