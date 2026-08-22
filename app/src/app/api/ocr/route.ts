@@ -334,8 +334,17 @@ export async function POST(request: NextRequest) {
       console.log("[OCR] ok steps:", sanitized.steps.length, "cost_cents:", cost);
       return NextResponse.json(payload);
     } catch (err) {
-      // 通信障害・Anthropic 障害・こちら側の障害。**返却する。**
-      await settleOcrFailure({ requestId, userId, reason: "ai_call_failed" });
+      // 🔴 **ここは「送ったあと」。** タイムアウトや切断でも、Anthropic 側は
+      //    完走して課金されていることがある。**件数は戻すが予算は戻さない。**
+      //    両方戻すと、意図的にタイムアウトさせるだけで
+      //    「予算にも件数にも計上されない支出」を無制限に作れる
+      //    （2026-08-22 の外部レビュー指摘 3）。
+      await settleOcrFailure({
+        requestId,
+        userId,
+        reason: "ai_call_failed",
+        chargeBudget: true,
+      });
       console.error("[OCR] ai call failed");
       return NextResponse.json(
         { error: "ai_unavailable", message: "読み取りに失敗しました。回数は消費していません。" },
@@ -346,6 +355,7 @@ export async function POST(request: NextRequest) {
     // ボディの解析など、予約前に起きうる失敗。requestId が取れていれば
     // 念のため精算しておく（取れていなければ予約もされていない）。
     if (requestId) {
+      // こちらは送信前（ボディの解析など）。予算も戻してよい。
       await settleOcrFailure({ requestId, userId, reason: "request_failed" });
     }
     console.error("[OCR] request failed");

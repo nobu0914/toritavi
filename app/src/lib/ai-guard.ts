@@ -633,6 +633,16 @@ export async function settleOcrFailure(args: {
   requestId: string;
   userId: string;
   reason: string;
+  /**
+   * 🔴 **Anthropic へ送ったあとに失敗したか。**
+   *
+   * 送信後の失敗（タイムアウト・切断）は、**向こうでは完走して課金されて
+   * いる可能性がある**。予算まで戻すと「予算にも件数にも計上されない支出」を
+   * 無制限に作れる（意図的にタイムアウトさせれば繰り返せる）。
+   *
+   * true のとき: 件数は戻す（利用者への約束）／**予算は見積りを spent へ移す**。
+   */
+  chargeBudget?: boolean;
 }): Promise<void> {
   try {
     const admin = createServiceClient();
@@ -640,6 +650,7 @@ export async function settleOcrFailure(args: {
       p_request_id: args.requestId,
       p_user_id: args.userId,
       p_reason: args.reason,
+      p_charge_budget: args.chargeBudget === true,
     });
     if (error) console.error("[ai-guard] settle failure failed:", error.message);
   } catch (e) {
