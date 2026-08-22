@@ -33,16 +33,19 @@ describe("確定仕様の件数", () => {
     assert.equal(SPEC_GUEST_REQUESTS, 3);
   });
 
-  test("🔴 ai-guard の既定値が確定仕様を参照している（10 / 100 の直書きが残っていない）", () => {
+  test("🔴 env で仕様値を超えられない（ログに出すだけにしない）", () => {
     const c = code(guard);
     assert.ok(
-      c.includes("envNum([\"AI_OCR_MONTHLY_REQUESTS\"], SPEC_FREE_REQUESTS)"),
-      "free の既定が確定仕様を参照していない",
+      c.includes("cappedQuota([\"AI_OCR_MONTHLY_REQUESTS\"], SPEC_FREE_REQUESTS)"),
+      "free の上限が env で増やせる",
     );
     assert.ok(
-      c.includes("envNum([\"AI_OCR_PRO_MONTHLY_REQUESTS\"], SPEC_PRO_REQUESTS)"),
-      "pro の既定が確定仕様を参照していない",
+      c.includes("cappedQuota([\"AI_OCR_PRO_MONTHLY_REQUESTS\"], SPEC_PRO_REQUESTS)"),
+      "pro の上限が env で増やせる",
     );
+    // 丸めていることを本体でも確かめる。
+    assert.ok(c.includes("if (raw > spec)"), "超過を丸めていない");
+    assert.ok(c.includes("return spec;"), "仕様値へ丸めていない");
   });
 
   test("🔴 効いている上限が仕様と違ったら検知する", () => {
@@ -76,7 +79,25 @@ describe("🔴 処理の並び順", () => {
   });
 
   test("予約が、Anthropic の実行より前にある", () => {
-    assert.ok(at("beginOcrRequest({") < at("client.messages.create({"));
+    assert.ok(at("beginOcrRequest({") < at("client.messages.create("));
+  });
+
+  test("🔴 計測に失敗したら Anthropic を呼ばない（fail-close）", () => {
+    const failClose = at("if (!counted.ok)");
+    assert.ok(failClose < at("client.messages.create("), "計測の失敗判定が実行より後ろ");
+    assert.ok(c.includes('error: "estimate_unavailable"'), "計測失敗を通してしまっている");
+    // 見積りへのフォールバックが残っていないこと。
+    assert.ok(!c.includes("fallback: inputTokens"), "見積りへのフォールバックが残っている");
+  });
+
+  test("🔴 段ごとではなく全体の締切で時間を配る", () => {
+    assert.ok(c.includes("countBudget(startedAt"), "計測の予算を取っていない");
+    assert.ok(c.includes("callBudget(startedAt"), "呼び出しの予算を取っていない");
+    assert.ok(!c.includes("ANTHROPIC_TIMEOUT_MS"), "段ごとの固定タイムアウトが残っている");
+  });
+
+  test("🔴 送る前に時間が足りなければ、精算してから諦める", () => {
+    assert.ok(c.includes('reason: "no_time_before_send"'));
   });
 
   test("モデレーションが予約より前で、フェイルクローズ版を使っている", () => {
@@ -86,6 +107,13 @@ describe("🔴 処理の並び順", () => {
 
 describe("🔴 精算の結線", () => {
   const c = code(route);
+
+  test("🔴 精算 RPC の false を成功扱いしない", () => {
+    const g = code(guard);
+    assert.ok(g.includes("if (data === true) return true;"), "true 以外も通している");
+    assert.ok(g.includes("readOcrRequestState("), "false のとき状態を見ていない");
+    assert.ok(g.includes('if (state === "succeeded") return true;'), "冪等成功の判定が無い");
+  });
 
   test("成功の精算が失敗したら 200 を返さない", () => {
     assert.ok(c.includes("const settled = await settleOcrSuccess("));

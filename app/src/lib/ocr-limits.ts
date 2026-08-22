@@ -82,9 +82,15 @@ export const TOKENS_PER_PDF_PAGE = 4600;
  * count_tokens は**安価な試行制限を通ったあとにだけ**呼ぶ。前に置くと
  * 「count_tokens だけを連打する」攻撃面になる。
  */
-export const ESTIMATE_SAFETY_FACTOR = 1.5;
+/**
+ * `count_tokens` の値に掛ける安全余裕。
+ *
+ * 計測値と実請求が一致する保証は無い。**予約は多めに、精算は実費で。**
+ * 足りないと予算の判定をすり抜ける。
+ */
+export const COUNT_SAFETY_MARGIN = 1.15;
 
-/** システムプロンプトとラッパー文のぶん。見積りに必ず足す。 */
+/** 取りこぼしの吸収（ラッパー・将来のプロンプト追加）。予約に必ず足す。 */
 export const OVERHEAD_TOKENS = 2000;
 
 /**

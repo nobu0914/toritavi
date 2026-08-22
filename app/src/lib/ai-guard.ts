@@ -62,6 +62,24 @@ export type AiGuardConfig = {
   };
 };
 
+/**
+ * 確定仕様の件数を**超えないように**上限を決める。
+ *
+ * 🔴 **env で増やせてはいけない。** ログに出すだけでは、打ち間違いが
+ * そのまま「違う商品を売る」ことになる（掲載文は 5 件・50 件と書く）。
+ * 減らす方向は事故対応に要るので許す。
+ */
+function cappedQuota(names: string[], spec: number): number {
+  const raw = envNum(names, spec);
+  if (raw > spec) {
+    console.error(
+      `[ai-guard] env が確定仕様を超えている（${raw} > ${spec}）。仕様値へ丸めた`,
+    );
+    return spec;
+  }
+  return Math.max(0, raw);
+}
+
 /** 複数 env 名を順に見て最初の有効値を数値で返す。 */
 function envNum(names: string[], fallback: number): number {
   for (const n of names) {
@@ -135,12 +153,12 @@ export const OCR_GUARD: AiGuardConfig = {
       // 🔴 既定値は**確定仕様と同じ数字**にする（2026-08-22: Free 5 / Pro 50）。
       //    既定が仕様と違うと、env の設定漏れが「静かに違う商品」になる。
       //    `assertQuotaMatchesSpec()` が食い違いを検知する。
-      quotaRequests: envNum(["AI_OCR_MONTHLY_REQUESTS"], SPEC_FREE_REQUESTS),
+      quotaRequests: cappedQuota(["AI_OCR_MONTHLY_REQUESTS"], SPEC_FREE_REQUESTS),
       quotaTokens: envNum(["AI_OCR_MONTHLY_TOKENS"], 500_000),
       ratePerMin: envNum(["AI_OCR_RATE_PER_MIN", "OCR_RATE_LIMIT_PER_MIN"], 5),
     },
     pro: {
-      quotaRequests: envNum(["AI_OCR_PRO_MONTHLY_REQUESTS"], SPEC_PRO_REQUESTS),
+      quotaRequests: cappedQuota(["AI_OCR_PRO_MONTHLY_REQUESTS"], SPEC_PRO_REQUESTS),
       quotaTokens: envNum(["AI_OCR_PRO_MONTHLY_TOKENS"], 3_000_000),
       ratePerMin: envNum(["AI_OCR_PRO_RATE_PER_MIN"], 10),
     },
@@ -693,8 +711,17 @@ export async function settleOcrSuccess(args: {
         p_result: args.result,
       });
       if (error) throw error;
-      // false = reserved の行が無かった（既に精算済み）。二度目は成功扱いでよい。
-      if (data === true || data === false) return true;
+      if (data === true) return true;
+      // 🔴 **false を成功扱いしない**（2026-08-22 の外部レビュー指摘 3）。
+      //    false は「reserved の行が無かった」であって、succeeded とは限らない。
+      //    failed に落ちている（sweep が拾った等）なら、実費が計上されず
+      //    結果も保存されていない。**状態を見て判断する。**
+      if (data === false) {
+        const state = await readOcrRequestState(args.requestId, args.userId);
+        if (state === "succeeded") return true; // 既に精算済み＝冪等な成功
+        console.error("[ai-guard] settle returned false; state =", state);
+        return false;
+      }
       throw new Error("unexpected settle result");
     } catch (e) {
       console.error(`[ai-guard] settle success failed (attempt ${attempt + 1}):`, e);
@@ -702,6 +729,27 @@ export async function settleOcrSuccess(args: {
     }
   }
   return false;
+}
+
+/** リクエストの現在の状態。**service_role は RLS を通らないので直接読める。** */
+export async function readOcrRequestState(
+  requestId: string,
+  userId: string,
+): Promise<string | null> {
+  try {
+    const admin = createServiceClient();
+    const { data, error } = await admin
+      .from("toritavi_ocr_requests")
+      .select("state")
+      .eq("request_id", requestId)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (error) throw error;
+    return (data?.state as string | undefined) ?? null;
+  } catch (e) {
+    console.error("[ai-guard] read request state failed:", e);
+    return null;
+  }
 }
 
 /**

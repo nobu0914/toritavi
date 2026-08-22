@@ -19,6 +19,7 @@ import { getAiMode, modeAllows, MODE_MESSAGE } from "@/lib/ai-switch";
 import { REJECT_MESSAGE, validateFile } from "@/lib/file-validate";
 import { sanitizeOcrResult } from "@/lib/ocr-output";
 import { countInputTokens } from "@/lib/ocr-token-count";
+import { callBudget, countBudget } from "@/lib/request-deadline";
 import {
   actualCostCents,
   estimateCostCents,
@@ -30,16 +31,11 @@ import {
   MAX_INPUT_TOKENS,
   MAX_OUTPUT_TOKENS,
   MAX_TEXT_CHARS,
-  OVERHEAD_TOKENS,
   pdfUnits,
   TOKENS_PER_PDF_PAGE,
 } from "@/lib/ocr-limits";
 
 export const maxDuration = 60;
-
-/** Anthropic 呼び出しの待ち上限。`maxDuration` より短くして、
- *  こちらが精算してから終われるようにする。 */
-const ANTHROPIC_TIMEOUT_MS = 50_000;
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -112,6 +108,10 @@ function decodeDataUrl(s: string): { mime: string; bytes: Uint8Array } | null {
 }
 
 export async function POST(request: NextRequest) {
+  // 🔴 **リクエスト全体の絶対締切の起点。** 段ごとのタイムアウトを足すと
+  //    合計が関数の上限を超え、精算する時間が残らないまま殺される。
+  const startedAt = Date.now();
+
   const origin = request.headers.get("origin");
   if (origin && !ALLOWED_ORIGINS.has(origin)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -250,6 +250,8 @@ export async function POST(request: NextRequest) {
     }
 
     // --- 入力トークンの天井。**原価の実効的な上限はここ。** ---
+    // 安価な事前ゲート。**予約の根拠ではない**（根拠は count_tokens の実測）。
+    // 明らかに大きすぎるものを、計測を呼ぶ前に落とすためだけに使う。
     if (inputTokens > MAX_INPUT_TOKENS) {
       return NextResponse.json(
         {
@@ -270,28 +272,45 @@ export async function POST(request: NextRequest) {
       //    再送するが、**再送のたびに Anthropic の課金が発生する**。
       //    予約は 1 件ぶんしか取っていないので、実費が見積りを超える。
       maxRetries: 0,
-      timeout: ANTHROPIC_TIMEOUT_MS,
     });
     const system = buildSystemPrompt(outputLang, jstToday());
     const content = buildContent(files, text);
 
     // --- 🔴 実際の入力トークンを数える（見積りは上界ではない）---
     //     試行制限を通ったあとなので、これ自体を連打できない。
+    //     **数えられなければ通さない**（fail-close）。
+    const cb = countBudget(startedAt, Date.now());
+    if (!cb.ok) {
+      return NextResponse.json(
+        { error: "timeout", message: "時間内に処理できませんでした。もう一度お試しください。" },
+        { status: 503 },
+      );
+    }
     const counted = await countInputTokens({
       client,
       model: OCR_MODEL,
       system,
       content,
-      fallback: inputTokens,
+      timeoutMs: cb.countMs,
     });
-    const actualInputTokens = Math.max(counted.tokens, inputTokens + OVERHEAD_TOKENS);
+    if (!counted.ok) {
+      // 「計測できない」と「安いと分かっている」は別物。通さない。
+      return NextResponse.json(
+        {
+          error: "estimate_unavailable",
+          message: "読み取りの準備に失敗しました。しばらくしてからお試しください。",
+        },
+        { status: 503 },
+      );
+    }
+    const actualInputTokens = counted.reserve;
 
     if (actualInputTokens > MAX_INPUT_TOKENS) {
       return NextResponse.json(
         {
           error: "input_too_large",
           message: "読み取る量が多すぎます。ページ数を減らすか、ファイルを分けてお試しください。",
-          measuredTokens: actualInputTokens,
+          measuredTokens: counted.measured,
           maxTokens: MAX_INPUT_TOKENS,
         },
         { status: 413 },
@@ -331,12 +350,25 @@ export async function POST(request: NextRequest) {
 
     // ===== ここから先の失敗は必ず精算する =====
     try {
-      const response = await client.messages.create({
-        model: OCR_MODEL,
-        max_tokens: MAX_OUTPUT_TOKENS,
-        system,
-        messages: [{ role: "user", content }],
-      });
+      // 🔴 **精算のぶんを残して呼ぶ。** 残り時間が足りないなら送らない
+      //    （送ってから殺されると、課金だけ起きて精算できない）。
+      const ab = callBudget(startedAt, Date.now());
+      if (!ab.ok) {
+        await settleOcrFailure({ requestId, userId, reason: "no_time_before_send" });
+        return NextResponse.json(
+          { error: "timeout", message: "時間内に処理できませんでした。回数は消費していません。" },
+          { status: 503 },
+        );
+      }
+      const response = await client.messages.create(
+        {
+          model: OCR_MODEL,
+          max_tokens: MAX_OUTPUT_TOKENS,
+          system,
+          messages: [{ role: "user", content }],
+        },
+        { timeout: ab.countMs, maxRetries: 0 },
+      );
 
       const tokensIn = response.usage?.input_tokens ?? 0;
       const tokensOut = response.usage?.output_tokens ?? 0;

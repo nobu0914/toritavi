@@ -1,46 +1,51 @@
 import Anthropic from "@anthropic-ai/sdk";
-import {
-  ESTIMATE_SAFETY_FACTOR,
-  OVERHEAD_TOKENS,
-} from "./ocr-limits.ts";
+import { COUNT_SAFETY_MARGIN, OVERHEAD_TOKENS } from "./ocr-limits.ts";
 
 /**
  * 送る内容の**実際の入力トークン数**を Anthropic に数えてもらう。
  *
- * 🔴 **なぜ要るか。** ページ数と寸法からの見積りは「典型値」に基づくもので、
- * 上界ではない。高密度なページや隠しテキストを仕込まれると実費が見積りを
- * 超え、予算の判定（reserved を積んでから呼ぶ）をすり抜ける。
+ * 🔴 **数えられなかったら OCR を通さない（fail-close）。**
+ * 以前は見積りへフォールバックしていたが、見積りは典型値に基づくもので
+ * 上界ではない。**「計測できない」と「安いと分かっている」は別物**で、
+ * 前者で通すと予算の判定が根拠を失う（2026-08-22 の外部レビュー指摘 1）。
  *
- * 🔴 **なぜ安全か。** この呼び出しは**安価な試行制限を通ったあと**に置く。
- * 1 分あたりの試行回数が既に縛られているので、これ自体を連打できない。
- * また外部に endpoint として露出しない（この関数はサーバ内でのみ呼ぶ）。
+ * 🔴 **成功した値もそのまま使わない。** `count_tokens` の値と実請求は
+ * 一致する保証がないので、[COUNT_SAFETY_MARGIN] を掛けて
+ * [OVERHEAD_TOKENS] を足したものを予約する。**予約は多めに、精算は実費で。**
  *
- * 失敗したら見積りに安全係数を掛けた値へ倒す。**下回る方向へは倒さない。**
+ * 呼ぶのは**安価な試行制限を通ったあと**だけ。前に置くとこれ自体が
+ * 連打の的になる。外部に endpoint としては出さない。
  */
+export type CountResult =
+  | { ok: true; measured: number; reserve: number }
+  | { ok: false };
+
 export async function countInputTokens(args: {
   client: Anthropic;
   model: string;
   system: string;
   content: Anthropic.MessageCreateParams["messages"][0]["content"];
-  /** ページ数・寸法から出した見積り（フォールバック用）。 */
-  fallback: number;
-}): Promise<{ tokens: number; measured: boolean }> {
+  timeoutMs: number;
+}): Promise<CountResult> {
   try {
-    const r = await args.client.messages.countTokens({
-      model: args.model,
-      system: args.system,
-      messages: [{ role: "user", content: args.content }],
-    });
+    const r = await args.client.messages.countTokens(
+      {
+        model: args.model,
+        system: args.system,
+        messages: [{ role: "user", content: args.content }],
+      },
+      { timeout: args.timeoutMs, maxRetries: 0 },
+    );
     const n = r?.input_tokens;
-    if (typeof n === "number" && Number.isFinite(n) && n > 0) {
-      return { tokens: n, measured: true };
-    }
-    throw new Error("no input_tokens in response");
-  } catch (e) {
-    console.error("[ocr] count_tokens failed; falling back to estimate");
+    if (typeof n !== "number" || !Number.isFinite(n) || n <= 0) return { ok: false };
     return {
-      tokens: Math.ceil(args.fallback * ESTIMATE_SAFETY_FACTOR) + OVERHEAD_TOKENS,
-      measured: false,
+      ok: true,
+      measured: n,
+      reserve: Math.ceil(n * COUNT_SAFETY_MARGIN) + OVERHEAD_TOKENS,
     };
+  } catch {
+    // 理由は出さない（本文・URL が混ざりうる）。区分だけ。
+    console.error("[ocr] count_tokens failed");
+    return { ok: false };
   }
 }
