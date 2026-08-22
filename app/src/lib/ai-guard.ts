@@ -627,9 +627,13 @@ export async function beginOcrRequest(args: {
   units: number;
   limitUnits: number;
   estCostCents: number;
-  /** 実測（count_tokens）または安全側へ倒した見積り。 */
+  /** 予約に使う値（計測 × 安全余裕 ＋ 固定分 ＋ 出力上限）。 */
   estTokens: number;
   limitTokens: number;
+  /** count_tokens が返した生の値。**判定に使わず、記録だけ。** */
+  countedInput: number;
+  /** 安全余裕を掛けた入力トークン（出力ぶんを含まない）。記録だけ。 */
+  reservedInput: number;
 }): Promise<NextResponse | BeginOk | BeginDuplicate> {
   const admin = createServiceClient();
   const { data, error } = await admin.rpc("toritavi_ocr_begin_request", {
@@ -641,6 +645,9 @@ export async function beginOcrRequest(args: {
     p_est_cost_cents: args.estCostCents,
     p_est_tokens: args.estTokens,
     p_limit_tokens: args.limitTokens,
+    // 見積りと実費のずれを後から測るための記録（判定には使わない）。
+    p_counted_input: args.countedInput,
+    p_reserved_input: args.reservedInput,
   });
 
   if (error) {

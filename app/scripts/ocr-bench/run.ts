@@ -107,11 +107,30 @@ async function runOne(c: Case, attempt: number) {
   const t0 = Date.now();
   try {
     const outputLang = OUTPUT_LANGS[c.lang] ?? OUTPUT_LANGS.ja;
+    const system = buildSystemPrompt(outputLang, today);
+    const content = buildContent(c);
+
+    // 🔴 **本番と同じ順序で count_tokens を先に呼ぶ**（計画 Q2-A）。
+    //    本番は この値 × 1.15 ＋ 2,000 を予約する。実請求がそれを上回ると
+    //    予算の判定が崩れるので、ずれを測れるようにする。
+    //    失敗しても計測を止めない（null で残す）。
+    let countedInput: number | null = null;
+    try {
+      const ct = await client.messages.countTokens({
+        model: "claude-sonnet-4-6",
+        system,
+        messages: [{ role: "user", content }],
+      });
+      countedInput = ct?.input_tokens ?? null;
+    } catch {
+      countedInput = null;
+    }
+
     const response = await client.messages.create({
       model: "claude-sonnet-4-6",
       max_tokens: MAX_TOKENS,
-      system: buildSystemPrompt(outputLang, today),
-      messages: [{ role: "user", content: buildContent(c) }],
+      system,
+      messages: [{ role: "user", content }],
     });
     const block = response.content.find((b) => b.type === "text");
     const raw = block?.type === "text" ? block.text : "";
@@ -121,6 +140,14 @@ async function runOne(c: Case, attempt: number) {
     const parsed = m ? JSON.parse(m[0]) : null;
     const rec = {
       case: c,
+      // 🔴 **count_tokens と実請求のずれを測る**（計画 Q2-A）。
+      //    予約はこの値に安全余裕を掛けて行うので、
+      //    実請求がこれを上回ると予算の判定が崩れる。
+      countedInput,
+      countedOverActual:
+        countedInput != null && (response.usage?.input_tokens ?? 0) > 0
+          ? Number((countedInput / (response.usage!.input_tokens as number)).toFixed(4))
+          : null,
       ok: parsed != null,
       ms: Date.now() - t0,
       tokensIn: response.usage?.input_tokens ?? 0,

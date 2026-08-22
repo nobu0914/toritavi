@@ -328,6 +328,8 @@ export async function POST(request: NextRequest) {
       estCostCents: estCost,
       estTokens: actualInputTokens + MAX_OUTPUT_TOKENS,
       limitTokens: OCR_GUARD.tiers[plan].quotaTokens,
+      countedInput: counted.measured,
+      reservedInput: counted.reserve,
     });
     if (begun instanceof NextResponse) return begun;
 

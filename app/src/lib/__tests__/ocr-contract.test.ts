@@ -160,15 +160,46 @@ describe("🔴 DB 側の契約", () => {
     assert.ok(sql.includes("WHERE toritavi_ocr_rate_buckets.hits + 1 <= p_global_per_min"));
   });
 
-  test("🔴 旧シグネチャを消してから作り直している", () => {
-    // create or replace は戻り値の型も引数既定値の削除もできない。
+  test("🔴 作り直す前に消している（型・既定値は replace で変えられない）", () => {
     for (const sig of [
-      "drop function if exists public.toritavi_ocr_try_attempt(uuid, int);",
       "drop function if exists public.toritavi_ocr_try_attempt(uuid, int, int);",
       "drop function if exists public.toritavi_ocr_sweep(int);",
     ]) {
-      assert.ok(sql.includes(sig), sig + ' が無い');
+      assert.ok(sql.includes(sig), sig + " が無い");
     }
+  });
+
+  test("🔴 2 引数の互換ラッパーを消していない（ロールバックで OCR が止まる）", () => {
+    // 途中の版のサーバは try_attempt を 2 引数で呼ぶ。無いと、コードだけ
+    // 戻した瞬間に関数が見つからず、フェイルクローズで全要求が 503 になる。
+    assert.ok(
+      !sql.includes("drop function if exists public.toritavi_ocr_try_attempt(uuid, int);"),
+      "互換ラッパーを消している",
+    );
+    assert.ok(
+      sql.includes("create or replace function public.toritavi_ocr_try_attempt(\n  p_user_id uuid,\n  p_per_min int\n) returns boolean"),
+      "2 引数の互換ラッパーが無い",
+    );
+    // ラッパーも全体上限を必ず適用すること（省略が「上限なし」にならない）。
+    assert.ok(
+      sql.includes("select public.toritavi_ocr_try_attempt(p_user_id, p_per_min, 120);"),
+      "ラッパーが全体上限を渡していない",
+    );
+  });
+
+  test("🔴 計測値を記録する列と引数がある（見積りと実費のずれを測る）", () => {
+    for (const needle of [
+      "counted_input_tokens  integer",
+      "reserved_input_tokens integer",
+      "actual_input_tokens   integer",
+      "actual_output_tokens  integer",
+      "p_counted_input  int default null",
+    ]) {
+      assert.ok(sql.includes(needle), needle + " が無い");
+    }
+    const g = readFileSync("src/lib/ai-guard.ts", "utf8");
+    assert.ok(g.includes("p_counted_input: args.countedInput"));
+    assert.ok(g.includes("p_reserved_input: args.reservedInput"));
   });
 
   test("🔴 全利用者ぶんの期限切れ掃除と created_at のインデックスがある", () => {
