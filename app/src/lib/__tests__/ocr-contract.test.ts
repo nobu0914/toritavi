@@ -149,7 +149,35 @@ describe("🔴 DB 側の契約", () => {
     assert.ok(sql.includes("RETURNING est_cost_cents, est_tokens, audience, units, period_day, period_month"));
   });
 
-  test("試行制限が advisory lock を取っている", () => {
+  test("利用者ごとの試行制限が advisory lock を取っている", () => {
     assert.ok(sql.includes("pg_advisory_xact_lock"));
+  });
+
+  test("🔴 全体の試行上限が原子的（別利用者どうしは lock で守れない）", () => {
+    // 利用者ごとの lock は鍵が user_id なので、別の利用者とは直列化されない。
+    // 全体件数は行ロックの下で足してから見る。
+    assert.ok(sql.includes("INSERT INTO toritavi_ocr_rate_buckets"));
+    assert.ok(sql.includes("WHERE toritavi_ocr_rate_buckets.hits + 1 <= p_global_per_min"));
+  });
+
+  test("🔴 旧シグネチャを消してから作り直している", () => {
+    // create or replace は戻り値の型も引数既定値の削除もできない。
+    for (const sig of [
+      "drop function if exists public.toritavi_ocr_try_attempt(uuid, int);",
+      "drop function if exists public.toritavi_ocr_try_attempt(uuid, int, int);",
+      "drop function if exists public.toritavi_ocr_sweep(int);",
+    ]) {
+      assert.ok(sql.includes(sig), sig + ' が無い');
+    }
+  });
+
+  test("🔴 全利用者ぶんの期限切れ掃除と created_at のインデックスがある", () => {
+    assert.ok(sql.includes("DELETE FROM toritavi_ocr_events WHERE created_at <"));
+    assert.ok(sql.includes("idx_ocr_events_created_at"));
+  });
+
+  test("🔴 サーバが全体上限を明示的に渡している", () => {
+    const g = readFileSync("src/lib/ai-guard.ts", "utf8");
+    assert.ok(g.includes("p_global_per_min: GLOBAL_ATTEMPTS_PER_MIN"));
   });
 });

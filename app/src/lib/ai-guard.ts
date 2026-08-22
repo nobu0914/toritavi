@@ -554,6 +554,15 @@ export async function checkMinuteRate(
 }
 
 /**
+ * 全利用者合算の 1 分あたり試行上限。
+ *
+ * 試行 1 回につき `count_tokens` を 1 回呼ぶので、アカウントを増やされると
+ * 組織全体のレート上限を枯渇させ、**正規の利用者まで OCR が使えなくなる**。
+ * 金銭ではなく可用性の防御なので、予算では止められない。
+ */
+export const GLOBAL_ATTEMPTS_PER_MIN = envNum(["AI_OCR_GLOBAL_RATE_PER_MIN"], 120);
+
+/**
  * 安価な試行制限。**ファイルを開く前に呼ぶ。**
  *
  * 🔴 以前は「件数を読む → 別のトランザクションで書く」形だったので、
@@ -571,6 +580,9 @@ export async function tryOcrAttempt(
     const { data, error } = await admin.rpc("toritavi_ocr_try_attempt", {
       p_user_id: userId,
       p_per_min: perMin,
+      // 🔴 **必ず明示的に渡す。** DB 側の既定値は外してあるので、
+      //    書き忘れるとエラーになる（黙って「全体上限なし」にならない）。
+      p_global_per_min: GLOBAL_ATTEMPTS_PER_MIN,
     });
     if (error) throw error;
     if (data === true) return null;
