@@ -105,6 +105,23 @@ function quotaKey(period: QuotaPeriod): { col: string; val: string } {
     : { col: "day", val: jstToday() };
 }
 
+export { SPEC_FREE_REQUESTS, SPEC_PRO_REQUESTS } from "./ocr-plan-spec.ts";
+import { SPEC_FREE_REQUESTS, SPEC_PRO_REQUESTS } from "./ocr-plan-spec.ts";
+
+/**
+ * 実際に効いている上限が確定仕様と違っていないかを見る。
+ *
+ * 🔴 **黙って違う商品を売らない。** env の設定漏れ・打ち間違いは
+ * コードに痕跡が残らない（`docs/feature-flags.md` の RevenueCat 鍵と同型）。
+ * 違っていたら理由を返す。呼び出し側がログに残す。
+ */
+export function quotaSpecMismatch(): string | null {
+  const f = OCR_GUARD.tiers.free.quotaRequests;
+  const p = OCR_GUARD.tiers.pro.quotaRequests;
+  if (f === SPEC_FREE_REQUESTS && p === SPEC_PRO_REQUESTS) return null;
+  return `free=${f}(spec ${SPEC_FREE_REQUESTS}) pro=${p}(spec ${SPEC_PRO_REQUESTS})`;
+}
+
 export const OCR_GUARD: AiGuardConfig = {
   feature: "ocr",
   budgetMonthlyCents: envNum(
@@ -115,12 +132,15 @@ export const OCR_GUARD: AiGuardConfig = {
     // ⚠️ env 名は *_MONTHLY_*。旧 *_DAILY_* にはフォールバックしない
     // （日次向けの値が月次上限として黙って適用されるのを防ぐため）。
     free: {
-      quotaRequests: envNum(["AI_OCR_MONTHLY_REQUESTS"], 10),
+      // 🔴 既定値は**確定仕様と同じ数字**にする（2026-08-22: Free 5 / Pro 50）。
+      //    既定が仕様と違うと、env の設定漏れが「静かに違う商品」になる。
+      //    `assertQuotaMatchesSpec()` が食い違いを検知する。
+      quotaRequests: envNum(["AI_OCR_MONTHLY_REQUESTS"], SPEC_FREE_REQUESTS),
       quotaTokens: envNum(["AI_OCR_MONTHLY_TOKENS"], 500_000),
       ratePerMin: envNum(["AI_OCR_RATE_PER_MIN", "OCR_RATE_LIMIT_PER_MIN"], 5),
     },
     pro: {
-      quotaRequests: envNum(["AI_OCR_PRO_MONTHLY_REQUESTS"], 100),
+      quotaRequests: envNum(["AI_OCR_PRO_MONTHLY_REQUESTS"], SPEC_PRO_REQUESTS),
       quotaTokens: envNum(["AI_OCR_PRO_MONTHLY_TOKENS"], 3_000_000),
       ratePerMin: envNum(["AI_OCR_PRO_RATE_PER_MIN"], 10),
     },
@@ -515,6 +535,44 @@ export async function checkMinuteRate(
   return null;
 }
 
+/**
+ * 安価な試行制限。**ファイルを開く前に呼ぶ。**
+ *
+ * 🔴 以前は「件数を読む → 別のトランザクションで書く」形だったので、
+ *    (a) 同時要求が同じ数を読んで全部通り、
+ *    (b) **PDF の解析より後**にあったので解析 DoS を止められなかった。
+ *    DB 側で advisory lock を取って数えて書く形に変え、呼ぶ位置を前へ出した。
+ */
+export async function tryOcrAttempt(
+  userId: string,
+  plan: Plan,
+): Promise<NextResponse | null> {
+  const perMin = OCR_GUARD.tiers[plan].ratePerMin;
+  try {
+    const admin = createServiceClient();
+    const { data, error } = await admin.rpc("toritavi_ocr_try_attempt", {
+      p_user_id: userId,
+      p_per_min: perMin,
+    });
+    if (error) throw error;
+    if (data === true) return null;
+    await logAiRejection(userId, "ocr", "rate_limit");
+    return NextResponse.json(
+      { error: "rate_limit", message: OCR_GUARD.messages.rateLimit(perMin) },
+      { status: 429 },
+    );
+  } catch (e) {
+    // 🔴 **数えられないなら通さない。** ここはファイルを開く前の最も安い門で、
+    //    通してしまうと解析 DoS がそのまま抜ける。件数・予算より手前なので
+    //    フェイルクローズにしても失うものが小さい。
+    console.error("[ai-guard] attempt limiter failed; blocking:", e);
+    return NextResponse.json(
+      { error: "rate_limit_unavailable", message: "混み合っています。しばらくしてからお試しください。" },
+      { status: 503 },
+    );
+  }
+}
+
 export type BeginOk = {
   kind: "granted";
   usedAfter: number;
@@ -539,6 +597,9 @@ export async function beginOcrRequest(args: {
   units: number;
   limitUnits: number;
   estCostCents: number;
+  /** 実測（count_tokens）または安全側へ倒した見積り。 */
+  estTokens: number;
+  limitTokens: number;
 }): Promise<NextResponse | BeginOk | BeginDuplicate> {
   const admin = createServiceClient();
   const { data, error } = await admin.rpc("toritavi_ocr_begin_request", {
@@ -548,6 +609,8 @@ export async function beginOcrRequest(args: {
     p_units: args.units,
     p_limit_units: args.limitUnits,
     p_est_cost_cents: args.estCostCents,
+    p_est_tokens: args.estTokens,
+    p_limit_tokens: args.limitTokens,
   });
 
   if (error) {
@@ -599,6 +662,17 @@ export async function beginOcrRequest(args: {
 }
 
 /** 成功の精算（実費で確定し、結果を短期だけ保持する）。 */
+/**
+ * 成功の精算。**永続化できたかを返す。**
+ *
+ * 🔴 **握り潰さない。** 以前はエラーも `false` も無視して呼び出し側が 200 を
+ * 返していた。精算されていないということは、予算が reserved のまま・
+ * 実費が計上されないまま・結果も保存されないまま、ということ。
+ * その状態で成功を返すと、再送は `duplicate_in_flight` で止まり、
+ * **利用者は枠を握られたまま結果も受け取れない**。
+ *
+ * 一時的な失敗は起きるので 3 回まで試す。それでも駄目なら false。
+ */
 export async function settleOcrSuccess(args: {
   requestId: string;
   userId: string;
@@ -606,21 +680,28 @@ export async function settleOcrSuccess(args: {
   tokensOut: number;
   costCents: number;
   result: unknown;
-}): Promise<void> {
-  try {
-    const admin = createServiceClient();
-    const { error } = await admin.rpc("toritavi_ocr_settle_success", {
-      p_request_id: args.requestId,
-      p_user_id: args.userId,
-      p_tokens_in: args.tokensIn,
-      p_tokens_out: args.tokensOut,
-      p_cost_cents: args.costCents,
-      p_result: args.result,
-    });
-    if (error) console.error("[ai-guard] settle success failed:", error.message);
-  } catch (e) {
-    console.error("[ai-guard] settle success threw:", e);
+}): Promise<boolean> {
+  const admin = createServiceClient();
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const { data, error } = await admin.rpc("toritavi_ocr_settle_success", {
+        p_request_id: args.requestId,
+        p_user_id: args.userId,
+        p_tokens_in: args.tokensIn,
+        p_tokens_out: args.tokensOut,
+        p_cost_cents: args.costCents,
+        p_result: args.result,
+      });
+      if (error) throw error;
+      // false = reserved の行が無かった（既に精算済み）。二度目は成功扱いでよい。
+      if (data === true || data === false) return true;
+      throw new Error("unexpected settle result");
+    } catch (e) {
+      console.error(`[ai-guard] settle success failed (attempt ${attempt + 1}):`, e);
+      if (attempt < 2) await new Promise((r) => setTimeout(r, 200 * (attempt + 1)));
+    }
   }
+  return false;
 }
 
 /**

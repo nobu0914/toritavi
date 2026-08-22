@@ -69,6 +69,25 @@ export function estimateImageTokens(width: number, height: number): number {
 export const TOKENS_PER_PDF_PAGE = 4600;
 
 /**
+ * 🔴 **見積りは「上界」ではない。**
+ *
+ * 公式が示す 1,500〜3,000 は**典型値であって最大値ではない**（2026-08-22 の
+ * 外部レビュー指摘 1）。高密度なページ・隠しテキストを仕込んだ 1 ページ・
+ * システムプロンプトとラッパーの分は、この定数では保証できない。
+ *
+ * そこで**実際の入力トークン数は Anthropic の count_tokens で数える**
+ * （`countInputTokens`）。この定数は、count_tokens が使えなかったときの
+ * フォールバックとしてだけ使い、そのときは [ESTIMATE_SAFETY_FACTOR] を掛ける。
+ *
+ * count_tokens は**安価な試行制限を通ったあとにだけ**呼ぶ。前に置くと
+ * 「count_tokens だけを連打する」攻撃面になる。
+ */
+export const ESTIMATE_SAFETY_FACTOR = 1.5;
+
+/** システムプロンプトとラッパー文のぶん。見積りに必ず足す。 */
+export const OVERHEAD_TOKENS = 2000;
+
+/**
  * 貼り付けテキストのトークン見積り。日本語は 1 文字 ≈ 1 トークンになりうる
  * ので、**文字数をそのまま上界として使う**（英語なら過大評価だが安全側）。
  */
