@@ -79,21 +79,38 @@ const nextConfig: NextConfig = {
       { source: "/concierge", destination: "/", permanent: false },
       { source: "/alerts", destination: "/", permanent: false },
       { source: "/unfiled", destination: "/", permanent: false },
-      { source: "/account/plan", destination: "/", permanent: false },
-      { source: "/account/profile", destination: "/", permanent: false },
-      { source: "/account/notifications", destination: "/", permanent: false },
-      { source: "/account/help", destination: "/", permanent: false },
+      // /account 配下は**まるごと閉じる**（2026-08-23）。
+      //
+      // もとは /account と /account/data だけ開けていた。理由はここに
+      // こう書いてあった —— 「iOS アプリが未リリースなので、今いる利用者は
+      // 全員 Web 登録者。閉じると書き出しも削除もできなくなる」。
+      // 🔴 **この前提は 2026-08-17 に誤りと確認済み。** 前提が消えたのに
+      // 例外だけが残っていた。
+      //
+      // 閉じても導線は切れない:
+      //   - 削除はアプリ内にある（設定 → アカウント削除。サーバ側の
+      //     `/api/account/delete` は**残す**。アプリがこれを叩く）
+      //   - 公開プライバシーポリシーのメール経路（30 日以内）も生きている
+      //   - 書き出し（JSON）は PP から記述を消したのに画面では押せていた。
+      //     嘘ではないが、不要と言った導線が残っていた
+      //
+      // /account/plan は **月額 480 円 / 年額 4,800 円を公開しながら、
+      // kSubscriptionEnabled=false でどこからも買えない**状態だった。
+      { source: "/account", destination: "/", permanent: false },
+      { source: "/account/:path*", destination: "/", permanent: false },
 
       // ---- ここは閉じない ----
       //
-      // /login, /account, /account/data:
-      //   **iOS アプリが未リリースなので、今いる利用者は全員 Web 登録者。**
-      //   ここを閉じると、その人たちはデータの書き出しもアカウント削除も
-      //   できなくなる。削除請求に応えられない状態を作る方が悪い。
+      // /login:
+      //   認証メールの各画面（forgot-password / reset-password /
+      //   verify-email）が戻り先として指しており、/auth/callback の
+      //   失敗時の着地点でもある。閉じるとその経路が行き先を失う。
       // /forgot-password, /reset-password, /verify-email, /auth/callback:
       //   アプリから送る認証メールの着地点。
       // /admin/*, /api/*:
-      //   運用と、アプリが叩くサーバ API。
+      //   運用と、アプリが叩くサーバ API。**`/api/account/delete` は
+      //   アプリの退会が呼ぶので、上の /account/:path* とは別物**
+      //   （redirects はページにしか効かない）。
     ];
   },
 };

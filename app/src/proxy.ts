@@ -79,12 +79,15 @@ const PROTECTED_PATHS = ["/scan", "/alerts", "/unfiled", "/account", "/trips", "
 /**
  * ログイン済みの利用者を送る先。
  *
- * **かつては `/` だった**が、`/` は「JUNROS は iPhone アプリです」の
- * 案内 1 枚に変わった（`src/app/page.tsx`）。Web に残っている用は
- * データの書き出しとアカウント削除だけなので、そこへ直接送る。
- * `/` のままだと、案内 → ログイン → 案内、と往復して行き先が無い。
+ * 2026-08-23 に `/account/data` から `/` へ戻した。**Web の /account 配下を
+ * まるごと閉じた**ため（`next.config.ts` の redirects）、そこへ送っても
+ * `/` へ 307 される。往復させる意味が無い。
+ *
+ * 🔴 **`/` は PUBLIC_PATHS に入っている。** 下の「ログイン済み × 公開ページ
+ * → SIGNED_IN_HOME」の規則から `/` を除外しないと、`/` → `/` の
+ * **無限リダイレクト**になる。片方だけ動かさないこと。
  */
-const SIGNED_IN_HOME = "/account/data";
+const SIGNED_IN_HOME = "/";
 
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
@@ -177,9 +180,14 @@ export async function proxy(request: NextRequest) {
   // Authenticated user hitting public auth pages → send to home.
   // /reset-password is excluded: a live recovery session needs to stay
   // there to finish the password change.
+  //
+  // 🔴 `/` も除外する。SIGNED_IN_HOME が `/` なので、除外しないと
+  //    `/` → `/` の無限リダイレクトになる（2026-08-23）。案内ページは
+  //    ログイン済みでもそのまま見せてよい。
   if (
     user &&
     isPublicPath(pathname) &&
+    pathname !== "/" &&
     pathname !== "/auth/callback" &&
     pathname !== "/reset-password"
   ) {
