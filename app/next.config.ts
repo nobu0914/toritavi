@@ -34,6 +34,18 @@ const nextConfig: NextConfig = {
   // serverless バンドルへ明示的に同梱する（トレースだけでは拾われない）。
   outputFileTracingIncludes: {
     "/admin/maintenance": ["./src/content/**"],
+    // 🔴 **PDF のページ数を数えるのに要る。**
+    //
+    //    pdf-lib は動的 import（`src/lib/file-validate.ts`）なので、
+    //    トレースだけでは拾われず**関数バンドルに入らない**ことがある。
+    //    入っていないと本番でだけ import が失敗し、
+    //    「PDF を読み取れませんでした」になる。
+    //
+    //    2026-08-24 に pdfjs で同じ形を 2 回踏んだ（DOMMatrix・ワーカー）。
+    //    **手元では再現しない**ので、ビルド後に
+    //    `.next/server/app/api/ocr/route.js.nft.json` を見て、
+    //    pdf-lib のファイルが載っていることを確かめること。
+    "/api/ocr": ["./node_modules/pdf-lib/**"],
   },
   async headers() {
     return [

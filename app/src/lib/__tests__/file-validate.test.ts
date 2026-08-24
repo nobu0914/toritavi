@@ -153,27 +153,26 @@ describe("PDF", () => {
     assert.deepEqual(a1, a2, "二度目の結果が違う＝一度目が壊している");
   });
 
-  // 🔴 **Node にブラウザの API を用意してから pdfjs を読むこと。**
+  // 🔴 **描画エンジンを使わないこと。**
   //
-  // pdfjs は Node では `@napi-rs/canvas`（**optionalDependencies**）から
-  // DOMMatrix を得る。macOS には入るが **Vercel の Linux には入らなかった**ので、
-  // 本番だけが `ReferenceError: DOMMatrix is not defined` で落ち、
-  // **PDF が 1 件も読めなかった**（2026-08-24）。
+  // pdfjs（ブラウザ向けの描画エンジン）を使っていたとき、Vercel の実行環境で
+  // **続けて 2 つ**に当たった。どちらも**手元では再現しない**:
+  //   1. DOMMatrix is not defined（@napi-rs/canvas は optionalDependencies で
+  //      macOS には入るが Linux には入らなかった）
+  //   2. Setting up fake worker failed（Next がワーカーの実体を含めなかった）
   //
-  // 🔴 **この検査は原文で見る。** 手元の node_modules には
-  // `@napi-rs/canvas` が入っているので、**代用を消しても実行では落ちない**。
-  // 「手元で通ったから大丈夫」がそのまま罠になった件なので、
-  // 実行結果ではなく結線を見張る。
-  test("🔴 pdfjs を読む前に、Node 用の代用を置いている", async () => {
+  // 1 を代用で塞いだら 2 が出た。**いたちごっこ**だったので道具を替えた。
+  // ここが pdfjs に戻ると、また本番でだけ PDF が読めなくなる。
+  test("🔴 PDF の読み取りに pdfjs を使っていない", async () => {
     const fsmod = await import("node:fs");
     const src = fsmod.readFileSync("src/lib/file-validate.ts", "utf8");
+    const code = src
+      .split("\n")
+      .filter((l) => !l.trimStart().startsWith("*") && !l.trimStart().startsWith("//"))
+      .join("\n");
     assert.ok(
-      src.includes("function ensurePdfGlobals"),
-      "DOMMatrix 等の代用が無い。Vercel では PDF が 1 件も読めなくなる",
+      !code.includes("pdfjs-dist"),
+      "pdfjs に戻っている。ワーカーとキャンバスを要求するので、本番でだけ読めなくなる",
     );
-    const call = src.indexOf("ensurePdfGlobals();");
-    const imp = src.indexOf('import("pdfjs-dist');
-    assert.ok(call > 0 && imp > 0, "代用の呼び出しか import が見つからない");
-    assert.ok(call < imp, "代用が import より後にある。読み込み時に参照されると落ちる");
-  });
-});
+    assert.ok(code.includes('import("pdf-lib")'), "pdf-lib を使っていない");
+  });});

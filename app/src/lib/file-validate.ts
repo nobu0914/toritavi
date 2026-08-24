@@ -123,128 +123,70 @@ export function readImageSize(
 }
 
 /**
- * PDF を実際に開いてページ数を得る。暗号化・破損はここで分かる。
+ * PDF を開いてページ数を得る。暗号化・破損はここで分かる。
  *
- * `pdfjs-dist` は既に依存に入っている（Web の閲覧で使用）。
- * **新しい依存を足していない。**
+ * ## なぜ pdfjs をやめたか（2026-08-24）
+ *
+ * もとは `pdfjs-dist` を使っていた（Web の閲覧で既に依存にあったため）。
+ * だが**ブラウザ向けの描画エンジン**で、ページ数を数えるだけの用途には
+ * ワーカーもキャンバスも要らないのに、Vercel の実行環境で**続けて 2 つ**に当たった:
+ *
+ *   1. `ReferenceError: DOMMatrix is not defined`
+ *      —— pdfjs は Node では `@napi-rs/canvas` から得るが、これは
+ *      **optionalDependencies** で、macOS には入るが Linux には入らなかった
+ *   2. `Setting up fake worker failed: Cannot find module
+ *      '/var/task/app/.next/server/chunks/pdf.worker.mjs'`
+ *      —— Next のバンドラがワーカーの実体を含めていなかった
+ *
+ * 🔴 **どちらも本番でしか出ない。** 手元では両方そろっているので通ってしまう。
+ * 1 を代用で塞いだら 2 が出た。**いたちごっこになる形だった。**
+ *
+ * `pdf-lib` は**純 JS で、ワーカーもキャンバスも使わない**。構造を読むための
+ * 道具なので、この用途に合っている。実測でバイト列も奪わない
+ * （pdfjs は `data` の ArrayBuffer を transfer するので写しが要った）。
+ *
+ * ## 分類
+ *
+ * - import が失敗 → `pdf_unreadable`（**こちら側の問題**）
+ * - 暗号化 → `pdf_encrypted`
+ * - それ以外の例外 → `pdf_corrupt`。pdf-lib は環境に依存しないので、
+ *   ここまで来たら**中身の問題**である可能性が高い。
+ *   ただし**必ずログに残す**（決めつけない）
  */
-/**
- * pdfjs が Node で参照するブラウザ API の**最小の代用**。
- *
- * ## なぜ要るか（2026-08-24 に本番で発覚）
- *
- * pdfjs は Node では `@napi-rs/canvas` から `DOMMatrix` などを得る。これは
- * pdfjs の **optionalDependencies** で、**macOS には入るが Vercel の Linux 環境
- * には入らなかった**。結果、本番だけがこう落ちていた:
- *
- *     ReferenceError | DOMMatrix is not defined
- *     Warning: Cannot load "@napi-rs/canvas": Cannot find module …
- *
- * 🔴 **PDF が 1 件も読めなかった。** しかも当時は理由を握り潰していたので
- * 「ファイルが壊れている可能性があります」と表示され、**利用者は自分の
- * ファイルを疑うことになっていた**（実際に正常な e チケットで報告された）。
- *
- * 🔴 **ローカルでは再現しない。** 手元の node_modules には
- * `@napi-rs/canvas` が入っているので、同じコードが通ってしまう。
- * **「手元で通ったから大丈夫」がそのまま罠になる形。**
- * 再現するには node_modules/@napi-rs を一時的に退避して実行する。
- *
- * ## なぜ代用で足りるのか
- *
- * ここでやるのは `getDocument` → `numPages` だけで、**描画は一切しない**。
- * 参照されたときに落ちなければよい。`@napi-rs/canvas`（ネイティブ binary・
- * 数十 MB）を依存に足すより軽く、関数バンドルも太らせない。
- *
- * 実測: 退避して再現 → `DOMMatrix is not defined`。この代用を入れると
- * 同じ PDF が 3 ページで開ける。
- *
- * `??=` なので、`@napi-rs/canvas` が使える環境では**何も上書きしない**。
- */
-function ensurePdfGlobals(): void {
-  const g = globalThis as Record<string, unknown>;
-  g.DOMMatrix ??= class DOMMatrix {
-    a = 1; b = 0; c = 0; d = 1; e = 0; f = 0;
-    constructor(init?: number[]) {
-      if (Array.isArray(init) && init.length >= 6) {
-        [this.a, this.b, this.c, this.d, this.e, this.f] = init;
-      }
-    }
-  };
-  g.Path2D ??= class Path2D {};
-  g.ImageData ??= class ImageData {
-    width: number;
-    height: number;
-    data: Uint8ClampedArray;
-    constructor(w: number, h: number) {
-      this.width = w;
-      this.height = h;
-      this.data = new Uint8ClampedArray(w * h * 4);
-    }
-  };
-}
-
 export async function readPdfPages(
   b: Uint8Array,
 ): Promise<
   { pages: number } | { error: "pdf_encrypted" | "pdf_corrupt" | "pdf_unreadable" }
 > {
+  let lib: typeof import("pdf-lib");
   try {
-    // **import より先に**代用を置く。読み込み時に参照されることがある。
-    ensurePdfGlobals();
-    const mod = await import("pdfjs-dist/legacy/build/pdf.mjs");
-    const task = mod.getDocument({
-      // 🔴 **写しを渡す。呼び出し元のバイト列を渡さない。**
-      //
-      //    pdfjs は `data` の ArrayBuffer を**奪う**（transfer）。渡したまま
-      //    にすると、この関数を抜けたあと呼び出し元の Uint8Array は
-      //    **長さ 0** になる。`route.ts` は検証のあと同じ配列を
-      //    `files.push({ bytes: dec.bytes })` で Claude へ送るので、
-      //    **空の PDF を送ることになる**（2026-08-24 に実測して発覚。
-      //    validateFile が `bytes: 0` を返していたのが手がかり）。
-      //
-      //    DOMMatrix の件を直しただけだと、今度は「AI が何も読めない」に
-      //    化けて、原因がさらに追いにくくなっていた。
-      //    `slice()` は新しい ArrayBuffer に複製する。
-      data: b.slice(),
-      // 外部リソースを一切取りに行かせない。
-      isEvalSupported: false,
-      useSystemFonts: false,
-      disableFontFace: true,
-      // 空パスワードを試させない（暗号化はここで例外になってほしい）。
-      password: "",
+    lib = await import("pdf-lib");
+  } catch (e) {
+    // 実行環境の問題。**利用者のファイルのせいにしない。**
+    console.error("[file-validate] pdf-lib を読み込めなかった:", e);
+    return { error: "pdf_unreadable" };
+  }
+
+  try {
+    const doc = await lib.PDFDocument.load(b, {
+      // 暗号化はここで例外にしたい（黙って開かない）。
+      ignoreEncryption: false,
+      // 何も書き換えない。読むだけ。
+      updateMetadata: false,
     });
-    const doc = await task.promise;
-    const pages = doc.numPages;
-    await doc.destroy();
+    const pages = doc.getPageCount();
     if (!Number.isFinite(pages) || pages < 1) return { error: "pdf_corrupt" };
     return { pages };
   } catch (e) {
+    if (e instanceof lib.EncryptedPDFError) return { error: "pdf_encrypted" };
     const name = (e as { name?: string })?.name ?? "";
     const message = (e as { message?: string })?.message ?? String(e);
-
-    // pdfjs は暗号化 PDF で PasswordException を投げる。
-    if (name === "PasswordException") return { error: "pdf_encrypted" };
-
-    // 🔴 **中身が壊れていると言えるのは、pdfjs がそう言ったときだけ。**
-    //
-    //    もとは**どの例外も pdf_corrupt** にまとめていた。だから
-    //    こちら側の問題（実行環境で pdfjs が動かない等）でも
-    //    「ファイルが壊れている可能性があります」と表示され、
-    //    **利用者は自分のファイルを疑うことになる。**
-    //    2026-08-24 に実機で発覚 —— 正常に開ける 3 ページの e チケットが
-    //    弾かれた（同じファイルをローカルの pdfjs で開くと通る）。
-    //
-    //    理由を握り潰していたので、**なぜ落ちたのかを誰も追えなかった。**
-    //    JR000108（停止スイッチを「上限超過」と表示していた件）と同じ型。
-    if (name === "InvalidPDFException" || name === "MissingPDFException") {
-      return { error: "pdf_corrupt" };
-    }
-
-    // ここに来たら**原因が分かっていない**。必ず残す。
-    console.error("[file-validate] PDF を開けなかった（原因不明）:", name, "|", message);
-    return { error: "pdf_unreadable" };
+    // **決めつけない。** 中身の問題である可能性が高いが、必ず残す。
+    console.error("[file-validate] PDF を開けなかった:", name, "|", message);
+    return { error: "pdf_corrupt" };
   }
 }
+
 
 /**
  * 1 ファイルを検証する。
