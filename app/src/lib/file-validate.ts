@@ -35,6 +35,8 @@ export type ValidateNg = {
     | "mime_mismatch"
     | "pdf_encrypted"
     | "pdf_corrupt"
+    // 🔴 **こちら側の問題**。利用者のファイルのせいにしない
+    | "pdf_unreadable"
     | "pdf_too_many_pages"
     | "image_dimensions";
 };
@@ -128,7 +130,9 @@ export function readImageSize(
  */
 export async function readPdfPages(
   b: Uint8Array,
-): Promise<{ pages: number } | { error: "pdf_encrypted" | "pdf_corrupt" }> {
+): Promise<
+  { pages: number } | { error: "pdf_encrypted" | "pdf_corrupt" | "pdf_unreadable" }
+> {
   try {
     const mod = await import("pdfjs-dist/legacy/build/pdf.mjs");
     const task = mod.getDocument({
@@ -147,9 +151,29 @@ export async function readPdfPages(
     return { pages };
   } catch (e) {
     const name = (e as { name?: string })?.name ?? "";
+    const message = (e as { message?: string })?.message ?? String(e);
+
     // pdfjs は暗号化 PDF で PasswordException を投げる。
     if (name === "PasswordException") return { error: "pdf_encrypted" };
-    return { error: "pdf_corrupt" };
+
+    // 🔴 **中身が壊れていると言えるのは、pdfjs がそう言ったときだけ。**
+    //
+    //    もとは**どの例外も pdf_corrupt** にまとめていた。だから
+    //    こちら側の問題（実行環境で pdfjs が動かない等）でも
+    //    「ファイルが壊れている可能性があります」と表示され、
+    //    **利用者は自分のファイルを疑うことになる。**
+    //    2026-08-24 に実機で発覚 —— 正常に開ける 3 ページの e チケットが
+    //    弾かれた（同じファイルをローカルの pdfjs で開くと通る）。
+    //
+    //    理由を握り潰していたので、**なぜ落ちたのかを誰も追えなかった。**
+    //    JR000108（停止スイッチを「上限超過」と表示していた件）と同じ型。
+    if (name === "InvalidPDFException" || name === "MissingPDFException") {
+      return { error: "pdf_corrupt" };
+    }
+
+    // ここに来たら**原因が分かっていない**。必ず残す。
+    console.error("[file-validate] PDF を開けなかった（原因不明）:", name, "|", message);
+    return { error: "pdf_unreadable" };
   }
 }
 
@@ -204,6 +228,8 @@ export const REJECT_MESSAGE: Record<ValidateNg["reason"], string> = {
   mime_mismatch: "ファイルの中身と種類が一致しません。別のファイルでお試しください。",
   pdf_encrypted: "パスワード付きの PDF は読み取れません。保護を外してからお試しください。",
   pdf_corrupt: "PDF を開けませんでした。ファイルが壊れている可能性があります。",
+  // 🔴 **原因がこちらにある可能性が高い。** 利用者のファイルを疑わせない。
+  pdf_unreadable: "PDF を読み取れませんでした。しばらくしてからお試しください。直らないときはお問い合わせください。",
   pdf_too_many_pages: "PDF は 20 ページまでです。必要なページだけを取り出してお試しください。",
   image_dimensions: "画像のサイズが大きすぎます。縮小してからお試しください。",
 };
