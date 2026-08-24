@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { logAiRejection } from "@/lib/moderation";
 import { createServiceClient } from "@/lib/supabase-service";
+import { getAiMode, MODE_MESSAGE } from "@/lib/ai-switch";
 
 /**
  * AI 利用制限（OCR / コンシェルジュ共通）。
@@ -686,6 +687,24 @@ export async function beginOcrRequest(args: {
       },
       { status: 429 },
     );
+  }
+  // 🔴 **DB 側の非常停止スイッチ**（`toritavi_ai_mode_blocks`）。
+  //
+  // route.ts も送信前に `getAiMode()` を見ているので、通常はここまで来ない。
+  // 来るのは **サーバの判定をすり抜けた場合** —— 15 秒キャッシュの隙、
+  // あるいはコードの側が壊れているとき。**そのための二重化**なので、
+  // ここで握り潰さない（`CLAUDE.md` §5「安全装置は静かに嘘をつかせない」）。
+  //
+  // 🔴 **理由は必ず「停止」で返す。** 上限（429）の文言に寄せると、
+  //    残っているのに使い切ったと読めて利用者は諦める（JR000108 で
+  //    アプリ側の同じ間違いを直したばかり）。
+  if (status === "ai_disabled") {
+    const mode = await getAiMode("ocr");
+    // キャッシュが古くて 'on' に見えることがある。DB は止めているので、
+    // **迷ったら「停止」と言う。**「不明」を返さない。
+    const message = mode === "on" ? MODE_MESSAGE.off : MODE_MESSAGE[mode];
+    await logAiRejection(args.userId, "ocr", "ai_disabled");
+    return NextResponse.json({ error: "ai_disabled", message }, { status: 503 });
   }
   if (status === "budget_exceeded") {
     await logAiRejection(args.userId, "ocr", "budget_exceeded");
