@@ -120,4 +120,60 @@ describe("PDF", () => {
     assert.equal(r.ok, false);
     if (!r.ok) assert.ok(r.reason === "pdf_corrupt" || r.reason === "pdf_encrypted");
   });
+
+  // 🔴 **検証がバイト列を奪わないこと。**
+  //
+  // pdfjs は `data` の ArrayBuffer を transfer する。写しを渡さないと、
+  // 検証を抜けたあと呼び出し元の Uint8Array が**長さ 0** になる。
+  // route.ts は検証のあと同じ配列を Claude へ送るので、
+  // **空の PDF を送ることになる**（2026-08-24 に実測して発覚）。
+  //
+  // 例外は出ない。AI が「何も読めない」と返すだけなので、
+  // **原因が PDF 側にあるように見える。**
+  test("🔴 検証しても、渡したバイト列が生きている", async () => {
+    const b = pdf(3);
+    const before = b.byteLength;
+    assert.ok(before > 0);
+    const r = await validateFile(b, "application/pdf");
+    assert.equal(r.ok, true);
+    assert.equal(
+      b.byteLength,
+      before,
+      "検証がバイト列を奪っている。このあと Claude へ送ると空になる",
+    );
+    if (r.ok) {
+      assert.equal(r.bytes, before, "報告しているバイト数が実物と違う");
+    }
+  });
+
+  test("同じバイト列を二度検証できる", async () => {
+    const b = pdf(2);
+    const a1 = await validateFile(b, "application/pdf");
+    const a2 = await validateFile(b, "application/pdf");
+    assert.deepEqual(a1, a2, "二度目の結果が違う＝一度目が壊している");
+  });
+
+  // 🔴 **Node にブラウザの API を用意してから pdfjs を読むこと。**
+  //
+  // pdfjs は Node では `@napi-rs/canvas`（**optionalDependencies**）から
+  // DOMMatrix を得る。macOS には入るが **Vercel の Linux には入らなかった**ので、
+  // 本番だけが `ReferenceError: DOMMatrix is not defined` で落ち、
+  // **PDF が 1 件も読めなかった**（2026-08-24）。
+  //
+  // 🔴 **この検査は原文で見る。** 手元の node_modules には
+  // `@napi-rs/canvas` が入っているので、**代用を消しても実行では落ちない**。
+  // 「手元で通ったから大丈夫」がそのまま罠になった件なので、
+  // 実行結果ではなく結線を見張る。
+  test("🔴 pdfjs を読む前に、Node 用の代用を置いている", async () => {
+    const fsmod = await import("node:fs");
+    const src = fsmod.readFileSync("src/lib/file-validate.ts", "utf8");
+    assert.ok(
+      src.includes("function ensurePdfGlobals"),
+      "DOMMatrix 等の代用が無い。Vercel では PDF が 1 件も読めなくなる",
+    );
+    const call = src.indexOf("ensurePdfGlobals();");
+    const imp = src.indexOf('import("pdfjs-dist');
+    assert.ok(call > 0 && imp > 0, "代用の呼び出しか import が見つからない");
+    assert.ok(call < imp, "代用が import より後にある。読み込み時に参照されると落ちる");
+  });
 });

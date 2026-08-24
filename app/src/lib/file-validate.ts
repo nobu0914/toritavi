@@ -128,15 +128,84 @@ export function readImageSize(
  * `pdfjs-dist` は既に依存に入っている（Web の閲覧で使用）。
  * **新しい依存を足していない。**
  */
+/**
+ * pdfjs が Node で参照するブラウザ API の**最小の代用**。
+ *
+ * ## なぜ要るか（2026-08-24 に本番で発覚）
+ *
+ * pdfjs は Node では `@napi-rs/canvas` から `DOMMatrix` などを得る。これは
+ * pdfjs の **optionalDependencies** で、**macOS には入るが Vercel の Linux 環境
+ * には入らなかった**。結果、本番だけがこう落ちていた:
+ *
+ *     ReferenceError | DOMMatrix is not defined
+ *     Warning: Cannot load "@napi-rs/canvas": Cannot find module …
+ *
+ * 🔴 **PDF が 1 件も読めなかった。** しかも当時は理由を握り潰していたので
+ * 「ファイルが壊れている可能性があります」と表示され、**利用者は自分の
+ * ファイルを疑うことになっていた**（実際に正常な e チケットで報告された）。
+ *
+ * 🔴 **ローカルでは再現しない。** 手元の node_modules には
+ * `@napi-rs/canvas` が入っているので、同じコードが通ってしまう。
+ * **「手元で通ったから大丈夫」がそのまま罠になる形。**
+ * 再現するには node_modules/@napi-rs を一時的に退避して実行する。
+ *
+ * ## なぜ代用で足りるのか
+ *
+ * ここでやるのは `getDocument` → `numPages` だけで、**描画は一切しない**。
+ * 参照されたときに落ちなければよい。`@napi-rs/canvas`（ネイティブ binary・
+ * 数十 MB）を依存に足すより軽く、関数バンドルも太らせない。
+ *
+ * 実測: 退避して再現 → `DOMMatrix is not defined`。この代用を入れると
+ * 同じ PDF が 3 ページで開ける。
+ *
+ * `??=` なので、`@napi-rs/canvas` が使える環境では**何も上書きしない**。
+ */
+function ensurePdfGlobals(): void {
+  const g = globalThis as Record<string, unknown>;
+  g.DOMMatrix ??= class DOMMatrix {
+    a = 1; b = 0; c = 0; d = 1; e = 0; f = 0;
+    constructor(init?: number[]) {
+      if (Array.isArray(init) && init.length >= 6) {
+        [this.a, this.b, this.c, this.d, this.e, this.f] = init;
+      }
+    }
+  };
+  g.Path2D ??= class Path2D {};
+  g.ImageData ??= class ImageData {
+    width: number;
+    height: number;
+    data: Uint8ClampedArray;
+    constructor(w: number, h: number) {
+      this.width = w;
+      this.height = h;
+      this.data = new Uint8ClampedArray(w * h * 4);
+    }
+  };
+}
+
 export async function readPdfPages(
   b: Uint8Array,
 ): Promise<
   { pages: number } | { error: "pdf_encrypted" | "pdf_corrupt" | "pdf_unreadable" }
 > {
   try {
+    // **import より先に**代用を置く。読み込み時に参照されることがある。
+    ensurePdfGlobals();
     const mod = await import("pdfjs-dist/legacy/build/pdf.mjs");
     const task = mod.getDocument({
-      data: b,
+      // 🔴 **写しを渡す。呼び出し元のバイト列を渡さない。**
+      //
+      //    pdfjs は `data` の ArrayBuffer を**奪う**（transfer）。渡したまま
+      //    にすると、この関数を抜けたあと呼び出し元の Uint8Array は
+      //    **長さ 0** になる。`route.ts` は検証のあと同じ配列を
+      //    `files.push({ bytes: dec.bytes })` で Claude へ送るので、
+      //    **空の PDF を送ることになる**（2026-08-24 に実測して発覚。
+      //    validateFile が `bytes: 0` を返していたのが手がかり）。
+      //
+      //    DOMMatrix の件を直しただけだと、今度は「AI が何も読めない」に
+      //    化けて、原因がさらに追いにくくなっていた。
+      //    `slice()` は新しい ArrayBuffer に複製する。
+      data: b.slice(),
       // 外部リソースを一切取りに行かせない。
       isEvalSupported: false,
       useSystemFonts: false,
