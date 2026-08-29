@@ -184,7 +184,7 @@ bash tool/backup_schedule.sh uninstall
 | 対象 | 装置 | 効果 |
 |---|---|---|
 | Cloudflare R2 | Budget Alert **$1** | 無料枠を超えて課金が発生した瞬間にメール通知 |
-| Anthropic API（OCR） | 月予算 **$20**（`AI_OCR_BUDGET_MONTHLY_CENTS`）| 超過で全体を 503 停止 |
+| Anthropic API（OCR） | **DB の `toritavi_ai_budget_limits`**（audience 別） | 超過で 429。🔴 `AI_OCR_BUDGET_MONTHLY_CENTS` は **OCR に効かない**（2026-08-30 実測。この env を読む関数はコンシェルジュ専用） |
 | Anthropic API（コンシェルジュ） | 月予算 **$50**（`AI_CONCIERGE_BUDGET_MONTHLY_CENTS`）| 同上 |
 | 利用者単位 | 日次リクエスト/トークン上限・分間レート | 1人が使い切れないようにする（429）|
 
