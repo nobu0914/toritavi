@@ -187,7 +187,19 @@ export type AdminUserListResult = {
   perPage: number;
   total: number;
   rows: AdminUserListRow[];
+  /**
+   * 検索が上限で打ち切られた。**「該当なし」と区別できるようにする。**
+   *
+   * 🔴 これが無いと、1001 人目以降を正確なメールで検索しても
+   * 「該当なし」に見え、サポートが**存在しないと判断する**。
+   */
+  searchTruncated?: boolean;
 };
+
+/** 検索で捲る 1 ページの件数（GoTrue の上限）。 */
+const SEARCH_PAGE_SIZE = 1000;
+/** 捲る上限。無制限にすると検索 1 回で全件を引いて画面が固まる。 */
+const SEARCH_MAX_PAGES = 20;
 
 export function maskEmail(email: string | null | undefined): string {
   if (!email) return "—";
@@ -215,9 +227,8 @@ export async function fetchAdminUserList(
   const page = Math.max(opts.page ?? 1, 1);
   const query = (opts.query ?? "").trim();
 
-  // Pull a window of users. supabase admin API doesn't support email
-  // LIKE filtering, so for the query branch we pull the first N pages
-  // and filter client-side (good enough while user count is small).
+  // supabase の admin API はメールの部分一致検索を持たないので、検索は
+  // **捲って取ってから JS で絞る**。上限に当たったら [searchTruncated] で返す。
   let users: Array<{
     id: string;
     email?: string | null;
@@ -225,6 +236,7 @@ export async function fetchAdminUserList(
     last_sign_in_at?: string | null;
   }> = [];
   let total = 0;
+  let searchTruncated = false;
 
   try {
     if (query) {
@@ -243,8 +255,30 @@ export async function fetchAdminUserList(
         }
       }
       if (users.length === 0) {
-        const { data } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-        const all = data?.users ?? [];
+        // 🔴 **捲る。** 以前は `page: 1, perPage: 1000` の 1 回だけで、
+        //    **1001 人目以降は正確なメールで検索しても「該当なし」**が
+        //    返っていた。サポートは「そんなアカウントは無い」と判断する。
+        //    件数がずれるダッシュボードと違い、**存在を否定する**ので質が違う。
+        //    （`account/delete` の `listAll` と同じ罠。あちらは捲っている）
+        //
+        //    上限は付ける。無制限に捲ると、利用者が増えたときに検索 1 回で
+        //    全件を引いて画面が固まる。**打ち切ったことは黙らずに返す。**
+        type ListedUser = Awaited<
+          ReturnType<typeof admin.auth.admin.listUsers>
+        >["data"]["users"][number];
+        const all: ListedUser[] = [];
+        let truncated = false;
+        for (let p = 1; p <= SEARCH_MAX_PAGES; p++) {
+          const { data } = await admin.auth.admin.listUsers({
+            page: p,
+            perPage: SEARCH_PAGE_SIZE,
+          });
+          const batch = data?.users ?? [];
+          all.push(...batch);
+          if (batch.length < SEARCH_PAGE_SIZE) break;
+          if (p === SEARCH_MAX_PAGES) truncated = true;
+        }
+        searchTruncated = truncated;
         const q = query.toLowerCase();
         const filtered = all.filter((u) =>
           (u.email ?? "").toLowerCase().includes(q) || u.id.toLowerCase().includes(q)
@@ -270,11 +304,11 @@ export async function fetchAdminUserList(
     }
   } catch (e) {
     console.warn("[admin-queries] fetchAdminUserList failed", e);
-    return { page, perPage, total: 0, rows: [] };
+    return { page, perPage, total: 0, rows: [], searchTruncated };
   }
 
   if (users.length === 0) {
-    return { page, perPage, total, rows: [] };
+    return { page, perPage, total, rows: [], searchTruncated };
   }
 
   const ids = users.map((u) => u.id);
@@ -338,7 +372,7 @@ export async function fetchAdminUserList(
     conciergeRequestsToday: conciergeBy.get(u.id) ?? 0,
   }));
 
-  return { page, perPage, total, rows };
+  return { page, perPage, total, rows, searchTruncated };
 }
 
 export type AdminUserDetail = {

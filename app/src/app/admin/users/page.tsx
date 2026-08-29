@@ -113,6 +113,27 @@ export default async function AdminUsersPage({
         </form>
       )}
 
+      {/* 🔴 **打ち切りを黙らせない。** 検索が上限に当たったとき、
+          「該当なし」と「上限で見えていない」を区別できないと、
+          **実在する利用者を「存在しない」と判断する。** */}
+      {result.searchTruncated && (
+        <div
+          style={{
+            background: "#FFF7ED",
+            border: "1px solid #FDBA74",
+            borderRadius: 10,
+            padding: "10px 14px",
+            marginBottom: 12,
+            fontSize: 12,
+            color: "#9A3412",
+          }}
+        >
+          検索できる範囲の上限に達しました。
+          <strong>ここに出ていなくても、その利用者が存在しないとは限りません。</strong>
+          メールアドレス全体か、利用者 ID（UUID）で検索し直してください。
+        </div>
+      )}
+
       <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", borderBottom: "1px solid var(--n-100)", fontSize: 12, color: "var(--text-dim)" }}>
           <span>
