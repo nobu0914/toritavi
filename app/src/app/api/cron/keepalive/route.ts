@@ -43,6 +43,16 @@ export async function GET(request: NextRequest) {
     if (auth !== `Bearer ${secret}`) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+  } else {
+    // 🔴 **未設定なら、この経路は誰でも叩ける。**
+    //    データは返さないが、DB クエリと関数実行を他人に消費させられる。
+    //    必須にはしない（上記のとおり、止まる方が危ない）が、
+    //    **黙って弱いまま動かさない**。設定すれば Vercel Cron が
+    //    自動で `Authorization: Bearer $CRON_SECRET` を付けるので、
+    //    こちらは何も変えずに閉じる（2026-08-29 のレーン 8 検査）。
+    console.error(
+      "[cron/keepalive] CRON_SECRET が未設定。この経路は認証なしで叩ける",
+    );
   }
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || "";

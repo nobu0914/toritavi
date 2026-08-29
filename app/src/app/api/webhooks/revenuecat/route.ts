@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase-service";
+import { verifyRevenueCatSignature } from "@/lib/revenuecat-signature";
 
 /**
  * POST /api/webhooks/revenuecat
@@ -10,10 +11,26 @@ import { createServiceClient } from "@/lib/supabase-service";
  * (src/lib/ai-guard.ts) and /api/ai-usage reflect purchases made in the
  * mobile app (Apple IAP / Google Play Billing via RevenueCat).
  *
- * Auth: RevenueCat sends a fixed shared-secret string in the Authorization
- * header (configured in the RevenueCat dashboard) — there is no per-request
- * signature, so this header IS the entire trust boundary. No Origin check:
- * this is never called by a browser.
+ * ## 認証は 2 段
+ *
+ * 1. **Authorization ヘッダの共有シークレット**（`REVENUECAT_WEBHOOK_SECRET`）。
+ *    ダッシュボードで設定した固定文字列。
+ * 2. **HMAC 署名**（`REVENUECAT_WEBHOOK_HMAC_SECRET`）。
+ *    `X-RevenueCat-Webhook-Signature: t=<unix>,v1=<hex>` を
+ *    `HMAC-SHA256("<t>." + 生の本文)` と突き合わせる。
+ *
+ * 🔴 **1 だけでは、鍵が漏れた時点で本文を自由に作れる。**
+ * `INITIAL_PURCHASE` と任意の `app_user_id` を送るだけで、
+ * **一円も払わずに Pro になれる。** 2 は本文の改ざんと再送を止める。
+ * （2026-08-29 のレーン 8 検査で指摘）
+ *
+ * ⚠️ **HMAC は env が設定されているときだけ強制する。**
+ * ダッシュボードで有効にする前にコード側を必須にすると、
+ * **正しい webhook を全部 401 で落とす**。順番は
+ * 「①ダッシュボードで有効化 → ②env を設定 → 自動的に強制が効く」。
+ * env が無い間は**毎回 console.error を出す** —— 黙って弱いまま動かさない。
+ *
+ * Origin は見ない: ブラウザから呼ばれる経路ではない。
  *
  * CANCELLATION (auto-renew turned off) is deliberately a no-op — the
  * subscriber keeps access until the period actually ends. Only EXPIRATION
@@ -54,14 +71,45 @@ function isAuthorized(request: NextRequest): boolean {
   return timingSafeEqual(a, b);
 }
 
+/** UUID（Supabase の user_id）以外を `toritavi_user_plan` へ入れない。 */
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function POST(request: NextRequest) {
   if (!isAuthorized(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // 🔴 **生の本文を先に読む。** HMAC は受け取ったバイト列そのものに対する
+  //    計算なので、`request.json()` で解析してからでは検証できない。
+  let raw: string;
+  try {
+    raw = await request.text();
+  } catch {
+    return NextResponse.json({ error: "Invalid body" }, { status: 400 });
+  }
+
+  const sig = verifyRevenueCatSignature(
+    raw,
+    request.headers.get("x-revenuecat-webhook-signature"),
+    process.env.REVENUECAT_WEBHOOK_HMAC_SECRET,
+    Date.now(),
+  );
+  if (!sig.ok) {
+    console.error("[webhooks/revenuecat] 署名を検証できなかった:", sig.reason);
+    return NextResponse.json({ error: sig.reason }, { status: 401 });
+  }
+  if (!sig.enforced) {
+    // 🔴 弱いまま動いていることを、毎回はっきり残す。
+    console.error(
+      "[webhooks/revenuecat] HMAC 未設定のまま受理した。" +
+        "REVENUECAT_WEBHOOK_HMAC_SECRET を設定すること",
+    );
+  }
+
   let body: { event?: RevenueCatEvent };
   try {
-    body = await request.json();
+    body = JSON.parse(raw) as { event?: RevenueCatEvent };
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
@@ -69,6 +117,15 @@ export async function POST(request: NextRequest) {
   const event = body.event;
   if (!event?.app_user_id || !event.type) {
     return NextResponse.json({ error: "Missing event fields" }, { status: 400 });
+  }
+
+  // 🔴 **`app_user_id` をそのまま `user_id` に入れない。**
+  //    アプリは `Purchases.logIn(supabaseUserId)` で UUID を渡すが、
+  //    匿名 ID（`$RCAnonymousID:...`）や試験イベントの値が来ることもある。
+  //    UUID でないものを upsert すると外部キー違反で 500 になり、
+  //    RevenueCat が延々と再送する。**受け取れないものは 200 で捨てる。**
+  if (!UUID_RE.test(event.app_user_id)) {
+    return NextResponse.json({ ok: true, skipped: "not_a_supabase_user" });
   }
 
   const hasProEntitlement = (event.entitlement_ids ?? []).includes(PRO_ENTITLEMENT);
