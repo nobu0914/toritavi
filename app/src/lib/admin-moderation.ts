@@ -13,9 +13,59 @@ import { recordAuditLog } from "@/lib/admin-audit";
 import type { AdminContext } from "@/lib/admin-auth";
 import { sendToUser } from "@/lib/fcm";
 import type { UserStatus } from "@/lib/moderation";
+import { USER_OWNED_BUCKETS } from "@/lib/user-data-ledger";
 
-const STEP_ATTACHMENTS_BUCKET = "step-attachments";
-const AVATARS_BUCKET = "toritavi-avatars";
+/**
+ * 🔴 **バケットの一覧は台帳から取る。ここに書かない。**
+ *
+ * 2026-08-30 まで、この 2 つを直書きしていた。台帳
+ * （`user-data-ledger.ts`）は **3 つ**あり、`toritavi-feedback` が
+ * 落ちていた。結果:
+ *
+ * - 利用者詳細の「ファイル」に**フィードバック添付が出ない**
+ *   （予約票・搭乗券が写り込む前提のスクリーンショット）。エラーも出ない
+ * - super_admin が消そうとしても `invalid bucket` で拒否される
+ *
+ * **同じ漏れで一度事故っている** —— 台帳が生まれた理由がまさに
+ * 「退会 API から `toritavi-feedback` が漏れた」こと。
+ * **その修正が、閲覧・削除側に入っていなかった。**
+ *
+ * 台帳に足せばここも自動で追随する（`admin_buckets_match_ledger` が見張る）。
+ */
+const ADMIN_VISIBLE_BUCKETS = USER_OWNED_BUCKETS;
+
+/** `list()` が返す 1 件。SDK の `FileObject` をそのまま受ける。 */
+type StorageEntry = Awaited<
+  ReturnType<
+    ReturnType<ReturnType<typeof createServiceClient>["storage"]["from"]>["list"]
+  >
+>["data"] extends (infer T)[] | null
+  ? T
+  : never;
+
+/** Supabase Storage の `list()` は 1 回 1000 件で頭打ち。捲らないと黙って切れる。 */
+const LIST_PAGE = 1000;
+
+/**
+ * `prefix` 配下を全件返す。短いページが返るまで捲る。
+ *
+ * 🔴 **捲らないと、重い利用者のフォルダが黙って切れる。**
+ * `api/account/delete` の `listAll` が同じ理由で捲っている
+ * （あちらは「消し残す」、こちらは「見えない」）。**同じ罠の別の面。**
+ */
+async function listAllObjects(
+  bucket: ReturnType<ReturnType<typeof createServiceClient>["storage"]["from"]>,
+  prefix: string
+): Promise<StorageEntry[]> {
+  const out: StorageEntry[] = [];
+  for (let offset = 0; ; offset += LIST_PAGE) {
+    const { data, error } = await bucket.list(prefix, { limit: LIST_PAGE, offset });
+    if (error || !data?.length) break;
+    out.push(...data);
+    if (data.length < LIST_PAGE) break;
+  }
+  return out;
+}
 
 // ---------- user status ----------
 
@@ -296,36 +346,33 @@ export async function fetchUserFiles(userId: string): Promise<UserFile[]> {
   const admin = createServiceClient();
   const files: UserFile[] = [];
 
-  // step attachments: two-level {userId}/{stepId}/{file}
-  const stepBucket = admin.storage.from(STEP_ATTACHMENTS_BUCKET);
-  const { data: stepFolders } = await stepBucket.list(userId, { limit: 1000 });
-  for (const folder of stepFolders ?? []) {
-    // folders have no metadata.size; skip file-like entries defensively
-    const { data: inner } = await stepBucket.list(`${userId}/${folder.name}`, {
-      limit: 1000,
-    });
-    for (const f of inner ?? []) {
-      files.push({
-        bucket: STEP_ATTACHMENTS_BUCKET,
-        path: `${userId}/${folder.name}/${f.name}`,
-        name: f.name,
-        sizeBytes: (f.metadata?.size as number | undefined) ?? null,
-        createdAt: (f.created_at as string | undefined) ?? null,
-      });
+  for (const spec of ADMIN_VISIBLE_BUCKETS) {
+    const bucket = admin.storage.from(spec.id);
+    if (spec.depth === 1) {
+      // {userId}/{file}
+      for (const f of await listAllObjects(bucket, userId)) {
+        files.push({
+          bucket: spec.id,
+          path: `${userId}/${f.name}`,
+          name: f.name,
+          sizeBytes: (f.metadata?.size as number | undefined) ?? null,
+          createdAt: f.created_at ?? null,
+        });
+      }
+    } else {
+      // {userId}/{stepId}/{file}
+      for (const folder of await listAllObjects(bucket, userId)) {
+        for (const f of await listAllObjects(bucket, `${userId}/${folder.name}`)) {
+          files.push({
+            bucket: spec.id,
+            path: `${userId}/${folder.name}/${f.name}`,
+            name: f.name,
+            sizeBytes: (f.metadata?.size as number | undefined) ?? null,
+            createdAt: f.created_at ?? null,
+          });
+        }
+      }
     }
-  }
-
-  // avatar: {userId}/avatar.*
-  const avatarBucket = admin.storage.from(AVATARS_BUCKET);
-  const { data: avatarFiles } = await avatarBucket.list(userId, { limit: 20 });
-  for (const f of avatarFiles ?? []) {
-    files.push({
-      bucket: AVATARS_BUCKET,
-      path: `${userId}/${f.name}`,
-      name: f.name,
-      sizeBytes: (f.metadata?.size as number | undefined) ?? null,
-      createdAt: (f.created_at as string | undefined) ?? null,
-    });
   }
 
   return files;
@@ -356,7 +403,7 @@ export async function deleteUserFile(
   path: string,
   meta: { ip: string | null; userAgent: string | null }
 ): Promise<{ audited: boolean }> {
-  if (bucket !== STEP_ATTACHMENTS_BUCKET && bucket !== AVATARS_BUCKET) {
+  if (!ADMIN_VISIBLE_BUCKETS.some((b) => b.id === bucket)) {
     throw new Error("invalid bucket");
   }
   if (!isPathOwnedBy(userId, bucket, path)) {
@@ -388,7 +435,7 @@ export async function deleteUserFile(
 function isPathOwnedBy(userId: string, bucket: string, path: string): boolean {
   if (!path || path.includes("..")) return false;
   const first = path.split("/")[0];
-  return first === userId && (bucket === STEP_ATTACHMENTS_BUCKET || bucket === AVATARS_BUCKET);
+  return first === userId && ADMIN_VISIBLE_BUCKETS.some((b) => b.id === bucket);
 }
 
 // ---------- targeted notification ----------
