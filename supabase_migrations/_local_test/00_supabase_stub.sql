@@ -8,7 +8,23 @@ END $$;
 CREATE SCHEMA auth;
 -- 🔴 `is_anonymous` は本番（GoTrue）が持つ列。027 のゲスト分岐が読む。
 --    スタブに無いと 027 が「列が無い」で落ち、**実物と違う形を検査する**。
-CREATE TABLE auth.users (id UUID PRIMARY KEY, is_anonymous BOOLEAN NOT NULL DEFAULT FALSE);
+-- 🔴 列は**本番に実在するものだけ**を置く（2026-08-31 に実測）。
+--    スタブに無いと、それを読む移行が「列が無い」で落ち、
+--    **実物と違う形を検査する**ことになる。
+CREATE TABLE auth.users (
+  id UUID PRIMARY KEY,
+  is_anonymous BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  last_sign_in_at TIMESTAMPTZ
+);
+
+-- 旅程（029 が `deleted_at` を立てる先）。**最小限**。
+-- 本体の定義はアプリ側の移行にあり、ここでは 029 が触る列だけを持つ。
+CREATE TABLE IF NOT EXISTS toritavi_journeys (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  deleted_at TIMESTAMPTZ
+);
 -- auth.uid() は Supabase の関数。005/013 が参照する。
 CREATE FUNCTION auth.uid() RETURNS UUID LANGUAGE sql AS $$ SELECT NULL::uuid $$;
 
