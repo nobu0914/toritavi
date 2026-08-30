@@ -116,6 +116,49 @@ describe("🔴 処理の並び順", () => {
     );
   });
 
+  test("🔴 ゲストの端末関門が、重いファイル検証より前にある", () => {
+    // ここが後ろだと、枠を使い切った端末でも PDF を開かせられる（解析 DoS）。
+    assert.ok(
+      at("decideGuest(") < at("await validateFile("),
+      "端末の関門が validateFile より後ろにある",
+    );
+  });
+
+  test("🔴 予約の上限が、端末側の上限で頭打ちになっている", () => {
+    // **これを忘れると `decideGuest` が表示だけの飾りになる。**
+    // App Attest が通らない端末（1 件）でも DB の 3 件まで通ってしまう。
+    const r = code(route);
+    assert.ok(
+      /limitUnits:\s*Math\.min\(/.test(r),
+      "limitUnits が端末側の上限で頭打ちになっていない",
+    );
+    assert.ok(r.includes("guestLimit"), "端末側の上限を渡していない");
+  });
+
+  test("🔴 端末カウンタの書き戻しは、成功地点にだけある", () => {
+    const r = code(route);
+    const n = (r.match(/setGuestUsed\(/g) ?? []).length;
+    assert.equal(
+      n,
+      1,
+      `setGuestUsed が ${n} 箇所。失敗経路で進めると使えていないのに枠が減り、` +
+        "複数箇所にあると二重に減る",
+    );
+    // 成功のログより前（＝AI 呼び出しが返ったあと）にあること。
+    assert.ok(at("setGuestUsed(") < at('"[OCR] ok steps:"'), "成功地点にない");
+  });
+
+  test("🔴 App Attest を通さずに満額（3 件）を出していない", () => {
+    // 実装するまでは `failed` 固定。ここが `attested` に変わるのは、
+    // 検証を実装したときだけ（`guest-mode-spec.md` §11）。
+    const r = code(route);
+    assert.ok(
+      /GuestAttestState\s*=\s*"failed"/.test(r),
+      "🔴 App Attest 未実装のまま attested を渡している —— " +
+        "偽クライアントを排除できないまま満額を出す",
+    );
+  });
+
   test("トークンの実測が、予約より前にある", () => {
     // 予約は見積り額で予算を押さえる。実測が後ろだと押さえる額が間違う。
     assert.ok(

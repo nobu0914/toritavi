@@ -1,5 +1,14 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
+import { logAiRejection } from "@/lib/moderation";
+import { queryGuestUsed, setGuestUsed } from "@/lib/devicecheck";
+import {
+  decideGuest,
+  nextDeviceUsed,
+  type GuestAttestState,
+  type GuestDecision,
+  type GuestDeviceState,
+} from "@/lib/guest-quota";
 import { authenticateRequest } from "@/lib/supabase-server";
 import {
   audienceOf,
@@ -211,6 +220,49 @@ export async function POST(request: NextRequest) {
     const attempt = await tryOcrAttempt(userId, audience);
     if (attempt) return attempt;
 
+    // --- ゲストの端末側の関門（DeviceCheck）---
+    //
+    // 🔴 **利用者側（DB）の関門とは別。** あちらは匿名 user_id を数えるので、
+    //    アプリを消して入れ直せば新しい枠が手に入る。**Apple 側に残る 2 bit
+    //    だけがリセットされない。**
+    //
+    // 🔴 **重い検証より前に置く。** ここを抜けていない要求に PDF を開かせない。
+    let guestDevice: { token: string; decision: GuestDecision } | null = null;
+    let guestLimit: number | undefined;
+    if (audience === "guest") {
+      // 🔴 **App Attest はまだ実装していない。** 実装するまで全端末が
+      //    「未検証」= 1 件。ここを `attested` に変えるのは、
+      //    `attest.ts` の検証を通してから（`guest-mode-spec.md` §11）。
+      //    **DeviceCheck だけで 3 件にしない** —— 偽クライアントを排除できない
+      //    まま端末カウンタを信じると、カウンタごと偽装される。
+      const attestState: GuestAttestState = "failed";
+
+      const token = request.headers.get("x-guest-device-token");
+      const dev = token
+        ? await queryGuestUsed(token)
+        : ({ ok: false, reason: "unavailable" } as const);
+      const state: GuestDeviceState = dev.ok
+        ? dev.known
+          ? { kind: "known", used: dev.used }
+          : { kind: "fresh" }
+        : { kind: "unknown", reason: dev.reason };
+
+      const decision = decideGuest(attestState, state);
+      guestLimit = decision.limit;
+      if (!decision.allow) {
+        await logAiRejection(userId, "ocr", "guest_device_exhausted");
+        return NextResponse.json(
+          {
+            error: "guest_quota_exhausted",
+            message:
+              "お試しでご利用いただける回数の上限に達しました。無料登録すると続けてご利用いただけます。",
+          },
+          { status: 429 },
+        );
+      }
+      if (token && decision.writeBack) guestDevice = { token, decision };
+    }
+
     // --- ファイルの実体検証（AI を呼ぶ前。ここで落ちても消費しない）---
     const files: ParsedFile[] = [];
     let totalBytes = 0;
@@ -342,7 +394,13 @@ export async function POST(request: NextRequest) {
       //    plan で引くとゲストが**無料会員と同じ 5 件**になる
       //    （2026-08-30 まで実際にそうだった。まだ匿名を開けていなかったので
       //    表に出ていなかっただけ）。
-      limitUnits: OCR_GUARD.tiers[audience].quotaRequests,
+      // 🔴 **端末側の上限で頭打ちにする。** ここを忘れると、App Attest が
+      //    通らない端末（1 件）でも DB の 3 件まで通ってしまう ——
+      //    `decideGuest` の判定が**表示だけの飾り**になる。
+      limitUnits: Math.min(
+        OCR_GUARD.tiers[audience].quotaRequests,
+        guestLimit ?? Number.MAX_SAFE_INTEGER,
+      ),
       estCostCents: estCost,
       estTokens: actualInputTokens + MAX_OUTPUT_TOKENS,
       limitTokens: OCR_GUARD.tiers[audience].quotaTokens,
@@ -437,6 +495,16 @@ export async function POST(request: NextRequest) {
           },
           { status: 500 },
         );
+      }
+
+      // 🔴 **端末のカウンタは成功してから進める。** 失敗で進めると、
+      //    使えていないのに枠が減る。逆に進め忘れると再インストールと
+      //    同じ抜け道になるので、**成功地点はここ 1 か所に限る。**
+      //    書き戻しの失敗は致命ではない（利用者側の関門が残る）が、黙らない。
+      if (guestDevice) {
+        const next = nextDeviceUsed(guestDevice.decision.used, units);
+        const wrote = await setGuestUsed(guestDevice.token, next);
+        if (!wrote) console.error("[OCR] guest device counter not updated");
       }
 
       console.log(
