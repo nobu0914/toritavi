@@ -67,8 +67,10 @@ export type AnalyticsData = {
   economics: {
     monthLabel: string;
     monthRevenueYen: number;
-    monthAiCostYen: number;
-    monthNetYen: number;
+    /** 🔴 **`null` は「読めなかった」。0 と混ぜない**（2026-08-30 レーン 8）。 */
+    monthAiCostYen: number | null;
+    /** 原価が読めなければ純益も出せない。**引き算して 0 にしない。** */
+    monthNetYen: number | null;
   };
   activeUsers: number; // 期間内にログインしたユーザー数（capped）
 };
@@ -219,7 +221,7 @@ export async function fetchAnalytics(days = 30): Promise<AnalyticsData> {
       monthLabel: monthStart.slice(0, 7),
       monthRevenueYen,
       monthAiCostYen: economicsMonth,
-      monthNetYen: monthRevenueYen - economicsMonth,
+      monthNetYen: economicsMonth === null ? null : monthRevenueYen - economicsMonth,
     },
     activeUsers: users.activeInPeriod,
   };
@@ -384,23 +386,44 @@ async function fetchDailyUsage(
   return { ocr, concierge };
 }
 
-async function fetchMonthAiCost(admin: Client, monthStart: string): Promise<number> {
-  const read = async (table: string): Promise<number> => {
+/**
+ * 当月の AI 原価（¥）。**読めなかったときは `null`。**
+ *
+ * 🔴 **「使っていない」と「読めなかった」を同じ 0 にしない**
+ * （2026-08-30 レーン 8 の二巡目）。以前は `error` を捨て、catch でも 0 を
+ * 返していた —— RLS の変更・表の欠落・接続断のいずれでも
+ * **ダッシュボードに ¥0 と出る。** 運用は「支出は無い」と読む。
+ * **お金の表示でそれをやってはいけない**（`CLAUDE.md` §5）。
+ */
+async function fetchMonthAiCost(
+  admin: Client,
+  monthStart: string
+): Promise<number | null> {
+  const read = async (table: string): Promise<number | null> => {
     try {
-      const { data } = await admin
+      const { data, error } = await admin
         .from(table)
         .select("spend_cents")
         .eq("month", monthStart)
         .maybeSingle();
+      // 🔴 **error を捨てない。** 行が無いだけ（data === null）は 0 でよいが、
+      //    読めなかったのは 0 ではない。
+      if (error) {
+        console.error(`[admin-analytics] ${table} の原価を読めなかった`, error);
+        return null;
+      }
       return Number(data?.spend_cents ?? 0);
-    } catch {
-      return 0;
+    } catch (e) {
+      console.error(`[admin-analytics] ${table} の原価取得で例外`, e);
+      return null;
     }
   };
   const [ocr, concierge] = await Promise.all([
     read("toritavi_ocr_budget"),
     read("toritavi_concierge_budget"),
   ]);
+  // 片方でも読めなければ合計は出せない。**足して 0 にしない。**
+  if (ocr === null || concierge === null) return null;
   // spend_cents → ¥（既存 UI 慣習: /100）
   return (ocr + concierge) / 100;
 }

@@ -121,7 +121,19 @@ export async function POST(request: NextRequest) {
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { sb, userId, isAnonymous } = auth;
 
-  const plan = await resolvePlan(sb, userId);
+  // 🔴 **プランが読めないなら、上限判定に進まない**（2026-08-30 レーン 3）。
+  //    以前は `resolvePlan` が黙って free を返し、**Pro 契約者が 429
+  //    「今月の上限に達しました」を食らう**形だった。「分からない」を
+  //    「無料」に変換しない。
+  let plan;
+  try {
+    plan = await resolvePlan(sb, userId);
+  } catch {
+    return NextResponse.json(
+      { error: "plan_unavailable", message: "混み合っています。しばらくしてからお試しください。" },
+      { status: 503 },
+    );
+  }
   const audience = audienceOf(plan, isAnonymous);
 
   // 🔴 **効いている上限が確定仕様と違ったら黙らない。** env の設定漏れは

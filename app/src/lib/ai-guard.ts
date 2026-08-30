@@ -226,26 +226,12 @@ export const CONCIERGE_GUARD: AiGuardConfig = {
   },
 };
 
-/**
- * 利用者プランを解決。toritavi_user_plan に行が無い / テーブル未作成 / エラー時は
- * 'free'（= 制限が厳しい側）にフォールバックする。フェイルクローズ。
- */
-export async function resolvePlan(
-  sb: SupabaseClient,
-  userId: string,
-): Promise<Plan> {
-  try {
-    const { data } = await sb
-      .from("toritavi_user_plan")
-      .select("plan")
-      .eq("user_id", userId)
-      .maybeSingle();
-    return data?.plan === "pro" ? "pro" : "free";
-  } catch (e) {
-    console.error("[ai-guard] resolvePlan failed; defaulting to free:", e);
-    return "free";
-  }
-}
+// `resolvePlan` と `PlanUnavailableError` は `plan-resolve.ts` へ移した。
+// **`ai-guard.ts` は `next/server` を読むので、素の node テストから
+// import できない。** 純粋なロジックは別ファイルに置くと検査できる
+// （`ocr-limits` / `file-validate` / `revenuecat-signature` と同じ形）。
+import { resolvePlan, PlanUnavailableError } from "./plan-resolve";
+export { resolvePlan, PlanUnavailableError };
 
 /** ガードを通過したときの情報。呼び出し側が枚数チェックに使う。 */
 export type AiGuardPass = {

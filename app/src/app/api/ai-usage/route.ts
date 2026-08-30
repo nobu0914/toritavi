@@ -31,7 +31,19 @@ export async function GET(request: NextRequest) {
   }
   const { sb, userId } = auth;
 
-  const plan = await resolvePlan(sb, userId);
+  // 🔴 **読めなかったら 200 で `free` を返さない**（2026-08-30 レーン 3）。
+  //    アプリは「サーバに聞けた・無料だった」と解釈し、契約者に
+  //    「まだ反映されていません」を出す —— **課金の嘘**になる。
+  //    503 なら `subscriptionSync` は「聞けなかった」として扱える。
+  let plan;
+  try {
+    plan = await resolvePlan(sb, userId);
+  } catch {
+    return NextResponse.json(
+      { error: "plan_unavailable", message: "利用状況を取得できませんでした。" },
+      { status: 503 },
+    );
+  }
   const [ocr, concierge] = await Promise.all([
     getAiUsage(sb, userId, OCR_GUARD, plan),
     getAiUsage(sb, userId, CONCIERGE_GUARD, plan),

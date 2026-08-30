@@ -51,6 +51,8 @@ export default async function AdminAnalyticsPage({
 
   const a = await fetchAnalytics(days);
   const net = a.economics.monthNetYen;
+  // 🔴 **読めなかったことを「0」と書かない**（2026-08-30 レーン 8）。
+  const cost = a.economics.monthAiCostYen;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -90,9 +92,23 @@ export default async function AdminAnalyticsPage({
         <Kpi label="アクティブU（期間）" value={num(a.activeUsers)} hint={a.usage.signupsCapped ? "1000上限" : undefined} />
         <Kpi
           label={`純収益（${a.economics.monthLabel}）`}
-          value={yen(net)}
-          hint={`売上 ${yen(a.economics.monthRevenueYen)} − AI原価 ${yen(a.economics.monthAiCostYen)}`}
-          valueColor={net < 0 ? "var(--danger-700, #b00)" : net > 0 ? "var(--success-700, #1a7f4b)" : undefined}
+          // 🔴 **読めなかったことを「¥0」と書かない。** 運用は 0 を見て
+          //    「支出は無い」と読む（2026-08-30 レーン 8 の二巡目）。
+          value={net === null ? "取得できず" : yen(net)}
+          hint={
+            cost === null
+              ? `売上 ${yen(a.economics.monthRevenueYen)} − AI原価 🔴 取得できず`
+              : `売上 ${yen(a.economics.monthRevenueYen)} − AI原価 ${yen(cost)}`
+          }
+          valueColor={
+            net === null
+              ? "var(--danger-700, #b00)"
+              : net < 0
+                ? "var(--danger-700, #b00)"
+                : net > 0
+                  ? "var(--success-700, #1a7f4b)"
+                  : undefined
+          }
         />
       </section>
 
