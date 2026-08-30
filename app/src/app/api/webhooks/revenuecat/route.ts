@@ -1,7 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase-service";
-import { eventAtIso } from "@/lib/webhook-event-order";
+import { eventAtIso, revokedUserIds } from "@/lib/webhook-event-order";
 import { verifyRevenueCatSignature } from "@/lib/revenuecat-signature";
 
 /**
@@ -59,6 +59,8 @@ type RevenueCatEvent = {
   entitlement_ids?: string[];
   /** RevenueCat がイベントを起こした時刻。**配送順ではなく、これで並べる。** */
   event_timestamp_ms?: number;
+  /** `TRANSFER` で**権利を手放した側**の app_user_id。 */
+  transferred_from?: string[];
 };
 
 
@@ -123,6 +125,44 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Missing event fields" }, { status: 400 });
   }
 
+  // 🔴 **`TRANSFER` は「渡した側」も落とす。**
+  //    同じ Apple ID を別アカウントで復元すると、権利は移る。付与側だけ
+  //    見ていると**元の持ち主は `pro` のまま残り、払わずに Pro が続く**。
+  //    落ちも警告も出ない（`CLAUDE.md` §6-1）。
+  //
+  //    失効は付与と違って**証拠を要求しない** —— 手放したことは
+  //    `transferred_from` に載っている事実で、`entitlement_ids` の有無に
+  //    依存させるとフェイルオープンになる。
+  //
+  // 🔴 **下の `app_user_id` の UUID 関門より前に置く。** 譲渡先が匿名
+  //    （ログアウトしたまま同じ Apple ID で復元する）だと関門で先に
+  //    返ってしまい、**渡した側が Pro のまま残る。いちばん起きやすい形。**
+  const eventAtForTransfer = eventAtIso(event, Date.now());
+  const from = revokedUserIds(event);
+  if (from.length > 0) {
+    let admin;
+    try {
+      admin = createServiceClient();
+    } catch (e) {
+      console.error("[webhooks/revenuecat] service client unavailable", e);
+      return NextResponse.json(
+        { error: "Server is missing SUPABASE_SERVICE_ROLE_KEY" },
+        { status: 500 },
+      );
+    }
+    const { error: revokeErr } = await admin
+      .from("toritavi_user_plan")
+      .update({ plan: "free", updated_at: eventAtForTransfer })
+      .in("user_id", from)
+      .lt("updated_at", eventAtForTransfer);
+    if (revokeErr) {
+      console.error("[webhooks/revenuecat] transfer revoke failed", from, revokeErr);
+      // 5xx で再送させる。**ここを 200 で流すと、渡した側が Pro のまま残る。**
+      return NextResponse.json({ error: revokeErr.message }, { status: 500 });
+    }
+  }
+
+
   // 🔴 **`app_user_id` をそのまま `user_id` に入れない。**
   //    アプリは `Purchases.logIn(supabaseUserId)` で UUID を渡すが、
   //    匿名 ID（`$RCAnonymousID:...`）や試験イベントの値が来ることもある。
@@ -160,7 +200,7 @@ export async function POST(request: NextRequest) {
   //    配送順は保証されない。再送で遅れた EXPIRATION が RENEWAL の後ろに
   //    並ぶと、契約中の人が黙って free に落ちる。**戻す経路は無い。**
   //    `updated_at` はイベント発生時刻を持ち、それが順序の正本になる。
-  const eventAt = eventAtIso(event, Date.now());
+  const eventAt = eventAtForTransfer;
 
   // ① 行が無ければ作る（既にあれば触らない）。
   const { error: insErr } = await admin

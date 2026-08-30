@@ -25,3 +25,25 @@ export function eventAtIso(
     typeof ms === "number" && Number.isFinite(ms) && ms > 0 ? ms : now,
   ).toISOString();
 }
+
+/** UUID（Supabase の user_id）以外を `toritavi_user_plan` へ入れない。 */
+export const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * `TRANSFER` で**権利を手放した側**の user_id。ここを free に落とす。
+ *
+ * 🔴 同じ Apple ID を別アカウントで復元すると権利は移る。付与側だけ
+ * 見ていると**元の持ち主は `pro` のまま残り、払わずに Pro が続く**。
+ *
+ * 失効は付与と違って**証拠（`entitlement_ids`）を要求しない**。手放した
+ * ことは `transferred_from` に載っている事実で、権利 ID の有無に
+ * 依存させるとフェイルオープンになる。
+ */
+export function revokedUserIds(event: {
+  type?: string;
+  transferred_from?: string[];
+}): string[] {
+  if (event.type !== "TRANSFER") return [];
+  return (event.transferred_from ?? []).filter((id) => UUID_RE.test(id));
+}

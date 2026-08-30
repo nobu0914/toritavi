@@ -12,7 +12,7 @@
 
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { eventAtIso } from "../webhook-event-order.ts";
+import { eventAtIso, revokedUserIds } from "../webhook-event-order.ts";
 
 const NOW = Date.UTC(2026, 7, 30, 12, 0, 0);
 
@@ -42,4 +42,44 @@ test("古いイベントは新しいイベントより前に並ぶ", () => {
   const older = eventAtIso({ event_timestamp_ms: NOW - 60_000 }, NOW);
   const newer = eventAtIso({ event_timestamp_ms: NOW }, NOW);
   assert.ok(older < newer, `${older} < ${newer}`);
+});
+
+// ─────────── TRANSFER: 渡した側を落とす ───────────
+//
+// 同じ Apple ID を別アカウントで復元すると権利は移る。付与側だけ見ていると
+// **元の持ち主は pro のまま残り、払わずに Pro が続く**（2026-08-30 のレーン 3）。
+
+test("TRANSFER は transferred_from を失効対象にする", () => {
+  const a = "11111111-2222-3333-4444-555555555555";
+  assert.deepEqual(
+    revokedUserIds({ type: "TRANSFER", transferred_from: [a] }),
+    [a],
+  );
+});
+
+test("🔴 entitlement_ids が無くても失効させる", () => {
+  // 失効に証拠を要求するとフェイルオープンになる。手放した事実は
+  // transferred_from に載っている。
+  const a = "11111111-2222-3333-4444-555555555555";
+  assert.deepEqual(
+    revokedUserIds({ type: "TRANSFER", transferred_from: [a] }),
+    [a],
+  );
+});
+
+test("匿名 ID や壊れた値は混ぜない", () => {
+  const a = "11111111-2222-3333-4444-555555555555";
+  assert.deepEqual(
+    revokedUserIds({
+      type: "TRANSFER",
+      transferred_from: ["$RCAnonymousID:abc", "", "not-a-uuid", a],
+    }),
+    [a],
+  );
+});
+
+test("TRANSFER 以外では誰も落とさない", () => {
+  const a = "11111111-2222-3333-4444-555555555555";
+  assert.deepEqual(revokedUserIds({ type: "RENEWAL", transferred_from: [a] }), []);
+  assert.deepEqual(revokedUserIds({ type: "TRANSFER" }), []);
 });
