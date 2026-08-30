@@ -207,7 +207,8 @@ export async function POST(request: NextRequest) {
 
     // 🔴 **重い検証より前に、安価な試行制限を通す。**
     //    PDF を開くのは高い（解析 DoS の的）。ここを抜けていないと開かない。
-    const attempt = await tryOcrAttempt(userId, plan);
+    // 分間の試行上限も audience で引く（ゲストは会員より厳しい）。
+    const attempt = await tryOcrAttempt(userId, audience);
     if (attempt) return attempt;
 
     // --- ファイルの実体検証（AI を呼ぶ前。ここで落ちても消費しない）---
@@ -336,10 +337,15 @@ export async function POST(request: NextRequest) {
       userId,
       audience,
       units,
-      limitUnits: OCR_GUARD.tiers[plan].quotaRequests,
+      // 🔴 **`plan` ではなく `audience`。** ここが件数リミッターの本丸。
+      //    `resolvePlan` は行の無い匿名利用者に `free` を返すので、
+      //    plan で引くとゲストが**無料会員と同じ 5 件**になる
+      //    （2026-08-30 まで実際にそうだった。まだ匿名を開けていなかったので
+      //    表に出ていなかっただけ）。
+      limitUnits: OCR_GUARD.tiers[audience].quotaRequests,
       estCostCents: estCost,
       estTokens: actualInputTokens + MAX_OUTPUT_TOKENS,
-      limitTokens: OCR_GUARD.tiers[plan].quotaTokens,
+      limitTokens: OCR_GUARD.tiers[audience].quotaTokens,
       countedInput: counted.measured,
       reservedInput: counted.reserve,
     });

@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
   if (!auth) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const { sb, userId } = auth;
+  const { sb, userId, isAnonymous } = auth;
 
   type Body = {
     threadId?: string;
@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
   //    （2026-08-30・`CLAUDE.md` §6-1 の 3「同じ経路を通る呼び出しを数える」）。
   let guard;
   try {
-    guard = await enforceAiLimits(sb, userId, CONCIERGE_GUARD);
+    guard = await enforceAiLimits(sb, userId, CONCIERGE_GUARD, isAnonymous);
   } catch {
     return NextResponse.json(
       { error: "plan_unavailable", message: "混み合っています。しばらくしてからお試しください。" },

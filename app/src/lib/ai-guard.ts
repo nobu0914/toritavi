@@ -43,7 +43,18 @@ export type AiGuardConfig = {
    * 有料の原価は「人数 × 件数上限」で上界が計算できるので、予算という別軸は不要。
    */
   budgetMonthlyCents: number;
-  tiers: { free: TierLimits; pro: TierLimits };
+  /**
+   * 🔴 **上限は `Plan` ではなく `Audience` で引く。**
+   *
+   * 2026-08-30 まで `{ free, pro }` だった。ゲストは `Audience` にしか
+   * 存在せず件数の軸に無かったので、**匿名ログインを開けた瞬間に
+   * ゲストが無料会員と同じ 5 件を使える**状態だった
+   * （`toritavi_app/docs/guest-mode-spec.md` §2-1）。
+   *
+   * `Record` にして**3 つとも書かせる**。省略可にすると、足し忘れが
+   * 「静かに free と同じ」に化ける —— それが元の欠陥そのもの。
+   */
+  tiers: Record<Audience, TierLimits>;
   tables: {
     budget: string;
     /** クォータ判定の正本テーブル。quotaPeriod に対応するキー列を持つこと。 */
@@ -163,8 +174,16 @@ async function quotaKey(
   return { col: "month", val: data };
 }
 
-export { SPEC_FREE_REQUESTS, SPEC_PRO_REQUESTS } from "./ocr-plan-spec.ts";
-import { SPEC_FREE_REQUESTS, SPEC_PRO_REQUESTS } from "./ocr-plan-spec.ts";
+export {
+  SPEC_FREE_REQUESTS,
+  SPEC_GUEST_REQUESTS,
+  SPEC_PRO_REQUESTS,
+} from "./ocr-plan-spec.ts";
+import {
+  SPEC_FREE_REQUESTS,
+  SPEC_GUEST_REQUESTS,
+  SPEC_PRO_REQUESTS,
+} from "./ocr-plan-spec.ts";
 
 /**
  * 実際に効いている上限が確定仕様と違っていないかを見る。
@@ -174,10 +193,25 @@ import { SPEC_FREE_REQUESTS, SPEC_PRO_REQUESTS } from "./ocr-plan-spec.ts";
  * 違っていたら理由を返す。呼び出し側がログに残す。
  */
 export function quotaSpecMismatch(): string | null {
+  // 🔴 **guest も見る。** 2026-08-30 まで free と pro しか比べておらず、
+  //    `SPEC_GUEST_REQUESTS` は**本番コードから 1 度も読まれていなかった**。
+  //    仕様に 3 と書いてあるのに実装が 5 でも、落ちも警告も出なかった。
+  //    **見張りに足し忘れると、同じ沈黙をもう一度作る。**
+  const g = OCR_GUARD.tiers.guest.quotaRequests;
   const f = OCR_GUARD.tiers.free.quotaRequests;
   const p = OCR_GUARD.tiers.pro.quotaRequests;
-  if (f === SPEC_FREE_REQUESTS && p === SPEC_PRO_REQUESTS) return null;
-  return `free=${f}(spec ${SPEC_FREE_REQUESTS}) pro=${p}(spec ${SPEC_PRO_REQUESTS})`;
+  if (
+    g === SPEC_GUEST_REQUESTS &&
+    f === SPEC_FREE_REQUESTS &&
+    p === SPEC_PRO_REQUESTS
+  ) {
+    return null;
+  }
+  return (
+    `guest=${g}(spec ${SPEC_GUEST_REQUESTS}) ` +
+    `free=${f}(spec ${SPEC_FREE_REQUESTS}) ` +
+    `pro=${p}(spec ${SPEC_PRO_REQUESTS})`
+  );
 }
 
 export const OCR_GUARD: AiGuardConfig = {
@@ -201,6 +235,18 @@ export const OCR_GUARD: AiGuardConfig = {
       quotaRequests: cappedQuota(["AI_OCR_PRO_MONTHLY_REQUESTS"], SPEC_PRO_REQUESTS),
       quotaTokens: envNum(["AI_OCR_PRO_MONTHLY_TOKENS"], 3_000_000),
       ratePerMin: envNum(["AI_OCR_PRO_RATE_PER_MIN"], 10),
+    },
+    // 🔴 **ゲスト（未登録）。件数は「生涯 3 件」で、月ごとには戻らない。**
+    //    戻らないのはここではなく DB が決める —— `ocr_period_start()` が
+    //    匿名利用者に固定の番兵日付を返すので、集計のキーが動かない
+    //    （`supabase_migrations/027_ocr_period_guest.sql`）。
+    //    **この 2 つは対。片方だけ入れても「3 件 / 月」になる。**
+    guest: {
+      quotaRequests: cappedQuota(["AI_OCR_GUEST_REQUESTS"], SPEC_GUEST_REQUESTS),
+      quotaTokens: envNum(["AI_OCR_GUEST_TOKENS"], 300_000),
+      // 会員より厳しくする。ゲストは 1 台 3 件しか無いので、
+      // まとめ撮りの必要が薄い一方、攻撃の入口になりやすい。
+      ratePerMin: envNum(["AI_OCR_GUEST_RATE_PER_MIN"], 3),
     },
   },
   tables: {
@@ -245,6 +291,15 @@ export const CONCIERGE_GUARD: AiGuardConfig = {
       quotaTokens: envNum(["AI_CONCIERGE_PRO_DAILY_TOKENS"], 1_000_000),
       ratePerMin: envNum(["AI_CONCIERGE_PRO_RATE_PER_MIN"], 10),
     },
+    // 🔴 **ゲストはコンシェルジュを使えない。すべて 0。**
+    //
+    //    ゲストの枠は「読み取りを 3 件試せる」ためのもので、チャットは
+    //    含まない。0 にしておけば、仮にどこかで呼ばれても**通らない**。
+    //
+    //    **env で開けられるようにしない**（`envNum` を使わない）。
+    //    設定 1 つでゲストにチャットが開くのは、意図しない開放になる。
+    //    開けると決めた日に、ここを書き換えること。
+    guest: { quotaRequests: 0, quotaTokens: 0, ratePerMin: 0 },
   },
   tables: {
     budget: "toritavi_concierge_budget",
@@ -292,9 +347,16 @@ export async function enforceAiLimits(
   sb: SupabaseClient,
   userId: string,
   cfg: AiGuardConfig,
+  // 🔴 **匿名かどうかを呼び出し側から渡す。**
+  //    内部の `resolvePlan` は行の無い匿名利用者に `free` を返すので、
+  //    これを受け取らないと**ゲストが無料会員の枠でコンシェルジュを使える**。
+  //    既定 `false` にしてあるのは既存の呼び出しを壊さないためだが、
+  //    **新しい呼び出しでは必ず渡すこと**（省略は「会員として扱う」の意味）。
+  isAnonymous = false,
 ): Promise<NextResponse | AiGuardPass> {
   const plan = await resolvePlan(sb, userId);
-  const tier = cfg.tiers[plan];
+  const audience = audienceOf(plan, isAnonymous);
+  const tier = cfg.tiers[audience];
 
   // 拒否は toritavi_ai_rejections に記録して繰り返し違反者を可視化する
   // （規約 第9条6/7/8号）。記録はベストエフォートで await しても安全。
@@ -481,9 +543,11 @@ export async function getAiUsage(
   sb: SupabaseClient,
   userId: string,
   cfg: AiGuardConfig,
-  plan: Plan,
+  // 🔴 **`Audience`。** 残数バッジはゲストにも出る。plan で引くと
+  //    ゲストの画面に「0 / 5」と出て、実際は 3 件で止まる —— **画面が嘘をつく**。
+  audience: Audience,
 ): Promise<AiFeatureUsage> {
-  const tier = cfg.tiers[plan];
+  const tier = cfg.tiers[audience];
   const key = await quotaKey(sb, userId, cfg.quotaPeriod);
   const { data: usage } = await sb
     .from(cfg.tables.quota)
@@ -554,9 +618,11 @@ export async function checkMinuteRate(
   sb: SupabaseClient,
   userId: string,
   cfg: AiGuardConfig,
-  plan: Plan,
+  // 🔴 **`Plan` ではなく `Audience`。** ゲストの分間上限を効かせるため。
+  //    `Plan` は `Audience` の部分型なので、既存の呼び出しはそのまま通る。
+  audience: Audience,
 ): Promise<NextResponse | null> {
-  const perMin = cfg.tiers[plan].ratePerMin;
+  const perMin = cfg.tiers[audience].ratePerMin;
   const since = new Date(Date.now() - 60_000).toISOString();
   const { count, error } = await sb
     .from(cfg.tables.events)
@@ -598,9 +664,9 @@ export const GLOBAL_ATTEMPTS_PER_MIN = envNum(["AI_OCR_GLOBAL_RATE_PER_MIN"], 12
  */
 export async function tryOcrAttempt(
   userId: string,
-  plan: Plan,
+  audience: Audience,
 ): Promise<NextResponse | null> {
-  const perMin = OCR_GUARD.tiers[plan].ratePerMin;
+  const perMin = OCR_GUARD.tiers[audience].ratePerMin;
   try {
     const admin = createServiceClient();
     const { data, error } = await admin.rpc("toritavi_ocr_try_attempt", {

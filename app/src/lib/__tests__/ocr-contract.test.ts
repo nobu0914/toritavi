@@ -33,6 +33,52 @@ describe("確定仕様の件数", () => {
     assert.equal(SPEC_GUEST_REQUESTS, 3);
   });
 
+  test("🔴 ゲストの上限が、件数の軸に存在する", () => {
+    // 2026-08-30 まで**存在しなかった**。ゲストは `Audience`（予算の軸）
+    // にしか無く、件数は `Plan = free | pro` で引いていたので、
+    // `resolvePlan` が行の無い匿名利用者に返す `free` = **5 件**が
+    // そのままゲストの上限になっていた（`guest-mode-spec.md` §2-1）。
+    const c = code(guard);
+    assert.ok(
+      c.includes("cappedQuota([\"AI_OCR_GUEST_REQUESTS\"], SPEC_GUEST_REQUESTS)"),
+      "ゲストの上限が仕様値に紐づいていない",
+    );
+  });
+
+  test("🔴 上限を plan ではなく audience で引いている", () => {
+    // **ここが本丸。** `tiers[plan]` に戻ると、ゲストが無料会員と同じ枠になる。
+    const r = code(route);
+    assert.ok(
+      !r.includes("tiers[plan]"),
+      "🔴 `tiers[plan]` が復活している —— ゲストが無料会員の枠を使う",
+    );
+    assert.ok(r.includes("tiers[audience]"), "audience で引いていない");
+  });
+
+  test("🔴 仕様との突き合わせが guest も見ている", () => {
+    // 見張りに guest を足し忘れると、仕様 3 に対して実装が 5 でも黙る。
+    // 🔴 **「近くに語がある」で見ない。比較そのものを見る。**
+    //    最初は `quotaSpecMismatch` から 600 字以内に SPEC_GUEST_REQUESTS が
+    //    あることを見ていたが、**判定の行を消しても返り値の文字列
+    //    （`spec ${SPEC_GUEST_REQUESTS}`）が残るので通ってしまった**
+    //    （書いた直後の変異検査で発覚。今日 3 度目の同じ失敗）。
+    const c = code(guard);
+    assert.ok(
+      /g\s*===\s*SPEC_GUEST_REQUESTS/.test(c),
+      "quotaSpecMismatch が guest を**比較**していない（語があるだけでは足りない）",
+    );
+  });
+
+  test("🔴 コンシェルジュはゲストに開いていない（0 で固定）", () => {
+    // env で開けられる形にしない（`envNum` を使わない）。
+    // 設定 1 つでゲストにチャットが開くのは、意図しない開放になる。
+    const c = code(guard);
+    assert.ok(
+      c.includes("guest: { quotaRequests: 0, quotaTokens: 0, ratePerMin: 0 }"),
+      "コンシェルジュのゲスト枠が 0 で固定されていない",
+    );
+  });
+
   test("🔴 env で仕様値を超えられない（ログに出すだけにしない）", () => {
     const c = code(guard);
     assert.ok(
@@ -65,7 +111,7 @@ describe("🔴 処理の並び順", () => {
   test("安価な試行制限が、重いファイル検証より前にある", () => {
     // ここが逆だと、PDF を開かせるだけの解析 DoS が素通りする。
     assert.ok(
-      at("tryOcrAttempt(userId, plan)") < at("await validateFile("),
+      at("tryOcrAttempt(userId, audience)") < at("await validateFile("),
       "試行制限が validateFile より後ろにある",
     );
   });

@@ -14,6 +14,7 @@ import {
   OCR_GUARD,
   CONCIERGE_GUARD,
   resolvePlan,
+  audienceOf,
   getAiUsage,
   nextResetIso,
 } from "@/lib/ai-guard";
@@ -29,7 +30,7 @@ export async function GET(request: NextRequest) {
   if (!auth) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const { sb, userId } = auth;
+  const { sb, userId, isAnonymous } = auth;
 
   // 🔴 **読めなかったら 200 で `free` を返さない**（2026-08-30 レーン 3）。
   //    アプリは「サーバに聞けた・無料だった」と解釈し、契約者に
@@ -44,6 +45,9 @@ export async function GET(request: NextRequest) {
       { status: 503 },
     );
   }
+  // 残数の上限は audience で引く（ゲストは 3 件）。
+  const audience = audienceOf(plan, isAnonymous);
+
   // 🔴 `getAiUsage` は期間キーを SQL に聞くので、**取れなければ投げる**
   //    （`QuotaPeriodUnavailableError`）。包まないと生 500 になる。
   //    2026-08-30 に concierge で同じ見落としをしたばかり
@@ -51,8 +55,8 @@ export async function GET(request: NextRequest) {
   let ocr, concierge;
   try {
     [ocr, concierge] = await Promise.all([
-      getAiUsage(sb, userId, OCR_GUARD, plan),
-      getAiUsage(sb, userId, CONCIERGE_GUARD, plan),
+      getAiUsage(sb, userId, OCR_GUARD, audience),
+      getAiUsage(sb, userId, CONCIERGE_GUARD, audience),
     ]);
   } catch {
     return NextResponse.json(
