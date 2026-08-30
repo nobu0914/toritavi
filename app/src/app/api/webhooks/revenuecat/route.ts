@@ -55,6 +55,8 @@ const REVOKING_EVENTS = new Set(["EXPIRATION"]);
 
 type RevenueCatEvent = {
   type: string;
+  /** イベントの一意な id。**二重配送の冪等化はこれで行う**（公式の推奨）。 */
+  id?: string;
   app_user_id: string;
   entitlement_ids?: string[];
   /** RevenueCat がイベントを起こした時刻。**配送順ではなく、これで並べる。** */
@@ -173,7 +175,7 @@ export async function POST(request: NextRequest) {
     }
     const { error: revokeErr } = await admin
       .from("toritavi_user_plan")
-      .update({ plan: "free", updated_at: eventAt })
+      .update({ plan: "free", updated_at: eventAt, last_event_id: event.id ?? null })
       .in("user_id", from)
       // 🔴 **同時刻は失効を勝たせる**（下の共通処理と同じ理由）。
       .lte("updated_at", eventAt);
@@ -241,7 +243,12 @@ export async function POST(request: NextRequest) {
   const { error: insErr } = await admin
     .from("toritavi_user_plan")
     .upsert(
-      { user_id: event.app_user_id, plan: newPlan, updated_at: eventAt },
+      {
+        user_id: event.app_user_id,
+        plan: newPlan,
+        updated_at: eventAt,
+        last_event_id: event.id ?? null,
+      },
       { onConflict: "user_id", ignoreDuplicates: true },
     );
   if (insErr) {
@@ -265,9 +272,26 @@ export async function POST(request: NextRequest) {
   //    するのが正しい（"maintain idempotent processing by tracking the
   //    event id"）。それには列の追加＝本番 DDL が要るので未着手。
   //    ここは DDL 無しでできる範囲の暫定。
+  // 🔴 **`last_event_id` は「どのイベントがこの行を最後に動かしたか」の記録。**
+  //
+  //    RevenueCat は at-least-once 配送で、同じイベントが複数回届きうる
+  //    （"maintain idempotent processing by tracking the event id"）。
+  //    ただし**ここでの書き込みはもともと冪等**である ——
+  //    同じイベントの再配送は `event_timestamp_ms` が同じなので、
+  //    付与側は `.lt` で弾かれ、失効側は `.lte` で同じ値を書き直すだけ。
+  //
+  //    そこで `id` を**関門には使わず、記録だけ**にした。関門にするには
+  //    `.or(last_event_id.is.null, last_event_id.neq.X)` が要るが、
+  //    **得られるものが「同じ値の書き直しを 1 回減らす」だけ**なのに対し、
+  //    検査側でこの条件を偽物の表に実装させることになり、
+  //    **本番と違う構造を検査する**危険のほうが大きい（`CLAUDE.md` §6-1 の 4）。
+  //
+  //    記録としての価値は別にある —— 課金が反映されないときに
+  //    「どのイベントで止まったか」を運用者が追える
+  //    （`admin-maintenance-guide.md` の調査手順）。
   const q = admin
     .from("toritavi_user_plan")
-    .update({ plan: newPlan, updated_at: eventAt })
+    .update({ plan: newPlan, updated_at: eventAt, last_event_id: event.id ?? null })
     .eq("user_id", event.app_user_id);
   const { data: updated, error } = await (newPlan === "free"
     ? q.lte("updated_at", eventAt)

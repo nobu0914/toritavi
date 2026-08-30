@@ -243,10 +243,14 @@ bash tool/security_check.sh     # セキュリティ側のフルチェック
 | 3 | `toritavi_user_plan` の行 | SQL Editor | `plan` と `updated_at` |
 
 ```sql
-select u.email, p.plan, p.updated_at
+select u.email, p.plan, p.updated_at, p.last_event_id
 from toritavi_user_plan p join auth.users u on u.id = p.user_id
 order by p.updated_at desc limit 20;
 ```
+
+> **`last_event_id` は「どのイベントがこの行を最後に動かしたか」。**
+> RevenueCat の Webhooks 送信履歴でその id を引けば、**どこで止まったか**が
+> 分かる。`null` は「手で入れた行」か「この列を足す前の行」。
 
 > 🔴 **`updated_at` は受信時刻ではなく、RevenueCat のイベント発生時刻。**
 > 配送順は保証されず、5xx で失敗したイベントは何時間も再送される。
@@ -257,6 +261,26 @@ order by p.updated_at desc limit 20;
 > 🔴 **`TRANSFER` は渡した側も free に落とす。** 同じ Apple ID を別
 > アカウントで復元すると権利は移る。「急に Pro でなくなった」の正体が
 > これのことがある。
+>
+> 🔴 **逆に「移ったのに Pro にならない」も起きる。承知のうえの空白。**
+> `TRANSFER` のペイロードには `entitlement_ids` が無く、移った権利が
+> 有効かを判断できないため、**受け取った側への付与はしていない**
+> （無条件に付与すると、払っていない人に配ることになる）。
+> **次の `RENEWAL` で自動的に pro になる**（最長 1 か月）。
+> 問い合わせが来たら手で行を入れて救済する:
+>
+> ```sql
+> insert into toritavi_user_plan (user_id, plan, updated_at)
+> values ('<user_id>', 'pro', 'epoch'::timestamptz)
+> on conflict (user_id) do update
+>   set plan = 'pro', updated_at = 'epoch'::timestamptz;
+> ```
+>
+> 🔴 **`updated_at` に `now()` を書かないこと。** この列は webhook の
+> 順序の正本で、「今」を書くと**それより古いイベントが以後すべて
+> 落ちる**（200 を返すので再送もされない）。
+>
+> 経緯は `docs/feature-flags.md` §4-1（リポジトリ側）。
 
 #### 503 が返るようになった（`plan_unavailable`）
 

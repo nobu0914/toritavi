@@ -276,6 +276,7 @@ test("INITIAL_PURCHASE: 行が無ければ作る（upsert 経路）", async () =
     signed({
       event: {
         type: "INITIAL_PURCHASE",
+        id: "evt_initial_001",
         app_user_id: U1,
         entitlement_ids: ["pro"],
         event_timestamp_ms: T,
@@ -285,7 +286,12 @@ test("INITIAL_PURCHASE: 行が無ければ作る（upsert 経路）", async () =
   assert.equal(res.status, 200);
   // upsert が作った直後の update は .lt で外れるので applied:false が正。
   assert.deepEqual(await json(res), { ok: true, plan: "pro", applied: false });
-  assert.deepEqual(rows, [{ user_id: U1, plan: "pro", updated_at: iso(T) }]);
+  // 🔴 **`last_event_id` に「どのイベントがこの行を作ったか」が残ること。**
+  //    課金が反映されないときに、運用者がここから追える
+  //    （`admin-maintenance-guide.md` の調査手順）。null で素通りさせない。
+  assert.deepEqual(rows, [
+    { user_id: U1, plan: "pro", updated_at: iso(T), last_event_id: "evt_initial_001" },
+  ]);
 });
 
 test("🔴 pro の権利が無い購入イベントでは付与しない", async () => {
