@@ -66,31 +66,51 @@ async function listAll(
   return names;
 }
 
-/** バケット内の `{userId}/` 配下を、台帳の depth に従って全部消す。 */
-async function removeUserObjects(
+/**
+ * バケット内の `{userId}/` 配下を、台帳の depth に従って全部消す。
+ *
+ * 🔴 **集め終わってから消さない。集めた分から消す。**
+ *
+ * 2026-08-30 まで「パスを全部集める → 最後にまとめて remove」だった。
+ * 時間切れになると **1 枚も消えないまま**終わり、再試行は同じ量を最初から
+ * やり直すので**進捗が積み上がらない**。一度超えた利用者は二度と退会できず、
+ * 画面には「削除に失敗しました」が出続ける。
+ * **Apple 5.1.1(v) はアカウント削除をアプリ内で完結できることを求めている。**
+ *
+ * いまは 1 フォルダ分を集めたらその場で消す。途中で落ちても**消えた分は
+ * 消えたまま**なので、再試行のたびに残りが減る。**繰り返せば必ず終わる。**
+ *
+ * 消す順序も変えていない —— `list` は「いま残っているもの」を返すので、
+ * 前回消えた分は次回そもそも列挙されない。
+ */
+// 🔴 **検査のために export している。** ここを外部から呼ぶ本番コードは無い。
+// ソース文字列の grep では「集めてから消す」形に戻されても気づけないので、
+// 実際に動かして進捗が積み上がることを確かめる（account-delete-incremental.test.ts）。
+export async function removeUserObjects(
   admin: ReturnType<typeof createServiceClient>,
   spec: UserOwnedBucket,
   userId: string
 ): Promise<void> {
   const bucket = admin.storage.from(spec.id);
-  const paths: string[] = [];
-
-  if (spec.depth === 1) {
-    for (const name of await listAll(bucket, userId)) {
-      paths.push(`${userId}/${name}`);
-    }
-  } else {
-    for (const folder of await listAll(bucket, userId)) {
-      for (const f of await listAll(bucket, `${userId}/${folder}`)) {
-        paths.push(`${userId}/${folder}/${f}`);
-      }
-    }
-  }
 
   // remove() も一度に渡せる件数に上限があるためチャンクで消す。
-  for (let i = 0; i < paths.length; i += PAGE) {
-    const { error } = await bucket.remove(paths.slice(i, i + PAGE));
-    if (error) throw error;
+  const removeChunked = async (paths: string[]) => {
+    for (let i = 0; i < paths.length; i += PAGE) {
+      const { error } = await bucket.remove(paths.slice(i, i + PAGE));
+      if (error) throw error;
+    }
+  };
+
+  if (spec.depth === 1) {
+    const names = await listAll(bucket, userId);
+    await removeChunked(names.map((n) => `${userId}/${n}`));
+    return;
+  }
+
+  // depth 2: **フォルダ 1 つぶんを集めたら、そのつど消す。**
+  for (const folder of await listAll(bucket, userId)) {
+    const files = await listAll(bucket, `${userId}/${folder}`);
+    await removeChunked(files.map((f) => `${userId}/${folder}/${f}`));
   }
 }
 
@@ -102,6 +122,17 @@ function describe(e: unknown): string {
   if (typeof e === "object" && e && "message" in e) return String(e.message);
   return String(e);
 }
+
+/**
+ * 🔴 **時間の上限を宣言する。** 2026-08-30 まで宣言が無く、Vercel の
+ * 既定（Hobby で 10 秒）で切られていた。`/api/ocr` は 60 を宣言しているのに
+ * この経路だけ抜けていた —— `vercel.json` にも functions 設定は無い。
+ *
+ * 上を 60 にしても**無限には伸ばせない**ので、これ単体では足りない。
+ * 上の `removeUserObjects` を「消しながら進む」形にしてあるのが本体で、
+ * これはその 1 回あたりに与える時間。
+ */
+export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
   // Reject cross-site browser callers. Origin is absent on native (mobile)
