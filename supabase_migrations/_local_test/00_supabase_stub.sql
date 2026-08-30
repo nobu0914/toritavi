@@ -6,7 +6,9 @@ DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='service_role') THEN CREATE ROLE service_role; END IF;
 END $$;
 CREATE SCHEMA auth;
-CREATE TABLE auth.users (id UUID PRIMARY KEY);
+-- 🔴 `is_anonymous` は本番（GoTrue）が持つ列。027 のゲスト分岐が読む。
+--    スタブに無いと 027 が「列が無い」で落ち、**実物と違う形を検査する**。
+CREATE TABLE auth.users (id UUID PRIMARY KEY, is_anonymous BOOLEAN NOT NULL DEFAULT FALSE);
 -- auth.uid() は Supabase の関数。005/013 が参照する。
 CREATE FUNCTION auth.uid() RETURNS UUID LANGUAGE sql AS $$ SELECT NULL::uuid $$;
 
