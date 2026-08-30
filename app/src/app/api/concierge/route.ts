@@ -136,7 +136,19 @@ export async function POST(request: NextRequest) {
 
   /* ---- AI 利用制限（月予算 → 日次 → 分間。@/lib/ai-guard で共通化）---- */
   // コンシェルジュは 1 リクエスト 1 件なので、通過後の件数チェックは不要。
-  const guard = await enforceAiLimits(sb, userId, CONCIERGE_GUARD);
+  // 🔴 **`enforceAiLimits` は内部で `resolvePlan` を呼び、それは throw する。**
+  //    包まないと、プラン読み取り失敗が**未処理例外の生 500** になる。
+  //    `/api/ocr` と `/api/ai-usage` は包んだのに**ここだけ見落としていた**
+  //    （2026-08-30・`CLAUDE.md` §6-1 の 3「同じ経路を通る呼び出しを数える」）。
+  let guard;
+  try {
+    guard = await enforceAiLimits(sb, userId, CONCIERGE_GUARD);
+  } catch {
+    return NextResponse.json(
+      { error: "plan_unavailable", message: "混み合っています。しばらくしてからお試しください。" },
+      { status: 503 },
+    );
+  }
   if (guard instanceof NextResponse) return guard;
 
   /* ---- 4) Ensure thread ---- */

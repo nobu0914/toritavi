@@ -57,13 +57,16 @@ test("TRANSFER は transferred_from を失効対象にする", () => {
   );
 });
 
-test("🔴 entitlement_ids が無くても失効させる", () => {
+test("🔴 entitlement_ids が無くても、複数の transferred_from を全員失効させる", () => {
   // 失効に証拠を要求するとフェイルオープンになる。手放した事実は
   // transferred_from に載っている。
+  // （以前は 1 件目のテストと**入力が同一**で、何も追加検証していなかった。
+  //   ここでは「複数人でも全員・順序どおり」を見る。）
   const a = "11111111-2222-3333-4444-555555555555";
+  const b = "66666666-7777-4888-9999-aaaaaaaaaaaa";
   assert.deepEqual(
-    revokedUserIds({ type: "TRANSFER", transferred_from: [a] }),
-    [a],
+    revokedUserIds({ type: "TRANSFER", transferred_from: [a, b] }),
+    [a, b],
   );
 });
 

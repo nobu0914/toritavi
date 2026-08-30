@@ -61,6 +61,8 @@ type RevenueCatEvent = {
   event_timestamp_ms?: number;
   /** `TRANSFER` で**権利を手放した側**の app_user_id。 */
   transferred_from?: string[];
+  /** `TRANSFER` で**権利を受け取る側**の app_user_id。 */
+  transferred_to?: string[];
 };
 
 
@@ -121,25 +123,44 @@ export async function POST(request: NextRequest) {
   }
 
   const event = body.event;
-  if (!event?.app_user_id || !event.type) {
+  // 🔴 **`app_user_id` を必須にしない。**
+  //    2026-08-30 まで `!event?.app_user_id` で 400 にしていたが、
+  //    **`TRANSFER` にはそもそも `app_user_id` が無い**（公式の
+  //    Event Types and Fields で、TRANSFER に適用されるのは Common fields と
+  //    Transfer fields だけ。Subscriber identity fields は対象外）。
+  //    その結果 **TRANSFER は全件 400 で弾かれ、5 回再送されて捨てられていた。**
+  //    「渡した側を free に落とす」処理を書いた当日、その処理は
+  //    **一度も走っていなかった**（落ちも警告も出ない・`CLAUDE.md` §6-1）。
+  if (!event?.type) {
     return NextResponse.json({ error: "Missing event fields" }, { status: 400 });
   }
 
-  // 🔴 **`TRANSFER` は「渡した側」も落とす。**
-  //    同じ Apple ID を別アカウントで復元すると、権利は移る。付与側だけ
-  //    見ていると**元の持ち主は `pro` のまま残り、払わずに Pro が続く**。
-  //    落ちも警告も出ない（`CLAUDE.md` §6-1）。
+  const eventAt = eventAtIso(event, Date.now());
+
+  // 🔴 **`TRANSFER` は他のイベントと形が違うので、先に片付けて return する。**
   //
-  //    失効は付与と違って**証拠を要求しない** —— 手放したことは
-  //    `transferred_from` に載っている事実で、`entitlement_ids` の有無に
-  //    依存させるとフェイルオープンになる。
+  //    公式の Transfer fields は `transferred_from` / `transferred_to`
+  //    （どちらも String[]・Always）だけで、**`app_user_id` も
+  //    `entitlement_ids` も無い。** 下の共通処理はどちらも前提にしているので、
+  //    ここを通すと必ず取りこぼす。
   //
-  // 🔴 **下の `app_user_id` の UUID 関門より前に置く。** 譲渡先が匿名
-  //    （ログアウトしたまま同じ Apple ID で復元する）だと関門で先に
-  //    返ってしまい、**渡した側が Pro のまま残る。いちばん起きやすい形。**
-  const eventAtForTransfer = eventAtIso(event, Date.now());
-  const from = revokedUserIds(event);
-  if (from.length > 0) {
+  //    **失効（渡した側）は証拠を要求しない。** 手放したことは
+  //    `transferred_from` に載っている事実で、権利 ID の有無に依存させると
+  //    フェイルオープンになる。
+  //
+  // 🔴 **付与（受け取った側）はしない。** `entitlement_ids` が無いので
+  //    「移された権利が pro だったか」も「いま有効か」も判断できない。
+  //    期限切れの取引が移っただけでも `TRANSFER` は飛ぶため、無条件に
+  //    付与するとフェイルオープンになる（払っていない人に Pro を配る）。
+  //    受け取った側は**次の `RENEWAL` で pro になる**（最長 1 か月）。
+  //    [要確認] この空白を埋めるには RevenueCat の REST API で
+  //    subscriber を引く必要があり、秘密鍵の追加が要る。未着手。
+  if (event.type === "TRANSFER") {
+    const from = revokedUserIds(event);
+    const to = (event.transferred_to ?? []).filter((id) => UUID_RE.test(id));
+    if (from.length === 0) {
+      return NextResponse.json({ ok: true, skipped: "transfer_no_known_source" });
+    }
     let admin;
     try {
       admin = createServiceClient();
@@ -152,16 +173,31 @@ export async function POST(request: NextRequest) {
     }
     const { error: revokeErr } = await admin
       .from("toritavi_user_plan")
-      .update({ plan: "free", updated_at: eventAtForTransfer })
+      .update({ plan: "free", updated_at: eventAt })
       .in("user_id", from)
-      .lt("updated_at", eventAtForTransfer);
+      // 🔴 **同時刻は失効を勝たせる**（下の共通処理と同じ理由）。
+      .lte("updated_at", eventAt);
     if (revokeErr) {
       console.error("[webhooks/revenuecat] transfer revoke failed", from, revokeErr);
-      // 5xx で再送させる。**ここを 200 で流すと、渡した側が Pro のまま残る。**
+      // 5xx で再送させる。**200 で流すと渡した側が Pro のまま残る。**
       return NextResponse.json({ error: revokeErr.message }, { status: 500 });
     }
+    // 付与を保留したことを**黙らせない**。ここが空白であることは設計であって
+    // 事故ではないが、記録が無いと次に見た人が事故と区別できない。
+    if (to.length > 0) {
+      console.warn(
+        "[webhooks/revenuecat] TRANSFER: 受け取った側の付与は保留した" +
+          "（entitlement_ids が無く有効性を判断できない）。次の RENEWAL で pro になる:",
+        to,
+      );
+    }
+    return NextResponse.json({ ok: true, transfer: { revoked: from.length, granted: 0 } });
   }
 
+  // ここから先は `app_user_id` を前提にする共通処理。
+  if (!event.app_user_id) {
+    return NextResponse.json({ error: "Missing event fields" }, { status: 400 });
+  }
 
   // 🔴 **`app_user_id` をそのまま `user_id` に入れない。**
   //    アプリは `Purchases.logIn(supabaseUserId)` で UUID を渡すが、
@@ -200,7 +236,6 @@ export async function POST(request: NextRequest) {
   //    配送順は保証されない。再送で遅れた EXPIRATION が RENEWAL の後ろに
   //    並ぶと、契約中の人が黙って free に落ちる。**戻す経路は無い。**
   //    `updated_at` はイベント発生時刻を持ち、それが順序の正本になる。
-  const eventAt = eventAtForTransfer;
 
   // ① 行が無ければ作る（既にあれば触らない）。
   const { error: insErr } = await admin
@@ -216,12 +251,28 @@ export async function POST(request: NextRequest) {
 
   // ② 既存行は、**このイベントより古いときだけ**進める。
   //    比較は Postgres の WHERE で行うので、同時到着でも逆転しない。
-  const { data: updated, error } = await admin
+  // 🔴 **同時刻のタイブレークは「失効優先」。**
+  //    `event_timestamp_ms` はミリ秒精度で、**別イベントが同値にならない
+  //    保証は公式には無い**（一意性が保証されているのは `id` の方）。
+  //    厳密比較 `.lt` だけだと同時刻は**先に届いた方が勝ち**、結果が
+  //    到着順に依存する。
+  //
+  //    どちらかを勝たせるなら**取り上げる側**にする（`CLAUDE.md` §5
+  //    フェイルクローズ）。誤って free にしても次の `RENEWAL` で戻るが、
+  //    誤って pro にすると**払っていない人に配り続ける**。
+  //
+  //    [要確認] 本来は RevenueCat の勧めどおり**イベント `id` で冪等化**
+  //    するのが正しい（"maintain idempotent processing by tracking the
+  //    event id"）。それには列の追加＝本番 DDL が要るので未着手。
+  //    ここは DDL 無しでできる範囲の暫定。
+  const q = admin
     .from("toritavi_user_plan")
     .update({ plan: newPlan, updated_at: eventAt })
-    .eq("user_id", event.app_user_id)
-    .lt("updated_at", eventAt)
-    .select("user_id");
+    .eq("user_id", event.app_user_id);
+  const { data: updated, error } = await (newPlan === "free"
+    ? q.lte("updated_at", eventAt)
+    : q.lt("updated_at", eventAt)
+  ).select("user_id");
 
   if (error) {
     console.error("[webhooks/revenuecat] update failed", event.type, event.app_user_id, error);

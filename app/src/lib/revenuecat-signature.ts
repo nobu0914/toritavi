@@ -18,28 +18,26 @@ import { createHmac, timingSafeEqual } from "node:crypto";
  */
 
 /**
- * 署名の `t` がこれ以上ずれていたら弾く。**24 時間。5 分ではない。**
+ * 署名の `t` がこれ以上ずれていたら弾く。**5 分。**
  *
- * 🔴 **狭くすると、再送で届いた本物のイベントを 401 で捨てる。**
- * webhook が 5xx（DB 一時障害など）で失敗すると RevenueCat は
- * 指数バックオフで**何時間も再送する**。そのとき署名の `t` を
- * 打ち直すのか、最初の値を持ち回るのかは**このリポジトリからは確認
- * できない**（Stripe は持ち回る側）。持ち回る実装なら、5 分の窓では
- * **2 回目以降の再送がすべて 401**。INITIAL_PURCHASE なら
- * 払ったのに free、EXPIRATION なら解約後も Pro のまま。
- * どちらも**落ちも警告も出ない**（`CLAUDE.md` §6-1）。
+ * 2026-08-30 に一度 24 時間へ広げたが、**前提が誤っていたので戻した。**
+ * 広げた理由は「再送で `t` を打ち直さないかもしれない」という推測だったが、
+ * 公式ドキュメントは逆を明記している:
  *
- * 窓を広げても失うものが小さいのは、**再生されても害が無い**ため:
- * 書き込みは冪等で、さらに `updated_at`（イベント発生時刻）より
- * 古いイベントは適用されない（webhook の順序ガード）。
- * つまりこの窓は「二重適用の防止」ではなく、**漏れた鍵で無限に
- * 使い回されるのを防ぐ**ためだけに残している。
+ * > RevenueCat recomputes `t` and `v1` on every delivery attempt,
+ * > including automatic retries and a manual Retry from the dashboard.
+ * > A 5-minute tolerance only needs to cover clock skew and the latency of
+ * > that POST. Don't size it to cover the retry delays of 5, 10, 20, 40,
+ * > and 80 minutes.
  *
- * [要確認] RevenueCat の再送が `t` を打ち直すか。打ち直すなら 5 分でも
- * 安全だが、**確かめるまでは広い方に倒す** —— 狭すぎたときの損失
- * （課金の取りこぼし）の方が、広すぎたときの損失より大きい。
+ * （`docs/integrations/webhooks` の Signature timestamp on retries。
+ *   2026-08-30 に一次資料で確認）
+ *
+ * 🔴 **窓は狭いほどよい。** ここが守っているのは「漏れた鍵で盗んだ
+ * リクエストを使い回されること」で、24 時間だと**丸一日使い回せる。**
+ * 再送を心配して広げる必要は無かった。
  */
-export const SIGNATURE_TOLERANCE_MS = 24 * 60 * 60 * 1000;
+export const SIGNATURE_TOLERANCE_MS = 5 * 60 * 1000;
 
 export type SignatureCheck =
   | { ok: true; enforced: boolean }

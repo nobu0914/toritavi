@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --test \"src/lib/__tests__/*.test.ts\"",
+    "test": "node --import ./src/lib/__tests__/support/register.mjs --test \"src/lib/__tests__/*.test.ts\"",
     "verify": "npm test && npx tsc --noEmit && npm run build"
   },
   "dependencies": {
