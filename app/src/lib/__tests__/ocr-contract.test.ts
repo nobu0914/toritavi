@@ -148,14 +148,25 @@ describe("🔴 処理の並び順", () => {
     assert.ok(at("setGuestUsed(") < at('"[OCR] ok steps:"'), "成功地点にない");
   });
 
-  test("🔴 App Attest を通さずに満額（3 件）を出していない", () => {
-    // 実装するまでは `failed` 固定。ここが `attested` に変わるのは、
-    // 検証を実装したときだけ（`guest-mode-spec.md` §11）。
+  test("🔴 App Attest の既定は failed（1 件）", () => {
+    // 「読めない」「行が無い」を**検証済みに変換しない**。
     const r = code(route);
     assert.ok(
-      /GuestAttestState\s*=\s*"failed"/.test(r),
-      "🔴 App Attest 未実装のまま attested を渡している —— " +
-        "偽クライアントを排除できないまま満額を出す",
+      /let attestState: GuestAttestState = "failed"/.test(r),
+      "🔴 既定が failed でない —— 読めないだけで満額を出す",
+    );
+  });
+
+  test("🔴 attested になるのは、保存された検証結果が true のときだけ", () => {
+    const r = code(route);
+    assert.ok(
+      /grant\?\.attested === true\)?\s*attestState = "attested"/.test(r),
+      "🔴 検証結果以外の条件で attested になっている",
+    );
+    // 検証結果は**利用者が書けない表**から読む（028 の RLS）。
+    assert.ok(
+      r.includes('from("toritavi_guest_grants")'),
+      "検証結果の出どころが toritavi_guest_grants でない",
     );
   });
 

@@ -46,6 +46,12 @@ create table if not exists public.toritavi_guest_grants (
   -- 検証した環境。development が本番に混ざっていないかを後から見るため。
   environment  text        check (environment in ('development','production')),
   attested_at  timestamptz,
+  -- 🔴 **チャレンジは 1 回限り・短命。** これが App Attest の使い回しを防ぐ
+  --    唯一の仕掛け（証明書の有効期限では防げない）。
+  --    サーバが発行してここへ置き、検証したら **null に戻す**。
+  --    新しい env の秘密鍵を増やさずに済ませるため、DB に持つ。
+  challenge    bytea,
+  challenge_at timestamptz,
   created_at   timestamptz not null default now(),
   updated_at   timestamptz not null default now()
 );
@@ -53,6 +59,10 @@ create table if not exists public.toritavi_guest_grants (
 comment on table public.toritavi_guest_grants is
   'ゲスト（匿名利用者）の App Attest 検証結果。端末フィンガープリントは持たない。'
   '件数は DeviceCheck（Apple 側の 2 bit）と toritavi_ocr_usage_monthly が数える。';
+
+comment on column public.toritavi_guest_grants.challenge is
+  'App Attest のチャレンジ。**1 回限り**。検証したらサーバが null に戻す。'
+  '使い回しを防ぐのはこれ（証明書の有効期限では防げない）。';
 
 -- ============================================================================
 -- RLS —— **本人が読めるだけ。書けない。**
@@ -85,6 +95,10 @@ create trigger trg_guest_grants_touch
 -- ============================================================================
 -- 確認
 -- ============================================================================
+
+-- ⓪ 列（チャレンジを持てること）
+select column_name from information_schema.columns
+where table_name = 'toritavi_guest_grants' order by ordinal_position;
 
 -- ① 表と RLS
 select

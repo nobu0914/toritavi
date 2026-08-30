@@ -230,12 +230,24 @@ export async function POST(request: NextRequest) {
     let guestDevice: { token: string; decision: GuestDecision } | null = null;
     let guestLimit: number | undefined;
     if (audience === "guest") {
-      // 🔴 **App Attest はまだ実装していない。** 実装するまで全端末が
-      //    「未検証」= 1 件。ここを `attested` に変えるのは、
-      //    `attest.ts` の検証を通してから（`guest-mode-spec.md` §11）。
-      //    **DeviceCheck だけで 3 件にしない** —— 偽クライアントを排除できない
+      // App Attest の結果は起動時に `/api/guest/attest` が保存している。
+      //
+      // 🔴 **読めなかったら `failed`（1 件）。** 「読めない」を「検証済み」に
+      //    変換しない。利用者は自分の行を**読めるが書けない**（028 の RLS）
+      //    ので、この読み取りは利用者の client で足りる。
+      //
+      // 🔴 **DeviceCheck だけで 3 件にしない。** 偽クライアントを排除できない
       //    まま端末カウンタを信じると、カウンタごと偽装される。
-      const attestState: GuestAttestState = "failed";
+      let attestState: GuestAttestState = "failed";
+      {
+        const { data: grant, error: grantErr } = await sb
+          .from("toritavi_guest_grants")
+          .select("attested")
+          .eq("user_id", userId)
+          .maybeSingle();
+        if (grantErr) console.error("[OCR] guest grant read failed");
+        else if (grant?.attested === true) attestState = "attested";
+      }
 
       const token = request.headers.get("x-guest-device-token");
       const dev = token
