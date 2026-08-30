@@ -65,8 +65,23 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  // ゲストの身元確認が済んでいるか。**アプリが起動時にやり直すかを決める。**
+  //
+  // 🔴 **読めなかったら false。** 「読めない」を「通っている」に変換すると、
+  //    失敗したまま二度とやり直さない。会員には常に false（意味を持たない）。
+  let guestAttested = false;
+  if (isAnonymous) {
+    const { data: g } = await sb
+      .from("toritavi_guest_grants")
+      .select("attested")
+      .eq("user_id", userId)
+      .maybeSingle();
+    guestAttested = g?.attested === true;
+  }
+
   return NextResponse.json({
     plan,
+    guestAttested,
     // 機能ごとにリセット単位が違う（OCR=月次 / コンシェルジュ=日次）。
     // トップレベルの resetAt は**配布済みアプリが読んでいる**ので残す。
     // 値は OCR のもの（バッジが表示しているのは OCR の残量）。
