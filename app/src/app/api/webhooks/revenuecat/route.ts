@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase-service";
+import { eventAtIso } from "@/lib/webhook-event-order";
 import { verifyRevenueCatSignature } from "@/lib/revenuecat-signature";
 
 /**
@@ -56,7 +57,10 @@ type RevenueCatEvent = {
   type: string;
   app_user_id: string;
   entitlement_ids?: string[];
+  /** RevenueCat がイベントを起こした時刻。**配送順ではなく、これで並べる。** */
+  event_timestamp_ms?: number;
 };
+
 
 function isAuthorized(request: NextRequest): boolean {
   const expected = process.env.REVENUECAT_WEBHOOK_SECRET;
@@ -152,18 +156,43 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { error } = await admin
+  // 🔴 **古いイベントで新しい状態を踏み潰さない。**
+  //    配送順は保証されない。再送で遅れた EXPIRATION が RENEWAL の後ろに
+  //    並ぶと、契約中の人が黙って free に落ちる。**戻す経路は無い。**
+  //    `updated_at` はイベント発生時刻を持ち、それが順序の正本になる。
+  const eventAt = eventAtIso(event, Date.now());
+
+  // ① 行が無ければ作る（既にあれば触らない）。
+  const { error: insErr } = await admin
     .from("toritavi_user_plan")
     .upsert(
-      { user_id: event.app_user_id, plan: newPlan, updated_at: new Date().toISOString() },
-      { onConflict: "user_id" }
+      { user_id: event.app_user_id, plan: newPlan, updated_at: eventAt },
+      { onConflict: "user_id", ignoreDuplicates: true },
     );
+  if (insErr) {
+    console.error("[webhooks/revenuecat] insert failed", event.type, event.app_user_id, insErr);
+    return NextResponse.json({ error: insErr.message }, { status: 500 });
+  }
+
+  // ② 既存行は、**このイベントより古いときだけ**進める。
+  //    比較は Postgres の WHERE で行うので、同時到着でも逆転しない。
+  const { data: updated, error } = await admin
+    .from("toritavi_user_plan")
+    .update({ plan: newPlan, updated_at: eventAt })
+    .eq("user_id", event.app_user_id)
+    .lt("updated_at", eventAt)
+    .select("user_id");
 
   if (error) {
-    console.error("[webhooks/revenuecat] upsert failed", event.type, event.app_user_id, error);
-    // 5xx so RevenueCat retries — the upsert is idempotent, safe to redeliver.
+    console.error("[webhooks/revenuecat] update failed", event.type, event.app_user_id, error);
+    // 5xx so RevenueCat retries — the write is idempotent, safe to redeliver.
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true, plan: newPlan });
+  if (!updated?.length) {
+    // ①で作ったか、より新しい状態が既に入っている。**どちらも正常。**
+    // 「何も起きなかった」を成功と区別できるよう、応答に残す。
+    return NextResponse.json({ ok: true, plan: newPlan, applied: false });
+  }
+  return NextResponse.json({ ok: true, plan: newPlan, applied: true });
 }
