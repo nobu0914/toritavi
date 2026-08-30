@@ -230,10 +230,59 @@ bash tool/security_check.sh     # セキュリティ側のフルチェック
 
 こちらは自動化していない。週次で回すこと。
 
+### 課金が反映されないとき（2026-08-30 追加）
+
+**「払ったのに Pro にならない」「解約したのに Pro のまま」は、止まらずに
+静かに起きる。** 落ちも警告も出ないので、利用者の申告で初めて分かる。
+見る順はこの 3 つ。
+
+| # | 見るもの | どこで | 正常 |
+|---|---|---|---|
+| 1 | RevenueCat の `app_user_id` | RevenueCat → Customers | **Supabase の UUID**。`$RCAnonymousID:…` なら課金だけ成立して権利が届いていない |
+| 2 | webhook の応答 | RevenueCat → Webhooks の送信履歴 | **200**。401 は HMAC、500 は Supabase 側 |
+| 3 | `toritavi_user_plan` の行 | SQL Editor | `plan` と `updated_at` |
+
+```sql
+select u.email, p.plan, p.updated_at
+from toritavi_user_plan p join auth.users u on u.id = p.user_id
+order by p.updated_at desc limit 20;
+```
+
+> 🔴 **`updated_at` は受信時刻ではなく、RevenueCat のイベント発生時刻。**
+> 配送順は保証されず、5xx で失敗したイベントは何時間も再送される。
+> 遅れて届いた `EXPIRATION` が `RENEWAL` の後ろに並ぶと契約中の人が
+> free に落ちるため、**この列より古いイベントは適用しない**。
+> webhook の応答に `applied: false` が出るのはそのため —— **異常ではない。**
+
+> 🔴 **`TRANSFER` は渡した側も free に落とす。** 同じ Apple ID を別
+> アカウントで復元すると権利は移る。「急に Pro でなくなった」の正体が
+> これのことがある。
+
+#### 503 が返るようになった（`plan_unavailable`）
+
+`/api/ocr` と `/api/ai-usage` は、**プランを読めなかったとき 503** を返す。
+以前は読み取り失敗を黙って `free` に変換していたので、**Pro 契約者が
+429「今月の上限に達しました」で止まっていた。**
+
+🔴 **503 は 2 つの意味を持つ。`error` フィールドで見分ける。**
+
+| `error` | 意味 | 対応 |
+|---|---|---|
+| `plan_unavailable` | **Supabase の読み取り失敗**（サービスは動いている） | DB の状態を見る。継続するなら Supabase 側の障害 |
+| （AI モードの停止） | **こちらが意図的に止めている** | 非常停止スイッチの状態を見る |
+
+**429 と 503 を同じ扱いにしないこと。** 429 は「その人の枠」、
+503 は「こちらの都合」。混ぜると、残数があるのに諦める利用者が出る。
+
 ### まだ無い歯止め（既知の残課題）
 
 - **ステージング環境が無い** — マイグレーションが本番一発勝負。`docs/MIGRATION_GUIDE.md` のチェックリストで代替している
 - **クラウド側に強制停止は無い** — R2・Supabase とも通知止まり
+- **`toritavi_user_plan` に手で入れた `pro` の行が 2 つある** —— 開発者本人
+  （`kijiatora.regi@`・2026-07-23）と**提出用スクリーンショットの撮影用**
+  （`020w5dhf@coyoteandpowell.com`・2026-08-30）。**どちらも課金ではない。**
+  監査で「払っていないのに pro」を見つけたら、まずこの 2 行を疑う
+  （経緯は Vault の `Infra/_index.md`）
 - 詳細は `docs/SAFETY_LIMITS.md`
 
 ---
