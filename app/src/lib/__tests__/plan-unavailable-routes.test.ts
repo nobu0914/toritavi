@@ -35,6 +35,16 @@ process.env.ANTHROPIC_API_KEY = "test-key-not-used";
  */
 function fakeSb(planResult: { data: unknown; error: unknown }) {
   return {
+    // 🔴 期間キーは SQL の `ocr_period_start()` が正本になった（025）。
+    //    偽物は**日付を返すだけ**にしてある。期間計算そのものは SQL 側の
+    //    責務で、ここで真似ると**本番と違う計算を検査する**ことになる。
+    //    見張っているのは「呼んだ結果を使っているか」だけ。
+    rpc(fn: string) {
+      if (fn === "ocr_period_start") {
+        return Promise.resolve({ data: "2026-08-01", error: null });
+      }
+      return Promise.resolve({ data: null, error: { message: "unknown rpc" } });
+    },
     from(table: string) {
       const result =
         table === "toritavi_user_plan" ? planResult : { data: null, error: null };
@@ -93,4 +103,28 @@ test("/api/ai-usage: プランが読めれば通常どおり返す（このテ�
   const res = await aiUsageGet(makeRequest() as NextRequest);
   assert.equal(res.status, 200);
   assert.equal((await body(res)).plan, "pro");
+});
+
+// ─────────── 期間キーが取れないときも free に倒さない（025） ───────────
+//
+// 🔴 書く側（`increment_ocr_usage_srv`）と読む側が別々にキーを計算していた
+//    ことが、過去 2 回の事故の原因だった（`019` に `013` の JST 修正が
+//    入っておらず、上限が毎日 9 時間効いていなかった）。読む側を
+//    `ocr_period_start()` に寄せたので、**取れなかったときの倒れ方**を固定する。
+//    ここで暦月に落とすと、落ちた瞬間だけ別のバケツを見て**上限が実質リセット**される。
+
+/** プランは読めるが、期間キーの RPC だけが失敗する偽クライアント。 */
+function fakeSbRpcFails() {
+  const sb = fakeSb({ data: { plan: "pro" }, error: null }) as unknown as {
+    rpc: (fn: string) => Promise<{ data: unknown; error: unknown }>;
+  };
+  sb.rpc = () => Promise.resolve({ data: null, error: { message: "boom" } });
+  return sb;
+}
+
+test("🔴 /api/ai-usage: 期間キーが取れなければ 503（free に倒さない）", async () => {
+  login(fakeSbRpcFails());
+  const res = await aiUsageGet(makeRequest() as NextRequest);
+  assert.equal(res.status, 503);
+  assert.equal((await body(res)).error, "plan_unavailable");
 });

@@ -280,6 +280,9 @@ test("INITIAL_PURCHASE: 行が無ければ作る（upsert 経路）", async () =
         app_user_id: U1,
         entitlement_ids: ["pro"],
         event_timestamp_ms: T,
+        // JST では 2026-08-30。**UTC で切ると 08-29 になる日時をわざと選んでいる**
+        // （UTC 2026-08-29 21:00 = JST 2026-08-30 06:00）。
+        purchased_at_ms: Date.UTC(2026, 7, 29, 21, 0, 0),
       },
     }),
   );
@@ -289,8 +292,18 @@ test("INITIAL_PURCHASE: 行が無ければ作る（upsert 経路）", async () =
   // 🔴 **`last_event_id` に「どのイベントがこの行を作ったか」が残ること。**
   //    課金が反映されないときに、運用者がここから追える
   //    （`admin-maintenance-guide.md` の調査手順）。null で素通りさせない。
+  // 🔴 **`period_anchor` は JST で切ること。** `ocr_period_start()` が
+  //    `(now() AT TIME ZONE 'Asia/Tokyo')::DATE` と比べるので、UTC で書くと
+  //    日付が 1 日ずれた期間ができる（`CLAUDE.md` §6 の「JST 修正が
+  //    複製先に入っていなかった」と同じ型）。
   assert.deepEqual(rows, [
-    { user_id: U1, plan: "pro", updated_at: iso(T), last_event_id: "evt_initial_001" },
+    {
+      user_id: U1,
+      plan: "pro",
+      updated_at: iso(T),
+      last_event_id: "evt_initial_001",
+      period_anchor: "2026-08-30",
+    },
   ]);
 });
 

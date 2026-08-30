@@ -44,10 +44,22 @@ export async function GET(request: NextRequest) {
       { status: 503 },
     );
   }
-  const [ocr, concierge] = await Promise.all([
-    getAiUsage(sb, userId, OCR_GUARD, plan),
-    getAiUsage(sb, userId, CONCIERGE_GUARD, plan),
-  ]);
+  // 🔴 `getAiUsage` は期間キーを SQL に聞くので、**取れなければ投げる**
+  //    （`QuotaPeriodUnavailableError`）。包まないと生 500 になる。
+  //    2026-08-30 に concierge で同じ見落としをしたばかり
+  //    —— `CLAUDE.md` §6-1 の 3「同じ経路を通る呼び出しを数える」。
+  let ocr, concierge;
+  try {
+    [ocr, concierge] = await Promise.all([
+      getAiUsage(sb, userId, OCR_GUARD, plan),
+      getAiUsage(sb, userId, CONCIERGE_GUARD, plan),
+    ]);
+  } catch {
+    return NextResponse.json(
+      { error: "plan_unavailable", message: "利用状況を取得できませんでした。" },
+      { status: 503 },
+    );
+  }
 
   return NextResponse.json({
     plan,

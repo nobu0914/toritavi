@@ -47,3 +47,25 @@ export function revokedUserIds(event: {
   if (event.type !== "TRANSFER") return [];
   return (event.transferred_from ?? []).filter((id) => UUID_RE.test(id));
 }
+
+/**
+ * 上限の期間の起点日（JST の YYYY-MM-DD）。`toritavi_user_plan.period_anchor`。
+ *
+ * 🔴 **JST で切る。** `ocr_period_start()` が
+ * `(now() AT TIME ZONE 'Asia/Tokyo')::DATE` と比べるので、ここで UTC の
+ * 日付を書くと**日付が 1 日ずれる期間ができる**（`CLAUDE.md` §6 の
+ * 「JST 修正が複製先に入っていなかった」と同じ型）。
+ *
+ * `purchased_at_ms` が無い / 壊れているイベントでは **null を返す**。
+ * null は「暦月で集計する」を意味し、**既存の挙動と同じ**。
+ * ここで現在時刻を入れると、**再送のたびに起点がずれて上限が実質
+ * リセットされる**ので、入れてはいけない。
+ */
+export function periodAnchorDate(event: {
+  purchased_at_ms?: number;
+}): string | null {
+  const ms = event.purchased_at_ms;
+  if (typeof ms !== "number" || !Number.isFinite(ms) || ms <= 0) return null;
+  const JST = 9 * 60 * 60 * 1000;
+  return new Date(ms + JST).toISOString().slice(0, 10);
+}

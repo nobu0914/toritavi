@@ -1,7 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase-service";
-import { eventAtIso, revokedUserIds } from "@/lib/webhook-event-order";
+import { eventAtIso, periodAnchorDate, revokedUserIds } from "@/lib/webhook-event-order";
 import { verifyRevenueCatSignature } from "@/lib/revenuecat-signature";
 
 /**
@@ -65,6 +65,8 @@ type RevenueCatEvent = {
   transferred_from?: string[];
   /** `TRANSFER` で**権利を受け取る側**の app_user_id。 */
   transferred_to?: string[];
+  /** 購入時刻。**上限の期間の起点**になる（`period_anchor`・025）。 */
+  purchased_at_ms?: number;
 };
 
 
@@ -248,6 +250,9 @@ export async function POST(request: NextRequest) {
         plan: newPlan,
         updated_at: eventAt,
         last_event_id: event.id ?? null,
+        // 🔴 付与のときだけ起点を書く。失効では触らない
+        //    —— 再契約すると新しい `purchased_at_ms` で入れ直る。
+        period_anchor: newPlan === "pro" ? periodAnchorDate(event) : null,
       },
       { onConflict: "user_id", ignoreDuplicates: true },
     );
@@ -291,7 +296,16 @@ export async function POST(request: NextRequest) {
   //    （`admin-maintenance-guide.md` の調査手順）。
   const q = admin
     .from("toritavi_user_plan")
-    .update({ plan: newPlan, updated_at: eventAt, last_event_id: event.id ?? null })
+    .update(
+      newPlan === "pro"
+        ? {
+            plan: newPlan,
+            updated_at: eventAt,
+            last_event_id: event.id ?? null,
+            period_anchor: periodAnchorDate(event),
+          }
+        : { plan: newPlan, updated_at: eventAt, last_event_id: event.id ?? null },
+    )
     .eq("user_id", event.app_user_id);
   const { data: updated, error } = await (newPlan === "free"
     ? q.lte("updated_at", eventAt)

@@ -117,11 +117,50 @@ function jstFirstOfMonth(): string {
   return `${jstToday().slice(0, 7)}-01`;
 }
 
-/** quotaPeriod に対応するキー列名と値。 */
-function quotaKey(period: QuotaPeriod): { col: string; val: string } {
-  return period === "month"
-    ? { col: "month", val: jstFirstOfMonth() }
-    : { col: "day", val: jstToday() };
+/**
+ * 期間キーを決められなかった。**free に倒さず、ここで止める。**
+ * 呼び出し側は 503 を返すこと（`plan_unavailable` と同じ扱い）。
+ */
+export class QuotaPeriodUnavailableError extends Error {
+  constructor() {
+    super("quota period unavailable");
+    this.name = "QuotaPeriodUnavailableError";
+  }
+}
+
+/**
+ * quotaPeriod に対応するキー列名と値。
+ *
+ * 🔴 **月次のキーは自分で計算しない。SQL の `ocr_period_start()` に聞く。**
+ *
+ * ここが今回の本題。**書く側（`increment_ocr_usage_srv`）と読む側（ここ）が
+ * 別々に同じキーを計算していた**ことが、過去 2 回の事故の原因だった:
+ *
+ *   - `019` の関数に `013` の JST 修正が入っておらず、
+ *     **上限が毎日 9 時間まったく効いていなかった**（2 か月気づかず）
+ *
+ * 契約日起点（2026-08-30）にすると計算はさらに複雑になり、二重実装のままでは
+ * また必ずずれる。**片方を消す**のが唯一の確実な手。往復が 1 回増えるが、
+ * 「上限が静かに無効になる」より安い。
+ *
+ * 🔴 **取れなかったら投げる。** ここで暦月に落とすと、落ちた瞬間だけ
+ * 別のバケツを見て**上限が実質リセットされる**（`CLAUDE.md` §5 フェイルクローズ）。
+ *
+ * 日次（コンシェルジュ）は書く側も `v_now_jst::DATE` の単純な値なので、
+ * 従来どおり TS で計算する。**複雑さのある方だけを寄せている。**
+ */
+async function quotaKey(
+  sb: SupabaseClient,
+  userId: string,
+  period: QuotaPeriod,
+): Promise<{ col: string; val: string }> {
+  if (period !== "month") return { col: "day", val: jstToday() };
+  const { data, error } = await sb.rpc("ocr_period_start", { p_user_id: userId });
+  if (error || typeof data !== "string") {
+    console.error("[ai-guard] ocr_period_start failed:", error);
+    throw new QuotaPeriodUnavailableError();
+  }
+  return { col: "month", val: data };
 }
 
 export { SPEC_FREE_REQUESTS, SPEC_PRO_REQUESTS } from "./ocr-plan-spec.ts";
@@ -282,7 +321,7 @@ export async function enforceAiLimits(
   }
 
   // 2) クォータ（ユーザー別・プラン別）→ 429
-  const key = quotaKey(cfg.quotaPeriod);
+  const key = await quotaKey(sb, userId, cfg.quotaPeriod);
   const { data: usage } = await sb
     .from(cfg.tables.quota)
     .select("requests_count, tokens_total")
@@ -445,7 +484,7 @@ export async function getAiUsage(
   plan: Plan,
 ): Promise<AiFeatureUsage> {
   const tier = cfg.tiers[plan];
-  const key = quotaKey(cfg.quotaPeriod);
+  const key = await quotaKey(sb, userId, cfg.quotaPeriod);
   const { data: usage } = await sb
     .from(cfg.tables.quota)
     .select("requests_count, tokens_total")
