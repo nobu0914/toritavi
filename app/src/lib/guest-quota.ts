@@ -118,9 +118,13 @@ export function capGuestUsage<T extends { limitRequests: number; usedRequests: n
   usage: T,
   decision: Pick<GuestDecision, "limit" | "used">,
 ): T {
+  const limit = Math.min(usage.limitRequests, decision.limit);
+  // 🔴 **上限を超えた使用数を出さない。** 端末が 3 件使ったあと、
+  //    検証前（上限 1 件）の画面を開くと **`3 / 1`** になる。
+  //    「使い切っている」ことは正しいが、**数字としては壊れている。**
   return {
     ...usage,
-    limitRequests: Math.min(usage.limitRequests, decision.limit),
-    usedRequests: Math.max(usage.usedRequests, decision.used),
+    limitRequests: limit,
+    usedRequests: Math.min(limit, Math.max(usage.usedRequests, decision.used)),
   };
 }

@@ -41,3 +41,12 @@ test("端末を見られないときは DB のまま（フェイルオープン�
   const shown = capGuestUsage({ limitRequests: 5, usedRequests: 1 }, d);
   assert.equal(shown.usedRequests, 1, "見られないことを「使った」に変換しない");
 });
+
+test("🔴 上限を超えた使用数を出さない（3 / 1 にならない）", () => {
+  // 16 Pro Max の実際の状態: 端末は 3 件使用済み、検証はまだ（上限 1 件）。
+  const d = decideGuest("failed", { kind: "known", used: 3 });
+  const shown = capGuestUsage({ limitRequests: 5, usedRequests: 0 }, d);
+  assert.equal(shown.limitRequests, 1);
+  assert.equal(shown.usedRequests, 1, "🔴 `3 / 1` と出る");
+  assert.ok(shown.usedRequests <= shown.limitRequests);
+});
