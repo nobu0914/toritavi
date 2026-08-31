@@ -17,10 +17,16 @@ test("🔴 ゲスト向けの文言に「今月」「翌月」が無い", () => 
   }
 });
 
-test("会員の文言は変えていない", () => {
-  for (const a of ["free", "pro"] as const) {
-    assert.equal(msgsFor(OCR_GUARD, a).quotaRequest, OCR_GUARD.messages.quotaRequest);
-  }
+test("無料会員の文言は変えていない（暦月なので「今月」で正しい）", () => {
+  // 🔴 **pro をここに含めない。** 2026-08-31 に Pro 用の文言を足した
+  //    （契約応当日が入ると「翌月 1 日」が嘘になるため。`pro-reset-wording.test.ts`）。
+  //    仕様が変わったのでこの期待値も変えた —— **テストの更新は変更の一部**
+  //    （`CLAUDE.md` §5）。
+  assert.equal(msgsFor(OCR_GUARD, "free").quotaRequest, OCR_GUARD.messages.quotaRequest);
+});
+
+test("🔴 Pro は差し替わっている（無料と同じにしない）", () => {
+  assert.notEqual(msgsFor(OCR_GUARD, "pro").quotaRequest, OCR_GUARD.messages.quotaRequest);
 });
 
 test("🔴 差し替えは quotaUnits の関数まで届く", () => {
