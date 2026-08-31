@@ -1,7 +1,11 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 import { logAiRejection } from "@/lib/moderation";
-import { queryGuestUsed, setGuestUsed } from "@/lib/devicecheck";
+import {
+  deviceCheckConfigured,
+  queryGuestUsed,
+  setGuestUsed,
+} from "@/lib/devicecheck";
 import {
   decideGuest,
   nextDeviceUsed,
@@ -252,7 +256,19 @@ export async function POST(request: NextRequest) {
       const token = request.headers.get("x-guest-device-token");
       const dev = token
         ? await queryGuestUsed(token)
-        : ({ ok: false, reason: "unavailable" } as const);
+        : ({ ok: false, reason: "no_token" } as const);
+
+      // 🔴 **ここを黙らせない。** 2026-08-31 に実機で
+      //    「再インストールしたら枠が戻る」を踏んだとき、**ログが 1 行も
+      //    無くて原因が絞れなかった** —— 端末トークンが来ていないのか、
+      //    DeviceCheck が未設定なのか、Apple が拒否したのかが区別できない。
+      //    **「効いていない」と「呼ばれていない」を混同しない。**
+      console.log(
+        "[OCR] guest device:",
+        token ? "token=yes" : "token=NO",
+        "configured=" + (deviceCheckConfigured() ? "yes" : "no"),
+        "result=" + (dev.ok ? `used=${dev.used} known=${dev.known}` : dev.reason),
+      );
       const state: GuestDeviceState = dev.ok
         ? dev.known
           ? { kind: "known", used: dev.used }
@@ -516,7 +532,11 @@ export async function POST(request: NextRequest) {
       if (guestDevice) {
         const next = nextDeviceUsed(guestDevice.decision.used, units);
         const wrote = await setGuestUsed(guestDevice.token, next);
-        if (!wrote) console.error("[OCR] guest device counter not updated");
+        // 🔴 **成功も出す。** 失敗だけ出す形だと、**書いていないのか
+        //    書けなかったのか**が区別できない（今日それで詰まった）。
+        console.log("[OCR] guest device write:", next, wrote ? "ok" : "FAILED");
+      } else if (audience === "guest") {
+        console.log("[OCR] guest device write: skipped（トークン無し or 読めず）");
       }
 
       console.log(
