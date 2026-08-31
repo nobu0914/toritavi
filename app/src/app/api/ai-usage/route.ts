@@ -20,7 +20,13 @@ import {
   nextResetIso,
 } from "@/lib/ai-guard";
 import { ALLOWED_ORIGINS } from "@/lib/allowed-origins";
-import { decideGuest } from "@/lib/guest-quota";
+import {
+  capGuestUsage,
+  decideGuest,
+  type GuestDecision,
+  type GuestDeviceState,
+} from "@/lib/guest-quota";
+import { queryGuestUsed } from "@/lib/devicecheck";
 
 export async function GET(request: NextRequest) {
   const origin = request.headers.get("origin");
@@ -86,15 +92,24 @@ export async function GET(request: NextRequest) {
   //    出して実際は 1 件で止まる** —— 画面が嘘をつく（2026-08-31 に実機で発覚）。
   //    判定は `/api/ocr` と同じ `decideGuest` に寄せる。**2 か所で別々に
   //    計算しない**（片方だけ直る形を作らない）。
-  const guestLimit =
-    isAnonymous
-      ? decideGuest(guestAttested ? "attested" : "failed", { kind: "fresh" })
-          .limit
-      : undefined;
+  // 🔴 **端末側の関門も通す。** ここを見ないと、画面の上下で違うことを言う ——
+  //    「上限に達しました」（端末の関門）と「残り 3 件」（DB の件数）が
+  //    同時に出た（2026-08-31 に実機で発生）。
+  //    **判定は 1 か所（`decideGuest`）に寄せ、残数もそこから出す。**
+  let guestDecision: GuestDecision | undefined;
+  if (isAnonymous) {
+    const token = request.headers.get("x-guest-device-token");
+    const dev = token ? await queryGuestUsed(token) : null;
+    const state: GuestDeviceState =
+      dev && dev.ok
+        ? dev.known
+          ? { kind: "known", used: dev.used }
+          : { kind: "fresh" }
+        : { kind: "unknown", reason: dev?.ok === false ? dev.reason : "no_token" };
+    guestDecision = decideGuest(guestAttested ? "attested" : "failed", state);
+  }
   const capOcr = (u: AiFeatureUsage): AiFeatureUsage =>
-    guestLimit === undefined
-      ? u
-      : { ...u, limitRequests: Math.min(u.limitRequests, guestLimit) };
+    guestDecision === undefined ? u : capGuestUsage(u, guestDecision);
 
   return NextResponse.json({
     plan,

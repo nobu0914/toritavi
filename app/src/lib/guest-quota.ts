@@ -104,3 +104,23 @@ export function nextDeviceUsed(used: number, units: number): 0 | 1 | 2 | 3 {
   const n = used + units;
   return (n < 0 ? 0 : n > 3 ? 3 : n) as 0 | 1 | 2 | 3;
 }
+
+/// 残数表示に、端末側の関門を反映させる。
+///
+/// 🔴 **画面の上下で違うことを言わせない。** 実機で、上の帯が
+///    「上限に達しました」（端末の関門）、下のピルが「残り 3 件」（DB の件数）
+///    になった（2026-08-31）。**どちらも個別には正しい**が、
+///    利用者には意味が分からない。**判定を 1 か所に寄せる。**
+///
+/// 使用数は **DB と端末の多い方**を採る。片方だけを見ると
+/// 「残っているのに弾かれる」形が残る。
+export function capGuestUsage<T extends { limitRequests: number; usedRequests: number }>(
+  usage: T,
+  decision: Pick<GuestDecision, "limit" | "used">,
+): T {
+  return {
+    ...usage,
+    limitRequests: Math.min(usage.limitRequests, decision.limit),
+    usedRequests: Math.max(usage.usedRequests, decision.used),
+  };
+}
