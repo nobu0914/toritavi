@@ -72,6 +72,8 @@ export type AiGuardConfig = {
     quotaUnits: (remaining: number) => string;
     rateLimit: (perMin: number) => string;
   };
+  /** ゲストにだけ差し替える文言。無ければ `messages` をそのまま使う。 */
+  guestMessages?: Partial<AiGuardConfig["messages"]>;
 };
 
 /**
@@ -272,6 +274,18 @@ export const OCR_GUARD: AiGuardConfig = {
     rateLimit: (n) =>
       `少しお待ちください。短時間に解析が多すぎます（1 分あたり ${n} 回まで）。`,
   },
+  // 🔴 **ゲストに「今月」「翌月 1 日」と言わない。** お試し枠にリセットは
+  //    無く、待てば戻ると読ませてしまう（2026-08-31 に実機で発覚）。
+  //    アプリ側の文言は直したが、**画面はサーバの `message` を優先する**
+  //    ので、ここを直さないと出るのは会員向けの文言のままだった。
+  guestMessages: {
+    quotaRequest:
+      "お試しの読み取り上限に達しました。ご登録いただくと続けてご利用いただけます。",
+    quotaToken:
+      "お試しの使用量が上限に達しました。ご登録いただくと続けてご利用いただけます。",
+    quotaUnits: (n) =>
+      `お試しの残りは ${n} 件です。選択した枚数を減らしてお試しください。`,
+  },
 };
 
 export const CONCIERGE_GUARD: AiGuardConfig = {
@@ -330,6 +344,14 @@ export { resolvePlan, PlanUnavailableError };
 /** ガードを通過したときの情報。呼び出し側が枚数チェックに使う。 */
 export type AiGuardPass = {
   plan: Plan;
+  /**
+   * この pass が誰に対して出たか。**文言の出し分けに使う。**
+   *
+   * 🔴 引数で回さずここに持たせる。`reserveOcrUnits` / `assertUnitsWithinQuota`
+   *    へ足すと、呼び出し側が増えたときに渡し忘れて**会員向けの文言が
+   *    ゲストに出る**（`CLAUDE.md` §6-1 の 3「同じ経路を通る呼び出しを数える」）。
+   */
+  audience: Audience;
   /** この期間に残っている件数（OCR はファイル数）。 */
   remaining: number;
   /** この期間の上限件数。**原子的な予約（reserveOcrUnits）に要る。** */
@@ -393,10 +415,10 @@ export async function enforceAiLimits(
   const used = usage?.requests_count ?? 0;
   if (usage) {
     if (used >= tier.quotaRequests) {
-      return reject("quota_request_limit", cfg.messages.quotaRequest, 429);
+      return reject("quota_request_limit", msgsFor(cfg, audience).quotaRequest, 429);
     }
     if (usage.tokens_total >= tier.quotaTokens) {
-      return reject("quota_token_limit", cfg.messages.quotaToken, 429);
+      return reject("quota_token_limit", msgsFor(cfg, audience).quotaToken, 429);
     }
   }
 
@@ -415,6 +437,7 @@ export async function enforceAiLimits(
 
   return {
     plan,
+    audience,
     remaining: Math.max(0, tier.quotaRequests - used),
     limitRequests: tier.quotaRequests,
   };
@@ -478,7 +501,7 @@ export async function reserveOcrUnits(
     return NextResponse.json(
       {
         error: "quota_request_limit",
-        message: cfg.messages.quotaUnits(remaining),
+        message: msgsFor(cfg, pass.audience).quotaUnits(remaining),
         remaining,
       },
       { status: 429 },
@@ -515,7 +538,7 @@ export async function assertUnitsWithinQuota(
   return NextResponse.json(
     {
       error: "quota_request_limit",
-      message: cfg.messages.quotaUnits(pass.remaining),
+      message: msgsFor(cfg, pass.audience).quotaUnits(pass.remaining),
       remaining: pass.remaining,
     },
     { status: 429 },
@@ -601,6 +624,18 @@ export type Audience = "guest" | "free" | "pro";
  * 匿名（ゲスト）かどうかは JWT の `is_anonymous` を正本にする。
  * Phase 3 で匿名認証を開けるまでは常に false。
  */
+/**
+ * その相手に出す文言。**ゲストは `guestMessages` で上書きする。**
+ *
+ * 🔴 ここを通さずに `cfg.messages.…` を直接読むと、ゲストに
+ *    「今月」「翌月 1 日」と出る。**リセットが無いので嘘になる。**
+ */
+export function msgsFor(cfg: AiGuardConfig, audience: Audience) {
+  return audience === "guest" && cfg.guestMessages
+    ? { ...cfg.messages, ...cfg.guestMessages }
+    : cfg.messages;
+}
+
 export function audienceOf(plan: Plan, isAnonymous: boolean): Audience {
   if (isAnonymous) return "guest";
   return plan;
@@ -773,7 +808,7 @@ export async function beginOcrRequest(args: {
     return NextResponse.json(
       {
         error: "quota_request_limit",
-        message: OCR_GUARD.messages.quotaUnits(remaining),
+        message: msgsFor(OCR_GUARD, args.audience).quotaUnits(remaining),
         remaining,
       },
       { status: 429 },
