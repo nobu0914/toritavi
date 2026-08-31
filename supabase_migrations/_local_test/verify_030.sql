@@ -70,6 +70,17 @@ begin
   select status into st
     from toritavi_ocr_begin_request(gen_random_uuid(), g,'guest',1,3,1,100,500000,100,100);
   select requests_count into n from toritavi_ocr_usage_monthly where user_id = g;
-  if st <> 'ok' then raise notice '✅ 4 件目は通らない（status=%・使用=%）', st, n;
-  else raise warning '🔴 4 件目が通った（status=%・使用=%）—— 上限が効いていない', st, n; end if;
+  -- 🔴 **成功は 'granted'。'ok' ではない。**
+  --    もとは `st <> 'ok'` を合格条件にしていた ——
+  --    **どの結果でも真になるので、4 件目が通っても ✅ を出していた。**
+  --    外部レビュー（2026-08-31）で指摘され、実コードで確認した
+  --    （`ai-guard.ts` は `status === "granted"` を見ている）。
+  --    **合格の値を直接書く。「それ以外」で表さない。**
+  if st = 'quota_exceeded' then
+    raise notice '✅ 4 件目は上限で止まった（status=%・使用=%）', st, n;
+  elsif st = 'granted' then
+    raise warning '🔴 4 件目が通った（status=%・使用=%）—— 上限が効いていない', st, n;
+  else
+    raise warning '🔴 想定外の status=%（使用=%）—— 判定できていない', st, n;
+  end if;
 end $$;
