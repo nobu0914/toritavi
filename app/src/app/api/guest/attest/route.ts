@@ -19,6 +19,7 @@
  *    書けたら `attested = true` を自分で立てられ、検証が無意味になる。
  */
 import { createHash, randomBytes } from "node:crypto";
+import { GUEST_MODE_ENABLED } from "@/lib/guest-quota";
 
 import { NextRequest, NextResponse } from "next/server";
 
@@ -44,6 +45,13 @@ function forbiddenOrigin(request: NextRequest): NextResponse | null {
 }
 
 export async function GET(request: NextRequest) {
+  // 🔴 **ゲストを提供していないので、受け口ごと閉じる**（2026-08-31 の決定）。
+  //    経路を残したままにすると、チャレンジ発行と検証結果の書き込みが
+  //    外から叩ける。**使わない口は開けておかない。**
+  if (!GUEST_MODE_ENABLED) {
+    return NextResponse.json({ error: "not_available" }, { status: 404 });
+  }
+
   const bad = forbiddenOrigin(request);
   if (bad) return bad;
 
@@ -73,6 +81,13 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  // 🔴 **ゲストを提供していないので、受け口ごと閉じる**（2026-08-31 の決定）。
+  //    経路を残したままにすると、チャレンジ発行と検証結果の書き込みが
+  //    外から叩ける。**使わない口は開けておかない。**
+  if (!GUEST_MODE_ENABLED) {
+    return NextResponse.json({ error: "not_available" }, { status: 404 });
+  }
+
   const bad = forbiddenOrigin(request);
   if (bad) return bad;
 

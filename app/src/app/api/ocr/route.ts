@@ -7,6 +7,7 @@ import {
   setGuestUsed,
 } from "@/lib/devicecheck";
 import {
+  GUEST_MODE_ENABLED,
   decideGuest,
   nextDeviceUsed,
   type GuestAttestState,
@@ -133,6 +134,20 @@ export async function POST(request: NextRequest) {
   const auth = await authenticateRequest(request);
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { sb, userId, isAnonymous } = auth;
+
+  // 🔴 **ゲスト（未登録）での読み取りは提供しない**（2026-08-31 の決定）。
+  //    アプリのフラグでは閉じない —— サーバは匿名 JWT を受けるので、
+  //    Supabase の匿名サインインが有効なら外部から使える。**ここで断る。**
+  //    戻すときに塞ぐものは `guest-quota.ts` の `GUEST_MODE_ENABLED` に列挙。
+  if (isAnonymous && !GUEST_MODE_ENABLED) {
+    return NextResponse.json(
+      {
+        error: "registration_required",
+        message: "読み取りのご利用には、メールアドレスでのご登録が必要です。",
+      },
+      { status: 403 },
+    );
+  }
 
   // 🔴 **プランが読めないなら、上限判定に進まない**（2026-08-30 レーン 3）。
   //    以前は `resolvePlan` が黙って free を返し、**Pro 契約者が 429
