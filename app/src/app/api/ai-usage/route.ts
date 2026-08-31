@@ -111,6 +111,29 @@ export async function GET(request: NextRequest) {
   const capOcr = (u: AiFeatureUsage): AiFeatureUsage =>
     guestDecision === undefined ? u : capGuestUsage(u, guestDecision);
 
+  // 🔴 **枠が戻る日は DB に訊く。** `nextResetIso` は user_id を取らないので
+  //    **常に翌月 1 日**を返していた。Pro に契約応当日が入ると嘘になる
+  //    （外部レビュー 2026-08-31 の P1）。
+  //
+  //    🔴 **サーバで計算しない。** 「期間開始 +1 か月」では月末起点がずれる ——
+  //    anchor=1/31・3/15 時点で、正しくは 3/31 なのに 3/28 になる（実測）。
+  //    丸めを 2 か所で書くと必ず食い違う（`CLAUDE.md` §6 の複製の型）。
+  //
+  //    読めなかったときは **Pro だけ null**（＝日付を出さない）に倒す。
+  //    暦月の人に翌月 1 日を出すのは正しいので、そちらは従来値を使う。
+  //    **分からないことを、それらしい日付に変換しない。**
+  const ocrResetAt = await (async (): Promise<string | null> => {
+    if (isAnonymous) return null; // ゲストはリセットしない
+    const { data, error } = await sb.rpc("ocr_period_next", {
+      p_user_id: userId,
+    });
+    if (!error && typeof data === "string") {
+      return new Date(`${data}T00:00:00+09:00`).toISOString();
+    }
+    console.error("[ai-usage] ocr_period_next failed:", error?.message);
+    return plan === "pro" ? null : nextResetIso(OCR_GUARD.quotaPeriod);
+  })();
+
   return NextResponse.json({
     plan,
     guestAttested,
@@ -120,10 +143,10 @@ export async function GET(request: NextRequest) {
     // 🔴 **ゲストはリセットしない。** 期間キーは番兵で固定なので、
     //    「9月1日にリセット」は嘘になる（実機で確認）。`null` を返し、
     //    アプリ側は日付なしの文言を出す。
-    resetAt: isAnonymous ? null : nextResetIso(OCR_GUARD.quotaPeriod),
+    resetAt: ocrResetAt,
     ocr: {
       ...capOcr(ocr),
-      resetAt: isAnonymous ? null : nextResetIso(OCR_GUARD.quotaPeriod),
+      resetAt: ocrResetAt,
     },
     concierge: {
       ...concierge,

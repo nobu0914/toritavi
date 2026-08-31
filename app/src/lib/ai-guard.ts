@@ -74,6 +74,8 @@ export type AiGuardConfig = {
   };
   /** ゲストにだけ差し替える文言。無ければ `messages` をそのまま使う。 */
   guestMessages?: Partial<AiGuardConfig["messages"]>;
+  /** Pro にだけ差し替える文言。無ければ `messages` をそのまま使う。 */
+  proMessages?: Partial<AiGuardConfig["messages"]>;
 };
 
 /**
@@ -278,6 +280,19 @@ export const OCR_GUARD: AiGuardConfig = {
   //    無く、待てば戻ると読ませてしまう（2026-08-31 に実機で発覚）。
   //    アプリ側の文言は直したが、**画面はサーバの `message` を優先する**
   //    ので、ここを直さないと出るのは会員向けの文言のままだった。
+  // 🔴 **Pro に「今月」「翌月 1 日」と言わない。** 契約応当日が入ると
+  //    リセットは月初ではない（`ocr_period_start` / `ocr_period_next`）。
+  //    日付を書かずに「次の更新日」と言う —— 実際の日付は
+  //    `/api/ai-usage` の `resetAt` が返し、画面がそれを出す。
+  //    外部レビュー（2026-08-31）P1 の指摘。
+  proMessages: {
+    quotaRequest:
+      "ご契約期間の読み取り上限に達しました。次の更新日にリセットされます。",
+    quotaToken:
+      "ご契約期間の使用量が上限に達しました。次の更新日にリセットされます。",
+    quotaUnits: (n) =>
+      `ご契約期間の残りは ${n} 件です。選択した枚数を減らしてお試しください。`,
+  },
   guestMessages: {
     quotaRequest:
       "お試しの読み取り上限に達しました。ご登録いただくと続けてご利用いただけます。",
@@ -631,9 +646,13 @@ export type Audience = "guest" | "free" | "pro";
  *    「今月」「翌月 1 日」と出る。**リセットが無いので嘘になる。**
  */
 export function msgsFor(cfg: AiGuardConfig, audience: Audience) {
-  return audience === "guest" && cfg.guestMessages
-    ? { ...cfg.messages, ...cfg.guestMessages }
-    : cfg.messages;
+  if (audience === "guest" && cfg.guestMessages) {
+    return { ...cfg.messages, ...cfg.guestMessages };
+  }
+  if (audience === "pro" && cfg.proMessages) {
+    return { ...cfg.messages, ...cfg.proMessages };
+  }
+  return cfg.messages;
 }
 
 export function audienceOf(plan: Plan, isAnonymous: boolean): Audience {
