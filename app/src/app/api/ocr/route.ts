@@ -454,6 +454,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 🔴 **端末のカウンタは Claude を呼ぶ前に進める。**
+    //
+    //    もとは成功してから進めていた（失敗で枠が減るのを避けるため）。
+    //    だが読み（`queryGuestUsed`）と書きの間に **Claude の呼び出しが
+    //    丸ごと入り**、同じ端末の要求が重なると**どれも同じ値を読み、
+    //    同じ値を書いた**（lost update）。DeviceCheck に加算も CAS も
+    //    無いので、この形では防げない。2026-08-31 に実際に踏んだ ——
+    //    90 秒に 4 要求を投げたあと入れ直したら**枠が戻っていた**
+    //    （`docs/guest-mode-spec.md` §22）。
+    //
+    //    **失敗しても戻さない（フェイルクローズ）。** 戻すと、
+    //    並んだ別の要求の加算まで消せる。3 件のうち 1 件を失う代償は
+    //    受け入れる（利用者判断・2026-08-31）。
+    //
+    //    予約（`beginOcrRequest`）の**後**に置く。前だと
+    //    `input_too_large` や予算 503 の門前払いでも枠が減る。
+    //    残る窓は「予約 → 送信」の 1 秒未満。**ゼロではない。**
+    if (guestDevice) {
+      const next = nextDeviceUsed(guestDevice.decision.used, units);
+      const wrote = await setGuestUsed(guestDevice.token, next);
+      // 🔴 **成功も出す。** 失敗だけ出す形だと、**書いていないのか
+      //    書けなかったのか**が区別できない（今日それで詰まった）。
+      console.log("[OCR] guest device write:", next, wrote ? "ok" : "FAILED");
+    } else if (audience === "guest") {
+      console.log("[OCR] guest device write: skipped（トークン無し or 読めず）");
+    }
+
     // ===== ここから先の失敗は必ず精算する =====
     try {
       // 🔴 **精算のぶんを残して呼ぶ。** 残り時間が足りないなら送らない
@@ -525,19 +552,6 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // 🔴 **端末のカウンタは成功してから進める。** 失敗で進めると、
-      //    使えていないのに枠が減る。逆に進め忘れると再インストールと
-      //    同じ抜け道になるので、**成功地点はここ 1 か所に限る。**
-      //    書き戻しの失敗は致命ではない（利用者側の関門が残る）が、黙らない。
-      if (guestDevice) {
-        const next = nextDeviceUsed(guestDevice.decision.used, units);
-        const wrote = await setGuestUsed(guestDevice.token, next);
-        // 🔴 **成功も出す。** 失敗だけ出す形だと、**書いていないのか
-        //    書けなかったのか**が区別できない（今日それで詰まった）。
-        console.log("[OCR] guest device write:", next, wrote ? "ok" : "FAILED");
-      } else if (audience === "guest") {
-        console.log("[OCR] guest device write: skipped（トークン無し or 読めず）");
-      }
 
       console.log(
         "[OCR] ok steps:", sanitized.steps.length,
