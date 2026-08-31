@@ -526,14 +526,29 @@ END; $function$;
 -- 確認
 -- ============================================================================
 
--- ① 5 つとも `ocr_period_start` を使っていること（期待: すべて t）
+-- ① 5 つとも新しいキーで数えていること（期待: 全部 t / 暦月の残存は全部 f）
+--
+-- 🔴 **`ocr_period_start` の有無で見ない。** `settle_*` はこの関数を
+--    **呼ばない**（begin が台帳に書いたキーを読む）ので、それで判定すると
+--    正しく入っていても `f` に見える。**実際に 1 度そう誤読した。**
+--    見るのは「上限の更新に新しいキーを使っているか」。
 select p.proname,
-       pg_get_functiondef(p.oid) like '%ocr_period_start%' as 期間関数を使う
+       pg_get_functiondef(p.oid) like '%month = v_quota%' as 上限は新キー,
+       pg_get_functiondef(p.oid) like '%month = v_month%' as 暦月が残存
 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
 where n.nspname='public' and p.proname in (
   'toritavi_ocr_begin_request','toritavi_reserve_ocr_units',
   'toritavi_release_ocr_units','toritavi_ocr_settle_success',
   'toritavi_ocr_settle_failure')
+order by p.proname;
+
+-- ①-b `settle_*` は台帳から読み、移行中の保険を持つこと（期待: t / t）
+select p.proname,
+       pg_get_functiondef(p.oid) like '%period_quota%' as 台帳から読む,
+       pg_get_functiondef(p.oid) like '%coalesce(v_quota, v_month)%' as 移行中の保険
+from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+where n.nspname='public'
+  and p.proname in ('toritavi_ocr_settle_success','toritavi_ocr_settle_failure')
 order by p.proname;
 
 -- ② 全体予算は暦月のままであること（期待: t）
