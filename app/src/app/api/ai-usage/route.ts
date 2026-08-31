@@ -16,9 +16,11 @@ import {
   resolvePlan,
   audienceOf,
   getAiUsage,
+  type AiFeatureUsage,
   nextResetIso,
 } from "@/lib/ai-guard";
 import { ALLOWED_ORIGINS } from "@/lib/allowed-origins";
+import { decideGuest } from "@/lib/guest-quota";
 
 export async function GET(request: NextRequest) {
   const origin = request.headers.get("origin");
@@ -79,14 +81,35 @@ export async function GET(request: NextRequest) {
     guestAttested = g?.attested === true;
   }
 
+  // 🔴 **ゲストの上限は、App Attest の結果で決まる。**
+  //    `tiers.guest` の 3 をそのまま返すと、**未検証の端末に「0 / 3」と
+  //    出して実際は 1 件で止まる** —— 画面が嘘をつく（2026-08-31 に実機で発覚）。
+  //    判定は `/api/ocr` と同じ `decideGuest` に寄せる。**2 か所で別々に
+  //    計算しない**（片方だけ直る形を作らない）。
+  const guestLimit =
+    isAnonymous
+      ? decideGuest(guestAttested ? "attested" : "failed", { kind: "fresh" })
+          .limit
+      : undefined;
+  const capOcr = (u: AiFeatureUsage): AiFeatureUsage =>
+    guestLimit === undefined
+      ? u
+      : { ...u, limitRequests: Math.min(u.limitRequests, guestLimit) };
+
   return NextResponse.json({
     plan,
     guestAttested,
     // 機能ごとにリセット単位が違う（OCR=月次 / コンシェルジュ=日次）。
     // トップレベルの resetAt は**配布済みアプリが読んでいる**ので残す。
     // 値は OCR のもの（バッジが表示しているのは OCR の残量）。
-    resetAt: nextResetIso(OCR_GUARD.quotaPeriod),
-    ocr: { ...ocr, resetAt: nextResetIso(OCR_GUARD.quotaPeriod) },
+    // 🔴 **ゲストはリセットしない。** 期間キーは番兵で固定なので、
+    //    「9月1日にリセット」は嘘になる（実機で確認）。`null` を返し、
+    //    アプリ側は日付なしの文言を出す。
+    resetAt: isAnonymous ? null : nextResetIso(OCR_GUARD.quotaPeriod),
+    ocr: {
+      ...capOcr(ocr),
+      resetAt: isAnonymous ? null : nextResetIso(OCR_GUARD.quotaPeriod),
+    },
     concierge: {
       ...concierge,
       resetAt: nextResetIso(CONCIERGE_GUARD.quotaPeriod),
