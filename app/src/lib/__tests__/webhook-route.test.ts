@@ -323,6 +323,83 @@ test("🔴 pro の権利が無い購入イベントでは付与しない", async
   assert.deepEqual(await json(res), { ok: true, skipped: "INITIAL_PURCHASE" });
 });
 
+// ────────── 失効させてはいけないイベント（2026-09-02 に穴として発見） ──────────
+//
+// 🔴 **`CANCELLATION` は「自動更新をオフにした」であって「期間が終わった」
+//    ではない。** 落としてよいのは `EXPIRATION` だけ。取り違えて
+//    `REVOKING_EVENTS` に足すと、**払った月を途中で取り上げる**。
+//
+//    route.ts のヘッダには最初からそう書いてあったが、**このファイルに
+//    `CANCELLATION` は一度も出てこなかった** —— つまり、足しても消しても
+//    テストは緑のままだった。落ちも警告も出ない型（`CLAUDE.md` §6-1）。
+//    サンドボックスで解約した直後に無料へ戻り、それが解約ではなく
+//    `EXPIRATION` によるもの（サンドボックスは 1 か月＝5 分・6 回で終了）
+//    だと確かめる過程で見つかった。
+//
+//    `BILLING_ISSUE` も同じ型で、しかも**猶予期間の最中に届く**。
+//    ここで取り上げると、支払い方法を直す機会を与えずに締め出すことになる。
+//
+//    **落とさないことだけでなく、行に触らないことも見る。** `updated_at` を
+//    進めてしまうと、後から届いた本物の `EXPIRATION` が `.lte` で弾かれる
+//    ——「取り上げない」が「二度と取り上げられない」に変わる。
+
+test("🔴 CANCELLATION: 解約しただけでは pro を取り上げない（行に触らない）", async () => {
+  const before = iso(T - 60_000);
+  const rows: Row[] = [{ user_id: U1, plan: "pro", updated_at: before }];
+  setAdmin(fakeAdmin(rows));
+  const res = await POST(
+    signed({
+      event: {
+        type: "CANCELLATION",
+        app_user_id: U1,
+        entitlement_ids: ["pro"],
+        event_timestamp_ms: T,
+      },
+    }),
+  );
+  assert.equal(res.status, 200);
+  assert.deepEqual(await json(res), { ok: true, skipped: "CANCELLATION" });
+  assert.equal(rows[0].plan, "pro", "解約で pro を取り上げた（払った期間が残っている）");
+  assert.equal(rows[0].updated_at, before, "落とさなくても行に触ると、後続の EXPIRATION が弾かれる");
+});
+
+test("🔴 BILLING_ISSUE: 猶予期間の最中に取り上げない", async () => {
+  const before = iso(T - 60_000);
+  const rows: Row[] = [{ user_id: U1, plan: "pro", updated_at: before }];
+  setAdmin(fakeAdmin(rows));
+  const res = await POST(
+    signed({
+      event: {
+        type: "BILLING_ISSUE",
+        app_user_id: U1,
+        entitlement_ids: ["pro"],
+        event_timestamp_ms: T,
+      },
+    }),
+  );
+  assert.equal(res.status, 200);
+  assert.deepEqual(await json(res), { ok: true, skipped: "BILLING_ISSUE" });
+  assert.equal(rows[0].plan, "pro", "支払い失敗の通知だけで締め出した");
+  assert.equal(rows[0].updated_at, before, "猶予中に行を進めると、本物の失効が弾かれる");
+});
+
+test("知らないイベント型は 200 で受け流す（再送ループを作らない）", async () => {
+  // RevenueCat は将来イベントを増やす。400 を返すと再送され、最後は捨てられる。
+  setAdmin(undefined);
+  const res = await POST(
+    signed({
+      event: {
+        type: "SUBSCRIPTION_EXTENDED",
+        app_user_id: U1,
+        entitlement_ids: ["pro"],
+        event_timestamp_ms: T,
+      },
+    }),
+  );
+  assert.equal(res.status, 200);
+  assert.deepEqual(await json(res), { ok: true, skipped: "SUBSCRIPTION_EXTENDED" });
+});
+
 test("UUID でない app_user_id は 200 で捨てる（再送ループを作らない）", async () => {
   setAdmin(undefined);
   const res = await POST(
