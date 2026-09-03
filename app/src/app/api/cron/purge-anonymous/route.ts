@@ -56,6 +56,15 @@ const MAX_PER_RUN = 50;
 /** 無活動と見なす日数（`guest-mode-spec.md` §7「保存期間」）。 */
 const INACTIVE_DAYS = 90;
 
+/**
+ * 拒否ログ（`toritavi_ai_rejections`）を保つ日数。
+ *
+ * 🔴 **無限に貯めない。** 分間の共有上限 120 だけで 1 日 17 万行まで増えうる。
+ * モデレーションの調べ物に要るのは直近だけで、それより古いものは
+ * 容量（無料プランの DB は 500MB・別プロジェクトと共有）を食うだけ。
+ */
+const REJECTION_KEEP_DAYS = 30;
+
 export async function GET(request: NextRequest) {
   // 🔴 **秘密が無ければ動かさない。** keepalive と違い、ここは消す。
   //    「設定漏れで掃除が止まる」より「設定漏れで消える」ほうが桁違いに悪い。
@@ -95,6 +104,36 @@ export async function GET(request: NextRequest) {
   for (const row of list) {
     const userId = row.user_id;
     let failed = false;
+
+    // 🔴 **消す直前にもう一度確かめる**（2026-09-04 の外部監査・TOCTOU）。
+    //
+    //    候補は一覧を取った時点の姿でしかない。取得から削除までの間に
+    //    その人が**戻ってきた**かもしれないし、**登録して恒久アカウントに
+    //    昇格した**かもしれない（`updateUser` は user_id を変えないので、
+    //    候補に載ったまま昇格しうる）。
+    //
+    //    **1 件でも「もう会員だった人」を消したら取り返しがつかない。**
+    //    ここは誰にも急かされていない掃除なので、迷ったら次回に回す。
+    const { data: fresh, error: freshErr } =
+      await admin.auth.admin.getUserById(userId);
+    if (freshErr || !fresh?.user) {
+      console.warn(`[cron/purge-anonymous] re-check failed for ${userId}`);
+      skipped += 1;
+      continue;
+    }
+    const u = fresh.user;
+    const lastSeen = u.last_sign_in_at ?? u.created_at;
+    const inactiveEnough =
+      Date.parse(lastSeen) < Date.now() - INACTIVE_DAYS * 86_400_000;
+    if (u.is_anonymous !== true || !inactiveEnough || u.email) {
+      // 匿名でなくなった／戻ってきた／メールが付いた。**消さない。**
+      console.warn(
+        `[cron/purge-anonymous] no longer eligible, skipping ${userId}:`,
+        `anon=${u.is_anonymous} inactive=${inactiveEnough} email=${u.email ? "yes" : "no"}`,
+      );
+      skipped += 1;
+      continue;
+    }
 
     // ① 先に Storage。**ここで失敗したら user を消さない。**
     for (const spec of USER_OWNED_BUCKETS) {
@@ -143,15 +182,41 @@ export async function GET(request: NextRequest) {
     deleted += 1;
   }
 
+  // 🔴 **拒否ログを剪定する**（2026-09-04 の外部監査）。
+  //
+  //    `logAiRejection` は拒否のたびに 1 行入れるが、**消す仕組みが無かった。**
+  //    分間の共有上限は 120 なので、上限だけで **1 日 17 万行**まで増えうる。
+  //    `toritavi_ocr_events` には 10 分の剪定があるのに、こちらには無かった。
+  //
+  //    ここに相乗りさせる（新しい cron を増やさない）。**失敗しても
+  //    掃除の成否には影響させない** —— 剪定は後片付けであって、
+  //    ここで 500 を返すと本体の削除まで再送されることになる。
+  let prunedRejections: number | null = null;
+  {
+    const cutoff = new Date(
+      Date.now() - REJECTION_KEEP_DAYS * 86_400_000,
+    ).toISOString();
+    const { error, count } = await admin
+      .from("toritavi_ai_rejections")
+      .delete({ count: "exact" })
+      .lt("created_at", cutoff);
+    if (error) {
+      console.warn("[cron/purge-anonymous] rejection prune failed", error.message);
+    } else {
+      prunedRejections = count ?? 0;
+    }
+  }
+
   // 🔴 **成功も出す。** 「0 件でした」と「呼ばれていない」を区別できるように
   //    （`CLAUDE.md` §6-1「出ないのに落ちない」）。
   console.log(
-    `[cron/purge-anonymous] candidates=${list.length} deleted=${deleted} skipped=${skipped}`,
+    `[cron/purge-anonymous] candidates=${list.length} deleted=${deleted} skipped=${skipped} prunedRejections=${prunedRejections}`,
   );
   return NextResponse.json({
     ok: true,
     candidates: list.length,
     deleted,
     skipped,
+    prunedRejections,
   });
 }
