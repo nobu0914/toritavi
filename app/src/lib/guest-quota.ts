@@ -78,7 +78,7 @@ export type GuestDecision = {
   /** 残り。表示にも使う。 */
   remaining: number;
   /** 断るときの理由（ログ・レスポンス用。**利用者向け文言ではない**）。 */
-  reason?: "device_exhausted";
+  reason?: "device_exhausted" | "device_unreadable";
   /**
    * 成功後に DeviceCheck へ書き戻すか。
    * **聞けなかったときは書かない** —— 読めていない値に +1 すると、
@@ -101,8 +101,30 @@ export function decideGuest(
   const limit = attest === "attested" ? SPEC_GUEST_REQUESTS : GUEST_UNATTESTED_LIMIT;
 
   if (device.kind === "unknown") {
-    // 読めていないので書き戻さない。利用者側の関門に委ねる。
-    return { allow: true, limit, used: 0, remaining: limit, writeBack: false };
+    // 🔴 **2026-09-03 に fail-open から fail-close へ変えた（P0-1）。**
+    //
+    //    もとは `allow: true` で「利用者側（DB）の関門に委ねる」としていた。
+    //    **その前提が誤りだった** —— 匿名 user_id は公開 API で作り直せる
+    //    ので、DB 側の関門も一緒にリセットされる。端末側も DB 側も
+    //    数えられない状態になり、**1 件ずつ無限に取れる。**
+    //    2026-08-31 の外部レビュー P0（`docs/guest-mode-spec.md` §23）。
+    //
+    //    ⚠️ **正規の利用者を巻き込む。** DeviceCheck が読めない端末
+    //    （設定ミス・通信断）は使えなくなる。**それでも通さない** ——
+    //    通した場合の上限は「無い」に等しく、受け入れられない。
+    //    理由を分けてあるので、画面は「上限に達した」ではなく
+    //    「確認できなかった」と言える。
+    //
+    //    `used` / `remaining` は**分からない**ので触らない
+    //    （0 と limit のまま）。allow が false なので数字は使われない。
+    return {
+      allow: false,
+      limit,
+      used: 0,
+      remaining: limit,
+      reason: "device_unreadable",
+      writeBack: false,
+    };
   }
 
   const used = device.kind === "known" ? device.used : 0;
@@ -118,6 +140,25 @@ export function decideGuest(
     };
   }
   return { allow: true, limit, used, remaining, writeBack: true };
+}
+
+/**
+ * この要求の単位数が、端末側の残数を超えていないか（P0-3）。
+ *
+ * 🔴 **`decideGuest` は「1 件でも残っているか」しか見ていない。**
+ * 残り 1 件の端末が 3 ページを 1 要求で投げると、判定は通り、
+ * `nextDeviceUsed` が 3 で頭打ちにするので**書き戻しでも気づけない**。
+ * 2026-08-31 の外部レビュー P0（`docs/guest-mode-spec.md` §23）。
+ *
+ * **判定と消費の単位を揃える。** 呼び出し側は `units` が確定してから、
+ * かつ予約（`beginOcrRequest`）の**前**に呼ぶこと ——
+ * 後だと予約だけ取って断ることになる。
+ */
+export function guestUnitsExceedRemaining(
+  decision: Pick<GuestDecision, "remaining">,
+  units: number,
+): boolean {
+  return units > decision.remaining;
 }
 
 /**

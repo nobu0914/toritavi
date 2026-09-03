@@ -48,6 +48,18 @@ export type AttestOutcome = {
   publicKey?: string;
   /** 落ちた理由。**ログ用**（利用者には出さない）。 */
   reason?: string;
+  /**
+   * 🔴 **検証が返した実際の環境**（`development` / `production`）。
+   *
+   * 2026-09-03 まで、この値は捨てられていた。呼び出し側は代わりに
+   * **設定（`APPLE_APPATTEST_ALLOW_DEV`）から書いていた** ——
+   * つまり「何だったか」ではなく「何を許したか」を記録していた。
+   * 2026-08-31 の外部レビュー P1（`docs/guest-mode-spec.md` §23）。
+   *
+   * `allowDevelopment: true` のときは development も production も
+   * 通るので、**設定からは実際の環境を復元できない。**
+   */
+  environment?: string;
 };
 
 /**
@@ -78,7 +90,9 @@ export function verifyAppAttest(
       teamIdentifier: teamId,
       allowDevelopmentEnvironment: opts.allowDevelopment === true,
     }) as { publicKey: string; environment: string };
-    return { state: "attested", publicKey: r.publicKey };
+    // 🔴 **`environment` を捨てない。** 呼び出し側が設定から書くと、
+    //    development の grant が production として残りうる（逆も）。
+    return { state: "attested", publicKey: r.publicKey, environment: r.environment };
   } catch (e) {
     // 🔴 メッセージをそのまま利用者へ返さない（内部構造が漏れる）。
     //    ログにも残すのは短い理由だけ。
