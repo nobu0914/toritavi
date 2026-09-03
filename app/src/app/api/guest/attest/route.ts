@@ -150,6 +150,21 @@ export async function POST(request: NextRequest) {
     patch.attested_at = new Date().toISOString();
     patch.public_key = result.publicKey ?? null;
     patch.key_hash = createHash("sha256").update(keyId).digest("hex");
+    // 🔴 **鍵を差し替えたらカウンタも一緒に捨てる**（2026-09-04 の外部監査）。
+    //
+    //    `assert_counter` は **その鍵の** `signCount`。新しい鍵は小さい値から
+    //    始まるので、古い鍵の値が残っていると `acceptAssertionCounter` が
+    //    **永久に拒み続ける**（`counter_not_advanced`）。
+    //
+    //    起きる形: アプリを入れ直す → App Attest の鍵は**インストールに
+    //    紐づくので無効**になる → 再 attestation で新しい鍵に差し替わる →
+    //    **以後 assertion が 1 通も通らない。** サーバは署名が無い扱いで
+    //    上限 1 件へ落とすだけなので、**画面には何も出ない**
+    //    （利用状況は `attested` を見て「3 件」と言い続ける。
+    //     `CLAUDE.md` §6-1「出ないのに落ちない」）。
+    //
+    //    **公開鍵・鍵ハッシュ・カウンタは一組。片方だけ替えない。**
+    patch.assert_counter = null;
     // 🔴 **検証結果を書く。設定を書かない**（2026-09-03）。
     //    ここは `ALLOW_DEV ? "development" : "production"` だった。
     //    `allowDevelopment: true` のときは development も production も

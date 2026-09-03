@@ -58,6 +58,23 @@ export function usedToBits(used: GuestUsed): { bit0: boolean; bit1: boolean } {
   return { bit0: (used & 1) === 1, bit1: (used & 2) === 2 };
 }
 
+/**
+ * Apple の「この端末の記録が無い」応答か。**純粋関数。**
+ *
+ * 200 + 本文 `Failed to find bit state` が**初回の正常な姿**。
+ *
+ * 🔴 **これ以外の 200 を初回と同じに扱わない。** 以前は「JSON でなければ
+ * 全部 `used: 0`」だったので、空の本文・中継が返した HTML・欠けた JSON が
+ * **すべて「1 件も使っていない」に化けた。** 枠はこの応答だけで決まるので、
+ * 設定ミスがそのまま**無料枠の復活**になる（2026-09-04 の外部監査）。
+ *
+ * 大小と前後の空白は無視する（Apple 側の表記揺れで閉じすぎないため）。
+ * **迷ったら閉じる側**——呼び出し元は「聞けなかった」として拒否する。
+ */
+export function isBitStateNotFound(body: string): boolean {
+  return body.trim().toLowerCase().includes("failed to find bit state");
+}
+
 /** 設定が揃っているか。**揃っていないことを「0 件使用」と混同しない。** */
 export function deviceCheckConfigured(env: DeviceCheckEnv = process.env): boolean {
   return Boolean(
@@ -154,6 +171,8 @@ export async function queryGuestUsed(
 
   // Apple は「その端末の記録が無い」を 200 + 本文 "Failed to find bit state"
   // で返す。**これは初回の正常な姿。**
+  //
+  // 🔴 **それ以外の 200 を初回と同じに扱わない**（`isBitStateNotFound`）。
   let text = "";
   try {
     text = await res.text();
@@ -168,9 +187,27 @@ export async function queryGuestUsed(
         return { ok: true, used: bitsToUsed(j.bit0, j.bit1), known: true };
       }
     } catch {
-      // JSON でない = 記録が無い。下へ落とす。
+      // JSON でない。**下で「記録が無い」の印を確かめる。**
     }
-    return { ok: true, used: 0, known: false };
+
+    // 🔴 **「記録が無い」だけを初回として扱う**（2026-09-04 の外部監査）。
+    //
+    //    ここは以前、**200 で JSON でなければ何でも** `used: 0, known: false`
+    //    を返していた。つまり —— 空の本文／中継（プロキシ・WAF）が返した
+    //    HTML／フィールドの欠けた JSON／将来 Apple が形を変えたとき ——
+    //    が**すべて「この端末は 1 件も使っていない」に化ける。**
+    //
+    //    枠はこの応答だけで決まるので、**設定ミスや中継の異常が
+    //    そのまま無料枠の復活になる。** 落ちも警告も出ない
+    //    （`CLAUDE.md` §6-1）。**印を確かめて、無ければ閉じる。**
+    if (isBitStateNotFound(text)) {
+      return { ok: true, used: 0, known: false };
+    }
+    console.error(
+      "[devicecheck] unexpected 200 body; treating as unavailable:",
+      `len=${text.length}`,
+    );
+    return { ok: false, reason: "unavailable" };
   }
 
   console.error("[devicecheck] query http:", res.status);
