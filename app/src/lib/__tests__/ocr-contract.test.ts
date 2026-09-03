@@ -157,11 +157,33 @@ describe("🔴 処理の並び順", () => {
     );
   });
 
-  test("🔴 attested になるのは、保存された検証結果が true のときだけ", () => {
+  test("🔴 attested になるのは、保存された検証結果 ＋ 要求ごとの署名が揃ったときだけ", () => {
+    // 🔴 **2026-09-03 に条件が 1 つ増えた。**
+    //    それまでは `grant?.attested === true` だけで `attested` にしていた。
+    //    attestation は「このアプリ・この端末が本物か」を**一度だけ**示す
+    //    もので、**その要求が本物かは示さない**（外部レビュー P1）。
+    //    いまは assertion の検証（`v.ok`）も通らないと `attested` にならない。
+    //
+    //    **形ではなく条件を見る。** ここは
+    //    `/grant\?\.attested === true\)?\s*attestState = "attested"/` と
+    //    書いてあり、**厳しくした変更でそのまま落ちた**。
+    //    正しくしたのにテストが落ちる形は、次に直す人を迷わせる。
     const r = code(route);
     assert.ok(
-      /grant\?\.attested === true\)?\s*attestState = "attested"/.test(r),
-      "🔴 検証結果以外の条件で attested になっている",
+      /grant\?\.attested === true/.test(r),
+      "🔴 保存された検証結果を見ていない",
+    );
+    assert.ok(
+      /attestState = "attested"/.test(r),
+      "attested になる経路が無い",
+    );
+    // `attestState = "attested"` が `v.ok` の内側にあること。
+    const at = r.indexOf('attestState = "attested"');
+    const okAt = r.lastIndexOf("if (v.ok)", at);
+    assert.ok(
+      okAt > 0 && okAt < at,
+      "🔴 assertion の検証を通らずに attested になっている。\n" +
+        "  attestation だけでは、その 1 要求が本物かを示せない。",
     );
     // 検証結果は**利用者が書けない表**から読む（028 の RLS）。
     assert.ok(

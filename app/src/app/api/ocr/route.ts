@@ -15,6 +15,7 @@ import {
   type GuestDecision,
   type GuestDeviceState,
 } from "@/lib/guest-quota";
+import { verifyGuestAssertion } from "@/lib/guest-assertion";
 import { authenticateRequest } from "@/lib/supabase-server";
 import {
   audienceOf,
@@ -249,6 +250,10 @@ export async function POST(request: NextRequest) {
     // 🔴 **重い検証より前に置く。** ここを抜けていない要求に PDF を開かせない。
     let guestDevice: { token: string; decision: GuestDecision } | null = null;
     let guestDecision: GuestDecision | null = null;
+    // 受理した assertion のカウンタ。**成功したときだけ入る。**
+    // 🔴 ゲストの判定ブロックの**外**で持つ —— 更新は予約の前に行うので、
+    //    ブロック内に閉じると届かない。
+    let acceptedCounter: number | null = null;
     let guestLimit: number | undefined;
     if (audience === "guest") {
       // App Attest の結果は起動時に `/api/guest/attest` が保存している。
@@ -263,11 +268,42 @@ export async function POST(request: NextRequest) {
       {
         const { data: grant, error: grantErr } = await sb
           .from("toritavi_guest_grants")
-          .select("attested")
+          // 🔴 `public_key` と `assert_counter` も読む（2026-09-03）。
+          //    保存だけして使っていなかった公開鍵を、ここで初めて使う。
+          .select("attested, public_key, assert_counter")
           .eq("user_id", userId)
           .maybeSingle();
         if (grantErr) console.error("[OCR] guest grant read failed");
-        else if (grant?.attested === true) attestState = "attested";
+        else if (grant?.attested === true) {
+          // 🔴 **attestation を通しただけでは `attested` にしない。**
+          //    あれは「このアプリ・この端末が本物か」を一度だけ示すもので、
+          //    **この要求が本物かは示さない。** assertion を要求ごとに
+          //    検証する（`docs/guest-mode-spec.md` §23 の P1）。
+          const assertion = request.headers.get("x-guest-assertion");
+          if (!assertion) {
+            // 署名が無い＝旧クライアントか偽物。**上限 1 件へ落とす**
+            //（全面拒否にしない —— 端末側の関門は別に効いている）。
+            console.log("[OCR] guest assertion: missing");
+          } else {
+            const v = verifyGuestAssertion({
+              // **署名の対象は requestId。** その 1 件に縛られるので、
+              // 別の要求へ付け替えられない。
+              assertion,
+              payload: requestId,
+              publicKey: grant.public_key,
+              previousCounter: grant.assert_counter,
+            });
+            if (v.ok) {
+              attestState = "attested";
+              acceptedCounter = v.counter;
+            } else {
+              // 🔴 **理由をログに残す。** 「通らなかった」だけだと、
+              //    鍵が無いのか・署名が壊れているのか・カウンタが
+              //    戻っているのかが分からない。
+              console.log("[OCR] guest assertion rejected:", v.reason);
+            }
+          }
+        }
       }
 
       const token = request.headers.get("x-guest-device-token");
@@ -438,6 +474,35 @@ export async function POST(request: NextRequest) {
         },
         { status: 413 },
       );
+    }
+
+    // 🔴 **assertion のカウンタを進める。**
+    //
+    //    受理した assertion のカウンタを保存する。**進まないカウンタは、
+    //    そのまま再生の入口**になる（同じ 1 通が何度でも通る）。
+    //    P0-2（端末カウンタ）と同じ形なので、**書けなければ通さない。**
+    //
+    //    予約（`beginOcrRequest`）の**前**に置く。後だと予約だけ取って
+    //    断ることになる。
+    if (acceptedCounter !== null) {
+      const { error: cErr } = await sb
+        .from("toritavi_guest_grants")
+        .update({ assert_counter: acceptedCounter })
+        .eq("user_id", userId)
+        // 🔴 **戻さない。** 並んだ別の要求が先に進めていたら、
+        //    こちらの古い値で上書きしない。
+        .lt("assert_counter", acceptedCounter);
+      if (cErr) {
+        console.error("[OCR] guest assert_counter update failed");
+        return NextResponse.json(
+          {
+            error: "guest_device_unverified",
+            message:
+              "お使いの端末を確認できませんでした。しばらくしてからお試しください。読み取りは行っていません。",
+          },
+          { status: 503 },
+        );
+      }
     }
 
     // 🔴 **P0-3: 端末の残数と、この要求の単位数を突き合わせる。**
