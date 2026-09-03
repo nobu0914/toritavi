@@ -41,6 +41,7 @@ import {
 } from "../guest-quota.ts";
 
 const ocrRoute = readFileSync("src/app/api/ocr/route.ts", "utf8");
+const attestRoute = readFileSync("src/app/api/guest/attest/route.ts", "utf8");
 
 // ───────────────────────── P0-1 ─────────────────────────
 //
@@ -190,6 +191,35 @@ test("🔴 route が理由で文言を分けている", () => {
   );
 });
 
+// ───────────────────────── P1: environment ─────────────────────────
+//
+// `environment` を検証結果ではなく `APPLE_APPATTEST_ALLOW_DEV` から
+// 記録していた（P1）。`allowDevelopment: true` のときは development も
+// production も通るので、**設定からは実際の環境を復元できない** ——
+// 本番の端末に development の印が付く（逆も）。
+
+test("🔴 P1: attest の environment を、設定ではなく検証結果から書く", () => {
+  assert.ok(
+    /patch\.environment\s*=\s*result\.environment/.test(attestRoute),
+    "environment を検証結果から書いていない。\n" +
+      "  設定（ALLOW_DEV）から書くと、**何だったかではなく何を許したか**を\n" +
+      "  記録することになる。",
+  );
+  assert.ok(
+    !/patch\.environment\s*=\s*ALLOW_DEV/.test(attestRoute),
+    "🔴 ALLOW_DEV から書く形が残っている。",
+  );
+});
+
+test("🔴 P1: 検証が環境を返さなければ、推測で埋めない", () => {
+  // `?? null` で落とす。`?? "production"` にすると、**確かめていないものを
+  // 本番だと名乗る**ことになる（このリポジトリが最も嫌う形）。
+  assert.ok(
+    /patch\.environment\s*=\s*result\.environment\s*\?\?\s*null/.test(attestRoute),
+    "環境が不明なときに既定値で埋めている。null にすること。",
+  );
+});
+
 // ───────────────────── 検査が空振りしていないこと ─────────────────────
 
 test("🔴 検査の土台：ルートのソースを実際に読めている", () => {
@@ -201,5 +231,9 @@ test("🔴 検査の土台：ルートのソースを実際に読めている", 
   assert.ok(
     ocrRoute.includes("setGuestUsed"),
     "route.ts にゲストの書き戻しが無い。実装が動いた？",
+  );
+  assert.ok(
+    attestRoute.length > 2000 && attestRoute.includes("verifyAppAttest"),
+    "attest ルートを読めていない（パスが変わった？）",
   );
 });

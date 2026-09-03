@@ -150,7 +150,13 @@ export async function POST(request: NextRequest) {
     patch.attested_at = new Date().toISOString();
     patch.public_key = result.publicKey ?? null;
     patch.key_hash = createHash("sha256").update(keyId).digest("hex");
-    patch.environment = ALLOW_DEV ? "development" : "production";
+    // 🔴 **検証結果を書く。設定を書かない**（2026-09-03）。
+    //    ここは `ALLOW_DEV ? "development" : "production"` だった。
+    //    `allowDevelopment: true` のときは development も production も
+    //    通るので、**設定からは実際の環境を復元できない** ——
+    //    本番の端末に development の印が付く（逆も）。
+    //    検証が環境を返さなかったときは `null`（**推測で埋めない**）。
+    patch.environment = result.environment ?? null;
   }
   const { error: upErr } = await svc
     .from("toritavi_guest_grants")
