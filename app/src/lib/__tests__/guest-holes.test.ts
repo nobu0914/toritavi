@@ -285,3 +285,58 @@ test("🔴 掃除 cron が途中で殺されない（maxDuration）", () => {
       + "「呼ばれていない」と区別できない",
   );
 });
+
+// ============================================================================
+// 🔴 **同じ端末の要求を 1 本ずつに並べる**（2026-09-04 の外部監査・P0）。
+//
+// DeviceCheck は「聞く」と「書く」しか無く、その間に検証と予約が挟まる。
+// 使用数 0 の端末から 3 本同時に出すと**3 本とも 0 を読み**、3 本とも通る。
+// 「3 件使ったのに DeviceCheck は 1」になり、匿名 ID を作り直して繰り返せる。
+//
+// Apple の API に加算も比較交換も無いので、**こちらで並べるしかない。**
+// ============================================================================
+
+test("🔴 端末の鍵は queryGuestUsed より前に取る", () => {
+  const src = (readFileSync("src/app/api/ocr/route.ts", "utf8"));
+  const claim = src.indexOf("claimGuestDevice(");
+  const query = src.indexOf("queryGuestUsed(token)");
+  assert.ok(claim > 0, "🔴 端末の排他が無い。3 本同時に出すと 3 本とも通る");
+  assert.ok(query > 0);
+  assert.ok(
+    claim < query,
+    "🔴 鍵を取るのが読み取りより後ろ。守りたい「読む→書く」が鍵の外に出る",
+  );
+});
+
+test("🔴 取れなかったら通さない", () => {
+  const src = (readFileSync("src/app/api/ocr/route.ts", "utf8"));
+  assert.ok(
+    /guestLock\.reason === "busy"/.test(src),
+    "🔴 busy を見ていない",
+  );
+  assert.ok(
+    /guest_device_busy/.test(src),
+    "🔴 断っていない。通すとこの仕組みが何もしないのと同じになる",
+  );
+});
+
+test("🔴 どの出口を通っても鍵を返す（finally）", () => {
+  const src = readFileSync("src/app/api/ocr/route.ts", "utf8");
+  assert.ok(
+    /\}\s*finally\s*\{[\s\S]*releaseGuestDevice\(/.test(src),
+    "🔴 finally で返していない。返し忘れると、その端末が TTL のあいだ"
+      + "締め出される（正規の利用者が使えなくなる）",
+  );
+});
+
+test("🔴 並べる鍵は key_hash（端末トークンでも user_id でもない）", () => {
+  const src = (readFileSync("src/lib/guest-device-lock.ts", "utf8"));
+  // 端末トークンは要求ごとに変わり、匿名 user_id は作り直せる。
+  // **またいで並べられるのは key_hash だけ。**
+  assert.ok(/keyHash/.test(src), "🔴 key_hash で並べていない");
+  const route = (readFileSync("src/app/api/ocr/route.ts", "utf8"));
+  assert.ok(
+    /select\("attested, public_key, assert_counter, key_hash"\)/.test(route),
+    "🔴 key_hash を読んでいない。鍵が常に無い扱いになり、並ばない",
+  );
+});

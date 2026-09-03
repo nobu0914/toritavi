@@ -19,6 +19,11 @@ import {
   guestAssertCounterPersisted,
   verifyGuestAssertion,
 } from "@/lib/guest-assertion";
+import {
+  claimGuestDevice,
+  releaseGuestDevice,
+  type DeviceLock,
+} from "@/lib/guest-device-lock";
 import { createServiceClient } from "@/lib/supabase-service";
 import { authenticateRequest } from "@/lib/supabase-server";
 import {
@@ -196,6 +201,9 @@ export async function POST(request: NextRequest) {
 
   // ===== ここから先はボディを読む。**予約より前に落ちるものは消費しない。** =====
   let requestId = "";
+  // 端末ごとの排他（下の `claimGuestDevice`）。**`finally` から返すので、
+  // try の外で宣言する。** 途中の return は 10 か所以上ある。
+  let guestLock: DeviceLock | null = null;
   try {
     const body = (await request.json()) as {
       requestId?: string;
@@ -269,14 +277,18 @@ export async function POST(request: NextRequest) {
       // 🔴 **DeviceCheck だけで 3 件にしない。** 偽クライアントを排除できない
       //    まま端末カウンタを信じると、カウンタごと偽装される。
       let attestState: GuestAttestState = "failed";
+      // 端末を安定して指せる唯一の値。**並列を並べる鍵**（下）。
+      let deviceKeyHash: string | null = null;
       {
         const { data: grant, error: grantErr } = await sb
           .from("toritavi_guest_grants")
           // 🔴 `public_key` と `assert_counter` も読む（2026-09-03）。
           //    保存だけして使っていなかった公開鍵を、ここで初めて使う。
-          .select("attested, public_key, assert_counter")
+          .select("attested, public_key, assert_counter, key_hash")
           .eq("user_id", userId)
           .maybeSingle();
+        // 端末を並べる鍵。**読めなくても致命ではない**（下で `no_key` 扱い）。
+        deviceKeyHash = (grant?.key_hash as string | null) ?? null;
         if (grantErr) console.error("[OCR] guest grant read failed");
         else if (grant?.attested === true) {
           // 🔴 **attestation を通しただけでは `attested` にしない。**
@@ -308,6 +320,34 @@ export async function POST(request: NextRequest) {
             }
           }
         }
+      }
+
+      // 🔴 **同じ端末の要求を 1 本ずつに並べる**（2026-09-04 の外部監査・P0）。
+      //
+      //    DeviceCheck は「聞く」と「書く」しか無く、その間に検証と予約が
+      //    挟まる。使用数 0 の端末から 3 本同時に出すと**3 本とも 0 を読み**、
+      //    3 本とも通ってしまう（「3 件使ったのに DeviceCheck は 1」）。
+      //    Apple の API に加算も比較交換も無いので、**こちらで並べるしかない。**
+      //
+      //    並べる鍵は `key_hash`（App Attest の鍵の指紋）。Keychain にあるので
+      //    **同じ端末なら匿名 ID をまたいで同じ**。端末トークンは要求ごとに
+      //    変わるので使えず、匿名 user_id は作り直せるので使えない。
+      //
+      //    🔴 **必ず `queryGuestUsed` の前に取る。** 後ろだと、守りたい
+      //    「読む→書く」の区間が鍵の外に出る。
+      guestLock = await claimGuestDevice(createServiceClient(), deviceKeyHash);
+      if (!guestLock.held && guestLock.reason === "busy") {
+        // **通さない。** 通すとこの仕組みが何もしないのと同じになる。
+        // 正規の利用ではまず起きない（読み取りは 1 画面 1 本）。
+        console.warn("[OCR] guest device busy; refusing concurrent request");
+        return NextResponse.json(
+          {
+            error: "guest_device_busy",
+            message:
+              "前の読み取りがまだ終わっていません。少し待ってからお試しください。",
+          },
+          { status: 429 },
+        );
       }
 
       const token = request.headers.get("x-guest-device-token");
@@ -789,5 +829,13 @@ export async function POST(request: NextRequest) {
     }
     console.error("[OCR] request failed");
     return NextResponse.json({ error: "bad_request" }, { status: 400 });
+  } finally {
+    // 🔴 **どの出口を通っても鍵を返す。** 途中の `return` は 10 か所以上ある。
+    //    返し忘れると、その端末は TTL（60 秒）のあいだ締め出される ——
+    //    **正規の利用者が「前の読み取りが終わっていません」と言われ続ける。**
+    //    消し忘れても TTL で開くが、それは最後の保険であって設計ではない。
+    if (guestLock?.held) {
+      await releaseGuestDevice(createServiceClient(), guestLock);
+    }
   }
 }
