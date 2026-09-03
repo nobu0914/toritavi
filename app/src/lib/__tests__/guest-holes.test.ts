@@ -34,6 +34,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
+import { isBitStateNotFound } from "../devicecheck.ts";
 import {
   decideGuest,
   guestUnitsExceedRemaining,
@@ -235,5 +236,52 @@ test("🔴 検査の土台：ルートのソースを実際に読めている", 
   assert.ok(
     attestRoute.length > 2000 && attestRoute.includes("verifyAppAttest"),
     "attest ルートを読めていない（パスが変わった？）",
+  );
+});
+
+// ============================================================================
+// 🔴 **2026-09-04 の外部監査（ChatGPT / Fable）で出た指摘の再発防止。**
+//    どれも「落ちも警告も出ないまま効かなくなる」形（`CLAUDE.md` §6-1）。
+// ============================================================================
+
+test("🔴 DeviceCheck の不明な 200 を「未使用」に化けさせない", () => {
+  // 枠は**この応答だけ**で決まる。設定ミスや中継の異常が
+  // そのまま**無料枠の復活**になる経路だった。
+  assert.equal(isBitStateNotFound("Failed to find bit state"), true);
+  assert.equal(isBitStateNotFound("  failed to find bit state \n"), true,
+    "大小・空白の揺れで閉じすぎない");
+  // 🔴 ここが true に戻ると、穴も戻る。
+  assert.equal(isBitStateNotFound(""), false, "空の本文");
+  assert.equal(isBitStateNotFound("<html>503</html>"), false, "中継が返した HTML");
+  assert.equal(isBitStateNotFound('{"bit0":true}'), false, "欠けた JSON");
+
+  const src = readFileSync("src/lib/devicecheck.ts", "utf8");
+  assert.ok(
+    /isBitStateNotFound\(text\)/.test(src),
+    "🔴 判定が呼ばれていない。200 なら何でも初回扱いに戻っている",
+  );
+});
+
+test("🔴 再 attestation でカウンタを捨てる（鍵と一組）", () => {
+  const src = readFileSync("src/app/api/guest/attest/route.ts", "utf8");
+  // 新しい鍵は小さい signCount から始まる。古い値が残ると
+  // **assertion が永久に通らず、黙って上限 1 件へ縮退する。**
+  assert.ok(
+    /patch\.assert_counter\s*=\s*null/.test(src),
+    "🔴 鍵を差し替えてカウンタを残している。入れ直した端末が二度と通らない",
+  );
+  // 公開鍵と同じ節にあること（片方だけ替えない）。
+  const i = src.indexOf("patch.public_key");
+  const j = src.indexOf("patch.assert_counter");
+  assert.ok(i > 0 && j > i && j - i < 1500,
+    "🔴 公開鍵とカウンタが別の場所で更新されている。一組で扱うこと");
+});
+
+test("🔴 掃除 cron が途中で殺されない（maxDuration）", () => {
+  const src = readFileSync("src/app/api/cron/purge-anonymous/route.ts", "utf8");
+  assert.ok(
+    /export const maxDuration\s*=\s*\d+/.test(src),
+    "🔴 既定（10 秒）では足りない。途中で殺されると集計ログが出ず、"
+      + "「呼ばれていない」と区別できない",
   );
 });

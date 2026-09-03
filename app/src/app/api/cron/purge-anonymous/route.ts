@@ -38,6 +38,18 @@ import { removeUserObjects } from "@/app/api/account/delete/route";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+/**
+ * 🔴 **既定（10 秒）では足りない**（2026-09-04 の外部監査）。
+ *
+ * 1 回で最大 50 人、1 人あたり 3 バケットの走査と削除、カスケードしない表の
+ * 削除、`auth.admin.deleteUser` まで走る。同じ仕事をする
+ * `/api/account/delete` は同じ理由で 60 を宣言している。
+ *
+ * 途中で殺されると**集計ログが出ない**ので、「呼ばれていない」と
+ * 「途中で死んだ」を区別できない（`CLAUDE.md` §6-1）。
+ */
+export const maxDuration = 60;
+
 /** 1 回で消す上限。**少しずつ、何度でも走らせる。** */
 const MAX_PER_RUN = 50;
 
