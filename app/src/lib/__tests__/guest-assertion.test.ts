@@ -11,7 +11,11 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { acceptAssertionCounter, verifyGuestAssertion } from "../guest-assertion.ts";
+import {
+  acceptAssertionCounter,
+  guestAssertCounterPersisted,
+  verifyGuestAssertion,
+} from "../guest-assertion.ts";
 
 test("初回（保存値なし）は受ける", () => {
   assert.equal(acceptAssertionCounter(null, 0), true);
@@ -96,5 +100,54 @@ test("🔴 端末側が署名する対象と、サーバが渡す payload が揃
   assert.ok(
     !/createHash\("sha256"\)/.test(src),
     "🔴 サーバ側で二重にハッシュしている。ライブラリが内部で取るので不要",
+  );
+});
+
+// ============================================================================
+// 🔴 **2026-09-03 に実機で見つけたバグの再発防止。**
+//
+// `.lt("assert_counter", n)` だけで書き戻していた。SQL の `NULL < 5` は
+// **偽ではなく NULL** なので、初期値が NULL の間は一致する行が 0 件になる。
+// **0 件更新はエラーではない**ので、そのまま通過していた。
+//
+// 結果、`assert_counter` は永久に NULL のままで、
+// `acceptAssertionCounter(null, x)` が常に真を返し、
+// **同じ署名を何度でも使い回せた。** 再生防御が一度も働いていない。
+//
+// 実機のゲスト読み取りが 2 件通っても NULL のままだったことで判明。
+// **単体テストもソース検査も緑のままだった** —— どちらも
+// PostgREST の NULL の意味までは見ていなかった（`CLAUDE.md` §6-1）。
+// ============================================================================
+
+test("🔴 保存されたカウンタが要求のカウンタ以上でなければ通さない", () => {
+  // **NULL は「書けなかった」。** ここが true を返すと、バグが元に戻る。
+  assert.equal(guestAssertCounterPersisted(null, 1), false);
+  assert.equal(guestAssertCounterPersisted(undefined, 1), false);
+  // 進んでいない
+  assert.equal(guestAssertCounterPersisted(0, 1), false);
+  // 進んだ
+  assert.equal(guestAssertCounterPersisted(1, 1), true);
+  // 並んだ要求が先に進めた（0 件更新だが、値としては満たしている）
+  assert.equal(guestAssertCounterPersisted(5, 1), true);
+});
+
+test("🔴 書き戻しの条件に NULL が含まれている", () => {
+  const src = readFileSync("src/app/api/ocr/route.ts", "utf8");
+  // 🔴 `.lt()` 単独に戻っていないこと。**これがバグそのものの形。**
+  assert.ok(
+    /assert_counter\.is\.null,assert_counter\.lt\./.test(src),
+    "🔴 NULL を含めていない。初期値が NULL の間、カウンタは一度も書かれない",
+  );
+  assert.ok(
+    !/\.lt\("assert_counter"/.test(src),
+    "🔴 `.lt(\"assert_counter\", …)` に戻っている（NULL に一致しない）",
+  );
+});
+
+test("🔴 書けたことを確かめている（0 件更新を成功にしない）", () => {
+  const src = readFileSync("src/app/api/ocr/route.ts", "utf8");
+  assert.ok(
+    src.includes("guestAssertCounterPersisted("),
+    "🔴 保存の確認が無い。0 件更新はエラーにならないので、黙って通る",
   );
 });

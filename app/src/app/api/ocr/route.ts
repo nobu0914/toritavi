@@ -15,7 +15,10 @@ import {
   type GuestDecision,
   type GuestDeviceState,
 } from "@/lib/guest-quota";
-import { verifyGuestAssertion } from "@/lib/guest-assertion";
+import {
+  guestAssertCounterPersisted,
+  verifyGuestAssertion,
+} from "@/lib/guest-assertion";
 import { authenticateRequest } from "@/lib/supabase-server";
 import {
   audienceOf,
@@ -485,15 +488,55 @@ export async function POST(request: NextRequest) {
     //    予約（`beginOcrRequest`）の**前**に置く。後だと予約だけ取って
     //    断ることになる。
     if (acceptedCounter !== null) {
-      const { error: cErr } = await sb
+      const { data: updated, error: cErr } = await sb
         .from("toritavi_guest_grants")
         .update({ assert_counter: acceptedCounter })
         .eq("user_id", userId)
+        // 🔴 **`is.null` を外さない。** ここは `.lt()` だけだった。
+        //    SQL の `NULL < 5` は**偽ではなく NULL** なので、初期値が NULL の
+        //    間は**一致する行が 0 件**になる。0 件更新はエラーではないので
+        //    `cErr` は null のまま通過し、**カウンタは永久に NULL のまま**に
+        //    なる。すると `acceptAssertionCounter(null, x)` が常に真を返し、
+        //    **同じ署名を何度でも使い回せる。**
+        //    2026-09-03 に実機で発見 —— ゲストの読み取りが 2 件通ったのに
+        //    `assert_counter` が NULL のままだった（`guest-mode-spec.md` §23）。
+        //
         // 🔴 **戻さない。** 並んだ別の要求が先に進めていたら、
         //    こちらの古い値で上書きしない。
-        .lt("assert_counter", acceptedCounter);
+        .or(`assert_counter.is.null,assert_counter.lt.${acceptedCounter}`)
+        .select("assert_counter");
       if (cErr) {
         console.error("[OCR] guest assert_counter update failed");
+        return NextResponse.json(
+          {
+            error: "guest_device_unverified",
+            message:
+              "お使いの端末を確認できませんでした。しばらくしてからお試しください。読み取りは行っていません。",
+          },
+          { status: 503 },
+        );
+      }
+
+      // 🔴 **書けたことを確かめる。** 0 件更新はエラーにならないので、
+      //    「進めた」と「進められなかった」が同じ顔をする（`CLAUDE.md` §6-1）。
+      //    ただし 0 件は**並んだ要求が先に進めた**ときにも起きるので、
+      //    件数ではなく**保存された値**を見る。
+      let stored: number | null =
+        (updated?.[0]?.assert_counter as number | null | undefined) ?? null;
+      if (stored === null) {
+        const { data: row } = await sb
+          .from("toritavi_guest_grants")
+          .select("assert_counter")
+          .eq("user_id", userId)
+          .maybeSingle();
+        stored = (row?.assert_counter as number | null | undefined) ?? null;
+      }
+      if (!guestAssertCounterPersisted(stored, acceptedCounter)) {
+        // **通さない。** 進まないカウンタは、そのまま再生の入口になる。
+        console.error(
+          "[OCR] guest assert_counter not persisted:",
+          `stored=${stored} accepted=${acceptedCounter}`,
+        );
         return NextResponse.json(
           {
             error: "guest_device_unverified",

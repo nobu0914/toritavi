@@ -61,6 +61,25 @@ export function acceptAssertionCounter(
 }
 
 /**
+ * 書き戻したカウンタが、実際に保存されたか。**純粋関数。**
+ *
+ * 🔴 **「更新が成功した」では足りない。** PostgREST の 0 件更新はエラーに
+ * ならないので、**「進めた」と「進められなかった」が同じ顔をする**
+ * （`CLAUDE.md` §6-1）。2026-09-03 に実機でこの形を踏んだ ——
+ * `.lt("assert_counter", n)` は初期値が NULL のとき一致せず、
+ * **カウンタが永久に NULL のまま**で再生防御が一度も働いていなかった。
+ *
+ * 0 件更新そのものは異常ではない（並んだ要求が先に進めた場合）。
+ * だから件数ではなく**保存された値**を見る。
+ */
+export function guestAssertCounterPersisted(
+  stored: number | null | undefined,
+  accepted: number,
+): boolean {
+  return typeof stored === "number" && Number.isInteger(stored) && stored >= accepted;
+}
+
+/**
  * 検証する。**投げない。**
  *
  * [payload] は署名の対象そのもの（この実装では `requestId`）。
