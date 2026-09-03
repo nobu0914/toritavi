@@ -330,7 +330,20 @@ describe("🔴 DB 側の契約", () => {
   });
 
   test("🔴 サーバが全体上限を明示的に渡している", () => {
+    // 🔴 **値の形ではなく「必ず渡している」ことを見る**（2026-09-04 に書き換え）。
+    //    ここは `p_global_per_min: GLOBAL_ATTEMPTS_PER_MIN` という**リテラル**を
+    //    固定していたので、pro に予約枠を残す変更で落ちた。
+    //    見張りたいのは「**書き忘れていない**」であって、渡す値そのものでは
+    //    ない（値は `globalCapFor` が受け手ごとに決める）。
     const g = readFileSync("src/lib/ai-guard.ts", "utf8");
-    assert.ok(g.includes("p_global_per_min: GLOBAL_ATTEMPTS_PER_MIN"));
+    assert.ok(
+      /p_global_per_min:\s*\S/.test(g),
+      "🔴 全体上限を渡していない。DB 側に既定値は無いのでエラーになる",
+    );
+    // 固定値に戻っていないこと —— それだと受け手で変わらず、予約が消える。
+    assert.ok(
+      !/p_global_per_min:\s*GLOBAL_ATTEMPTS_PER_MIN\b/.test(g),
+      "🔴 固定値に戻っている。pro の予約枠が効かない",
+    );
   });
 });
