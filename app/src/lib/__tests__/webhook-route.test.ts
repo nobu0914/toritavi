@@ -56,8 +56,21 @@ type Row = { user_id: string; plan: string; updated_at: string };
  * する。メソッド名を記録するだけの偽物だと「.lte を .lt に変えた」を
  * 検出できない —— 行が落ちるかどうかで見る。
  */
-function fakeAdmin(rows: Row[]) {
+function fakeAdmin(rows: Row[], opts: { anonymous?: boolean } = {}) {
   return {
+    // 🔴 **匿名かどうかを引く口**（2026-09-04 に足した門）。
+    //    匿名の uid も UUID なので `UUID_RE` は抜ける。付与の直前に
+    //    ここで断らないと、**捨て身のアカウントに課金が紐づく。**
+    auth: {
+      admin: {
+        getUserById(_id: string) {
+          return Promise.resolve({
+            data: { user: { is_anonymous: opts.anonymous === true } },
+            error: null,
+          });
+        },
+      },
+    },
     from(table: string) {
       assert.equal(table, "toritavi_user_plan", "想定外のテーブルに書いた");
       return {
@@ -452,4 +465,46 @@ test("🔴 HMAC 署名が壊れていれば 401（検証が配線されている
     ),
   );
   assert.equal(res.status, 401);
+});
+
+// ============================================================================
+// 🔴 **匿名（ゲスト）アカウントに Pro を付けない**（2026-09-04 の外部監査）。
+//
+// 匿名の uid も UUID なので `UUID_RE` は抜ける。付けてしまうと:
+//   - 端末（Keychain）を失えば**二度と Pro に戻れない**
+//   - 90 日無活動で掃除の cron が**アカウントごと消す**。課金だけ残る
+//
+// アプリ側にも門があるが、**アプリは改造できる。**
+// 権利が付く最後の場所はここなので、ここでも断る。
+// ============================================================================
+
+test("🔴 匿名アカウントには pro を付けない", async () => {
+  const rows: Row[] = [];
+  setAdmin(fakeAdmin(rows, { anonymous: true }));
+  const res = await POST(
+    signed({
+      event: {
+        type: "INITIAL_PURCHASE",
+        app_user_id: U1,
+        entitlement_ids: ["pro"],
+        event_timestamp_ms: T,
+      },
+    }),
+  );
+  assert.equal(res.status, 200, "再送ループを作らない");
+  assert.deepEqual(await json(res), { ok: true, skipped: "anonymous_user" });
+  assert.equal(rows.length, 0, "🔴 匿名の行を作ってしまっている");
+});
+
+test("🔴 匿名でも失効（free へ戻す）は通す", async () => {
+  // 「取り上げる」方向は安全側。止めると、付いてしまった権利を戻せなくなる。
+  const rows: Row[] = [{ user_id: U1, plan: "pro", updated_at: iso(T - 1000) }];
+  setAdmin(fakeAdmin(rows, { anonymous: true }));
+  const res = await POST(
+    signed({
+      event: { type: "EXPIRATION", app_user_id: U1, event_timestamp_ms: T },
+    }),
+  );
+  assert.equal(res.status, 200);
+  assert.equal(rows[0].plan, "free", "🔴 匿名の失効を止めてしまっている");
 });

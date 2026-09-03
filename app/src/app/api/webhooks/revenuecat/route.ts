@@ -236,6 +236,42 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // 🔴 **匿名（ゲスト）アカウントに Pro を付けない**（2026-09-04 の外部監査）。
+  //
+  //    匿名の uid も UUID なので、上の `UUID_RE` は抜ける。付けてしまうと
+  //    サブスクリプションが**捨て身のアカウント**に紐づく:
+  //      - 端末（Keychain）を失えば**二度と Pro に戻れない**
+  //        （メールもパスワードも無いので本人を特定できない）
+  //      - 90 日無活動で `/api/cron/purge-anonymous` が**アカウントごと消す**。
+  //        **課金だけが残る**
+  //
+  //    アプリ側（購入画面・`PurchasesService.purchase`）にも門があるが、
+  //    **アプリは改造できる。** 権利が付く最後の場所はここなので、ここでも断る。
+  //
+  //    🔴 **失効（free へ戻す）は通す。** 「取り上げる」方向は安全側で、
+  //    止めると付いてしまった権利を戻せなくなる。
+  if (newPlan === "pro") {
+    const { data: got, error: anonErr } = await admin.auth.admin.getUserById(
+      event.app_user_id,
+    );
+    if (anonErr) {
+      // 🔴 **確かめられないなら付けない。** 通すと上の危険がそのまま成立する。
+      //    RevenueCat は再送するので、機会そのものは失わない。
+      console.error(
+        "[webhooks/revenuecat] anonymous check failed",
+        anonErr.message,
+      );
+      return NextResponse.json({ error: "anonymous_check_failed" }, { status: 500 });
+    }
+    if (got?.user?.is_anonymous === true) {
+      console.warn(
+        "[webhooks/revenuecat] 匿名アカウントへの付与を拒否した:",
+        event.app_user_id,
+      );
+      return NextResponse.json({ ok: true, skipped: "anonymous_user" });
+    }
+  }
+
   // 🔴 **古いイベントで新しい状態を踏み潰さない。**
   //    配送順は保証されない。再送で遅れた EXPIRATION が RENEWAL の後ろに
   //    並ぶと、契約中の人が黙って free に落ちる。**戻す経路は無い。**
