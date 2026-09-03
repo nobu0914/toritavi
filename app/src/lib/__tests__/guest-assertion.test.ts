@@ -151,3 +151,45 @@ test("🔴 書けたことを確かめている（0 件更新を成功にしな�
     "🔴 保存の確認が無い。0 件更新はエラーにならないので、黙って通る",
   );
 });
+
+// ============================================================================
+// 🔴 **カウンタの書き戻しは service client で行う。**
+//
+// `toritavi_guest_grants` は **利用者が読めるが書けない**設計（028 の RLS）。
+// 書けたら `attested = true` を自分で立てられ、検証が無意味になるため、
+// `guest/attest/route.ts` の書き込みは全て `createServiceClient()` を使う。
+//
+// にもかかわらず、2026-09-03 に足したカウンタの書き戻しは
+// `authenticateRequest` が返す**利用者スコープ**のクライアント（RLS 適用）で
+// 書いていた。**どちらに転んでも壊れる:**
+//
+//   - RLS が拒めば 0 件更新 → 保存確認が false → **attested なゲスト全員が 503**
+//   - RLS が許していれば、匿名が PostgREST 直叩きで attested を立てられる
+//
+// 🔴 **注記は同じファイルにあったのに、そこへ書いてしまった。**
+//    だから注記ではなく検査で止める。
+// ============================================================================
+
+test("🔴 カウンタの書き戻しに利用者スコープのクライアントを使わない", () => {
+  const src = readFileSync("src/app/api/ocr/route.ts", "utf8");
+  // 書き戻しの前後を切り出して、そこに `sb` の更新が無いことを見る。
+  const i = src.indexOf("acceptedCounter !== null");
+  assert.ok(i > 0, "書き戻しの節が見つからない");
+  const block = src.slice(i, i + 2500);
+  assert.ok(
+    !/await\s+sb\s*\n?\s*\.from\("toritavi_guest_grants"\)\s*\n?\s*\.update\(/.test(
+      block,
+    ),
+    "🔴 RLS が適用されるクライアントで書いている。attested なゲストが全員 503 になる",
+  );
+  assert.ok(
+    /createServiceClient\(\)/.test(block),
+    "🔴 service client を使っていない",
+  );
+  // 🔴 **他人の行に触れない条件を外さない。** service client は RLS を
+  //    迂回するので、ここが消えると誰の行でも書ける。
+  assert.ok(
+    /\.eq\("user_id",\s*userId\)/.test(block),
+    "🔴 user_id の絞り込みが無い。service client は RLS を迂回する",
+  );
+});

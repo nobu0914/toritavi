@@ -19,6 +19,7 @@ import {
   guestAssertCounterPersisted,
   verifyGuestAssertion,
 } from "@/lib/guest-assertion";
+import { createServiceClient } from "@/lib/supabase-service";
 import { authenticateRequest } from "@/lib/supabase-server";
 import {
   audienceOf,
@@ -488,7 +489,25 @@ export async function POST(request: NextRequest) {
     //    予約（`beginOcrRequest`）の**前**に置く。後だと予約だけ取って
     //    断ることになる。
     if (acceptedCounter !== null) {
-      const { data: updated, error: cErr } = await sb
+      // 🔴 **service client で書く。`sb` では書けない。**
+      //
+      //    `sb` は `authenticateRequest` が返す**利用者スコープ**の
+      //    クライアントで、RLS が適用される。そして `toritavi_guest_grants` は
+      //    **利用者が読めるが書けない**設計（028 の RLS。同じ趣旨の注記が
+      //    この少し上と `guest/attest/route.ts` の冒頭にある）。
+      //    attest 側の書き込みが全て `createServiceClient()` なのはそのため。
+      //
+      //    🔴 **`sb` のままだと、どちらに転んでも壊れる:**
+      //      - RLS が拒めば 0 件更新 → 下の保存確認が false → **attested な
+      //        ゲスト全員が 503**。2026-09-04 に保存確認を足したことで、
+      //        「黙って通る」から「全員弾く」へ悪化していた
+      //      - RLS が許していれば、匿名が PostgREST 直叩きで `attested` を
+      //        自分で立てられる ＝ **attestation が無意味**
+      //
+      //    `userId` は JWT を検証して得た値なので、`.eq("user_id", userId)` を
+      //    外さない限り service client でも他人の行には触れない。
+      const svc = createServiceClient();
+      const { data: updated, error: cErr } = await svc
         .from("toritavi_guest_grants")
         .update({ assert_counter: acceptedCounter })
         .eq("user_id", userId)
@@ -524,7 +543,9 @@ export async function POST(request: NextRequest) {
       let stored: number | null =
         (updated?.[0]?.assert_counter as number | null | undefined) ?? null;
       if (stored === null) {
-        const { data: row } = await sb
+        // 読み直しも service client で。**書いた側と同じ目で見る** ——
+        // 片方だけ RLS 越しにすると、書けたのに読めない／その逆が起きる。
+        const { data: row } = await svc
           .from("toritavi_guest_grants")
           .select("assert_counter")
           .eq("user_id", userId)
