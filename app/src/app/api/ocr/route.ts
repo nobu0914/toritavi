@@ -9,6 +9,7 @@ import {
 import {
   GUEST_MODE_ENABLED,
   decideGuest,
+  guestUnitsExceedRemaining,
   nextDeviceUsed,
   type GuestAttestState,
   type GuestDecision,
@@ -247,6 +248,7 @@ export async function POST(request: NextRequest) {
     //
     // 🔴 **重い検証より前に置く。** ここを抜けていない要求に PDF を開かせない。
     let guestDevice: { token: string; decision: GuestDecision } | null = null;
+    let guestDecision: GuestDecision | null = null;
     let guestLimit: number | undefined;
     if (audience === "guest") {
       // App Attest の結果は起動時に `/api/guest/attest` が保存している。
@@ -292,13 +294,26 @@ export async function POST(request: NextRequest) {
 
       const decision = decideGuest(attestState, state);
       guestLimit = decision.limit;
+      // 🔴 **判定は `guestDevice` と別に持つ。** `guestDevice` はトークンが
+      //    あり書き戻す場合だけ立つので、そこに寄せると P0-3 の検査が
+      //    「書き戻す場合だけ」効く形になる。
+      guestDecision = decision;
       if (!decision.allow) {
-        await logAiRejection(userId, "ocr", "guest_device_exhausted");
+        // 🔴 **理由で文言を分ける。** 「上限に達した」と「端末を確認できな
+        //    かった」は、利用者に取れる手が違う。前者は登録、後者は再試行。
+        //    まとめると、**設定ミスの人に「使い切った」と嘘をつく**。
+        const unreadable = decision.reason === "device_unreadable";
+        await logAiRejection(
+          userId,
+          "ocr",
+          unreadable ? "guest_device_unreadable" : "guest_device_exhausted",
+        );
         return NextResponse.json(
           {
-            error: "guest_quota_exhausted",
-            message:
-              "お試しでご利用いただける回数の上限に達しました。無料登録すると続けてご利用いただけます。",
+            error: unreadable ? "guest_device_unverified" : "guest_quota_exhausted",
+            message: unreadable
+              ? "お使いの端末を確認できませんでした。通信状況をご確認のうえ、もう一度お試しください。無料登録すると、この確認なしでご利用いただけます。"
+              : "お試しでご利用いただける回数の上限に達しました。無料登録すると続けてご利用いただけます。",
           },
           { status: 429 },
         );
@@ -425,6 +440,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 🔴 **P0-3: 端末の残数と、この要求の単位数を突き合わせる。**
+    //
+    //    `decideGuest` は「1 件でも残っているか」しか見ていない。残り 1 件の
+    //    端末が 3 ページを 1 要求で投げると判定は通り、`nextDeviceUsed` が
+    //    3 で頭打ちにするので**書き戻しでも気づけない**。
+    //
+    //    **予約（`beginOcrRequest`）の前**に置く。後だと予約だけ取って
+    //    断ることになり、DB 側の枠が減る。
+    if (guestDecision && guestUnitsExceedRemaining(guestDecision, units)) {
+      await logAiRejection(userId, "ocr", "guest_units_over_remaining");
+      return NextResponse.json(
+        {
+          error: "guest_quota_exhausted",
+          message: `お試しでご利用いただけるのは残り ${guestDecision.remaining} 件です。ページ数を減らすか、無料登録してお試しください。`,
+        },
+        { status: 429 },
+      );
+    }
+
     // --- 冪等性 + 件数 + トークン + 予算を 1 トランザクションで確保 ---
     const estCost = estimateCostCents(actualInputTokens);
     const begun = await beginOcrRequest({
@@ -492,6 +526,25 @@ export async function POST(request: NextRequest) {
       // 🔴 **成功も出す。** 失敗だけ出す形だと、**書いていないのか
       //    書けなかったのか**が区別できない（今日それで詰まった）。
       console.log("[OCR] guest device write:", next, wrote ? "ok" : "FAILED");
+      // 🔴 **P0-2: 書けなければ続行しない。**
+      //
+      //    もとは結果をログに出すだけで、**書けなくても Claude を呼んで
+      //    いた**。端末カウンタが進まないので、同じ端末で何度でも通る。
+      //    2026-08-31 の外部レビュー P0（`docs/guest-mode-spec.md` §23）。
+      //
+      //    **予約は必ず戻す。** ここは `beginOcrRequest` の後なので、
+      //    そのまま返すと DB 側の枠が減ったまま残る。
+      if (!wrote) {
+        await settleOcrFailure({ requestId, userId, reason: "guest_device_write_failed" });
+        return NextResponse.json(
+          {
+            error: "guest_device_unverified",
+            message:
+              "お使いの端末を確認できませんでした。通信状況をご確認のうえ、もう一度お試しください。回数は消費していません。",
+          },
+          { status: 503 },
+        );
+      }
     } else if (audience === "guest") {
       console.log("[OCR] guest device write: skipped（トークン無し or 読めず）");
     }
