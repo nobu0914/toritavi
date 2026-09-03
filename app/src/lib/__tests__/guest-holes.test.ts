@@ -34,6 +34,11 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
+import {
+  GLOBAL_ATTEMPTS_PER_MIN,
+  GLOBAL_RESERVED_FOR_PRO,
+  globalCapFor,
+} from "../ai-guard.ts";
 import { isBitStateNotFound } from "../devicecheck.ts";
 import {
   decideGuest,
@@ -338,5 +343,42 @@ test("🔴 並べる鍵は key_hash（端末トークンでも user_id でもな
   assert.ok(
     /select\("attested, public_key, assert_counter, key_hash"\)/.test(route),
     "🔴 key_hash を読んでいない。鍵が常に無い扱いになり、並ばない",
+  );
+});
+
+// ============================================================================
+// 🔴 **Pro の可用性を、無料アカウントの数で奪わせない**（2026-09-04 の外部監査・P1）。
+//
+// 全体の試行上限（120/分）は**受け手を区別しない**共有バケットだった。
+// 予算は受け手ごとに分かれているので「ゲストが使い切っても Pro は止まらない」
+// は**金銭には真だが可用性には偽**。無効な要求でも共有枠は消費するので、
+// 匿名／無料アカウントを増やせば**払っている人まで 429 にできた。**
+// ============================================================================
+
+test("🔴 pro には予約枠が残る", () => {
+  // pro は全体をそのまま使える。それ以外は予約分だけ低い。
+  assert.equal(globalCapFor("pro"), GLOBAL_ATTEMPTS_PER_MIN);
+  assert.ok(
+    globalCapFor("free") < GLOBAL_ATTEMPTS_PER_MIN,
+    "🔴 free が全体を使い切れる。pro の枠が残らない",
+  );
+  assert.equal(globalCapFor("guest"), globalCapFor("free"),
+    "guest と free は同じ扱いでよい（どちらも払っていない）");
+  assert.equal(
+    globalCapFor("free"),
+    GLOBAL_ATTEMPTS_PER_MIN - GLOBAL_RESERVED_FOR_PRO,
+  );
+});
+
+test("🔴 予約が大きすぎても誰も通らなくならない", () => {
+  // 設定を触った人が予約を上限以上にしても、下限 1 で止まる。
+  assert.ok(globalCapFor("free") >= 1);
+});
+
+test("🔴 受け手ごとの上限を実際に渡している", () => {
+  const src = readFileSync("src/lib/ai-guard.ts", "utf8");
+  assert.ok(
+    /p_global_per_min:\s*globalCapFor\(audience\)/.test(src),
+    "🔴 固定値を渡している。受け手で変わらないなら予約は効かない",
   );
 });

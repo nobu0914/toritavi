@@ -709,6 +709,40 @@ export async function checkMinuteRate(
 export const GLOBAL_ATTEMPTS_PER_MIN = envNum(["AI_OCR_GLOBAL_RATE_PER_MIN"], 120);
 
 /**
+ * **Pro のために空けておく枠**（全体上限のうち何件を予約するか）。
+ *
+ * 🔴 **共有バケットは受け手を区別しない**（2026-09-04 の外部監査・P1）。
+ * 上の注記が言うとおり、アカウントを増やされると全体上限が枯渇する。
+ * そのとき**払っている人まで 429 になる。**
+ *
+ * 予算（`toritavi_ai_budget_limits`）は受け手ごとに分かれているので
+ * 「ゲストが使い切っても Pro は止まらない」は**金銭には真だが、
+ * 可用性には偽**だった。
+ *
+ * ここを空けると、全体が 90 を超えた時点で **free / guest は断られ、
+ * pro だけが 120 まで通る。** 攻撃側は無料アカウントをいくら増やしても
+ * 90 で頭打ちになり、**Pro の 30 件には手が届かない。**
+ *
+ * 🔴 **DDL は要らない。** DB 側は `hits + 1 <= p_global_per_min` を見るだけで、
+ * 上限は呼び出しごとに渡している。**渡す数を変えるだけで予約になる。**
+ */
+export const GLOBAL_RESERVED_FOR_PRO = envNum(
+  ["AI_OCR_GLOBAL_RESERVE_PRO"],
+  30,
+);
+
+/**
+ * この受け手が使ってよい**全体**の上限。
+ *
+ * pro は全体をそのまま使える。それ以外は予約分を引いた残りまで。
+ * **1 を下回らせない**（0 だと誰も通らなくなる）。
+ */
+export function globalCapFor(audience: Audience): number {
+  if (audience === "pro") return GLOBAL_ATTEMPTS_PER_MIN;
+  return Math.max(1, GLOBAL_ATTEMPTS_PER_MIN - GLOBAL_RESERVED_FOR_PRO);
+}
+
+/**
  * 安価な試行制限。**ファイルを開く前に呼ぶ。**
  *
  * 🔴 以前は「件数を読む → 別のトランザクションで書く」形だったので、
@@ -728,7 +762,11 @@ export async function tryOcrAttempt(
       p_per_min: perMin,
       // 🔴 **必ず明示的に渡す。** DB 側の既定値は外してあるので、
       //    書き忘れるとエラーになる（黙って「全体上限なし」にならない）。
-      p_global_per_min: GLOBAL_ATTEMPTS_PER_MIN,
+      //
+      // 🔴 **受け手で変える**（2026-09-04）。pro には予約枠を残す ——
+      //    そうしないと、無料アカウントを増やされたときに
+      //    **払っている人まで 429 になる。**
+      p_global_per_min: globalCapFor(audience),
     });
     if (error) throw error;
     if (data === true) return null;
