@@ -43,6 +43,44 @@ export type ProgramStat = {
   revenueYen: number; // clicks × epcYen
 };
 
+/**
+ * 登録ファネル。**この期間に登録した人（コホート）を追う。**
+ *
+ * 🔴 **「期間中に起きたイベント数」ではない。** 転換率を出したいので、
+ *    分母と分子は**同じ人の集合**でなければならない。今月の購入者に
+ *    先月の登録者が混じると、率が意味を失う。
+ *
+ * 🔴 **`null` は「読めなかった」。0 と混ぜない**（2026-08-30 レーン 8 と同じ方針）。
+ *    読めなかったのに 0 を出すと、**離脱していないのに離脱したように見える。**
+ *
+ * ## なぜ要るか（2026-09-04）
+ *
+ * ゲスト（未登録お試し）を出すかどうかを決められなかった理由が、
+ * **増分の Pro 転換率を測れないこと**だった（`toritavi_app` の
+ * `docs/guest-mode-spec.md` §24）。ここが埋まらない限り、
+ * ゲストを開けても「効いたのか」を判定できない。
+ *
+ * ## いま測れないもの
+ *
+ * **⓪「入口を見た → 登録を始めた」は入っていない。** それはアプリ側に
+ * 記録が要る（`affiliate_clicks` と同じ形）。ここに出ている 4 段は
+ * **すべて既存データから遡って出せる**ので、DDL もアプリ変更も無しで先に置く。
+ */
+export type FunnelData = {
+  /** コホートの開始日（この日以降に登録した人を追う）。 */
+  cohortFrom: string;
+  /** 登録が完了した人（匿名は除く）。 */
+  registered: number | null;
+  /** そのうちメール確認まで済んだ人。 */
+  confirmed: number | null;
+  /** そのうち読み取りに 1 回以上成功した人。 */
+  firstRead: number | null;
+  /** そのうち Pro になった人。 */
+  pro: number | null;
+  /** 利用者一覧が 1000 件で頭打ちになったか（既存の `fetchUsers` と同じ制限）。 */
+  capped: boolean;
+};
+
 export type AnalyticsData = {
   period: { days: number; startDay: string; endDay: string };
   affiliate: {
@@ -58,6 +96,7 @@ export type AnalyticsData = {
     byBucket: { bucket: string; clicks: number }[];
     clicksCapped: boolean;
   };
+  funnel: FunnelData;
   usage: {
     dailySignups: DailyPoint[];
     dailyOcr: DailyPoint[];
@@ -115,7 +154,7 @@ export async function fetchAnalytics(days = 30): Promise<AnalyticsData> {
   // union window = 期間開始と月初の早い方（月次経済指標も同じ取得で賄う）
   const windowStart = periodStart < monthStart ? periodStart : monthStart;
 
-  const [rates, clicksRes, impressions, usage, economicsMonth, users] =
+  const [rates, clicksRes, impressions, usage, economicsMonth, users, funnel] =
     await Promise.all([
       fetchRates(admin),
       fetchClicks(admin, windowStart),
@@ -123,6 +162,7 @@ export async function fetchAnalytics(days = 30): Promise<AnalyticsData> {
       fetchDailyUsage(admin, periodStart, keys),
       fetchMonthAiCost(admin, monthStart),
       fetchUsers(admin, periodStart),
+      fetchFunnel(admin, periodStart),
     ]);
 
   const { clicks, capped: clicksCapped } = clicksRes;
@@ -211,6 +251,7 @@ export async function fetchAnalytics(days = 30): Promise<AnalyticsData> {
         .sort((a, b) => b.clicks - a.clicks),
       clicksCapped,
     },
+    funnel,
     usage: {
       dailySignups: users.dailySignups,
       dailyOcr: usage.ocr,
@@ -426,6 +467,115 @@ async function fetchMonthAiCost(
   if (ocr === null || concierge === null) return null;
   // spend_cents → ¥（既存 UI 慣習: /100）
   return (ocr + concierge) / 100;
+}
+
+/**
+ * 登録ファネル（コホート）。詳細は [FunnelData]。
+ *
+ * 🔴 **読めなかった段は `null`。** そこから先も `null` にする ——
+ *    分母が分からないのに率だけ出すと、**嘘の転換率**になる。
+ */
+export type FunnelUser = {
+  id: string;
+  created_at?: string;
+  email_confirmed_at?: string | null;
+  is_anonymous?: boolean;
+};
+
+/**
+ * ファネルの数え方。**取得から切り離してある**ので、偽の DB を組まずに検査できる
+ * （`plan-resolve.ts` と同じ方針。`funnel.test.ts`）。
+ *
+ * @param users      利用者一覧。`null` は**読めなかった**（0 件ではない）
+ * @param ocrUserIds 期間内に読み取りのあった user_id。`null` は読めなかった
+ * @param proUserIds いま pro の user_id。`null` は読めなかった
+ */
+export function funnelFrom(
+  users: FunnelUser[] | null,
+  ocrUserIds: string[] | null,
+  proUserIds: string[] | null,
+  periodStart: string,
+  capped = false
+): FunnelData {
+  const out: FunnelData = {
+    cohortFrom: periodStart,
+    registered: null,
+    confirmed: null,
+    firstRead: null,
+    pro: null,
+    capped,
+  };
+  // 🔴 **分母が読めなければ、以降も出さない。** 率だけ出すと嘘になる。
+  if (users == null) return out;
+
+  const startMs = new Date(`${periodStart}T00:00:00Z`).getTime();
+  const cohort = new Set<string>();
+  let confirmed = 0;
+  for (const u of users) {
+    // 🔴 **匿名を混ぜない。** 混ぜると分母が膨らみ、転換率が実際より低く出る。
+    if (u.is_anonymous) continue;
+    if (!u.created_at) continue;
+    if (new Date(u.created_at).getTime() < startMs) continue;
+    cohort.add(u.id);
+    if (u.email_confirmed_at) confirmed += 1;
+  }
+  out.registered = cohort.size;
+  out.confirmed = confirmed;
+
+  // **人数を数える。** 日次の合計ではない（1 人が 10 件読んでも 1 人）。
+  if (ocrUserIds != null) {
+    const read = new Set<string>();
+    for (const id of ocrUserIds) if (cohort.has(id)) read.add(id);
+    out.firstRead = read.size;
+  }
+  if (proUserIds != null) {
+    const pro = new Set<string>();
+    for (const id of proUserIds) if (cohort.has(id)) pro.add(id);
+    out.pro = pro.size;
+  }
+  return out;
+}
+
+async function fetchFunnel(
+  admin: Client,
+  periodStart: string
+): Promise<FunnelData> {
+  let users: FunnelUser[] | null = null;
+  let capped = false;
+  try {
+    const { data } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    const list = data?.users ?? [];
+    // @ts-expect-error supabase exposes total on the payload
+    capped = ((data && (data.total ?? list.length)) as number) > 1000;
+    users = list as unknown as FunnelUser[];
+  } catch (e) {
+    console.warn("[analytics] funnel: listUsers failed", e);
+  }
+
+  const ids = async (
+    table: string,
+    build: (q: ReturnType<Client["from"]>) => PromiseLike<{ data: unknown; error: unknown }>
+  ): Promise<string[] | null> => {
+    try {
+      const { data, error } = await build(admin.from(table));
+      if (error) throw error;
+      return (data as { user_id?: string }[] | null ?? []).map((r) => String(r.user_id ?? ""));
+    } catch (e) {
+      console.warn(`[analytics] funnel: ${table} failed`, e);
+      return null; // 🔴 **読めなかったを 0 にしない**
+    }
+  };
+
+  const [ocrIds, proIds] = await Promise.all([
+    ids("toritavi_ocr_usage", (q) =>
+      (q as unknown as { select: (c: string) => { gte: (a: string, b: string) => PromiseLike<{ data: unknown; error: unknown }> } })
+        .select("user_id").gte("day", periodStart)),
+    ids("toritavi_user_plan", (q) =>
+      (q as unknown as { select: (c: string) => { eq: (a: string, b: string) => PromiseLike<{ data: unknown; error: unknown }> } })
+        .select("user_id").eq("plan", "pro")),
+  ]);
+
+  return funnelFrom(users, ocrIds, proIds, periodStart, capped);
 }
 
 async function fetchUsers(

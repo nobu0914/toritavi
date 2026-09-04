@@ -2,7 +2,7 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { requireAdmin } from "@/lib/admin-auth";
 import { recordAuditLog } from "@/lib/admin-audit";
-import { fetchAnalytics } from "@/lib/admin-analytics";
+import { fetchAnalytics, type FunnelData } from "@/lib/admin-analytics";
 import BarChart from "@/components/admin/BarChart";
 import ProgramRatesTable from "@/components/admin/ProgramRatesTable";
 
@@ -119,6 +119,18 @@ export default async function AdminAnalyticsPage({
         </div>
       )}
 
+      {/* 登録ファネル。**ゲストを開けられるかの判断材料**（`guest-mode-spec.md` §24）*/}
+      <section style={card}>
+        <h2 style={h2}>登録ファネル（{a.funnel.cohortFrom} 以降に登録した人を追跡）</h2>
+        <FunnelRows f={a.funnel} />
+        <p style={caption}>
+          🔴 <b>期間中のイベント数ではなく、同じ人の集合（コホート）を追っています。</b>
+          分母と分子が別の集団だと転換率が意味を失うため。
+          「—」は<b>読めなかった</b>という意味で、0 ではありません。
+          {a.funnel.capped && " 利用者一覧が 1000 件で頭打ちです。"}
+        </p>
+      </section>
+
       {/* クリック推移 */}
       <section style={card}>
         <h2 style={h2}>クリック推移（日次）</h2>
@@ -180,6 +192,61 @@ function Kpi({
       </div>
       <div style={{ fontSize: 22, fontWeight: 700, marginTop: 6, color: valueColor }}>{value}</div>
       {hint && <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 4 }}>{hint}</div>}
+    </div>
+  );
+}
+
+/**
+ * ファネルの各段と、**前の段からの通過率**。
+ *
+ * 🔴 **読めなかった段は「—」。** 0 と書くと**離脱していないのに離脱したように
+ *    見える。** 前の段が読めていなければ、率も出さない（分母が無い）。
+ */
+function FunnelRows({ f }: { f: FunnelData }) {
+  const stages: { label: string; v: number | null }[] = [
+    { label: "登録の完了", v: f.registered },
+    { label: "メール確認の完了", v: f.confirmed },
+    { label: "読み取りに 1 回成功", v: f.firstRead },
+    { label: "Pro を購入", v: f.pro },
+  ];
+  return (
+    <div style={{ display: "grid", gap: 6 }}>
+      {stages.map((s, i) => {
+        const prev = i === 0 ? null : stages[i - 1].v;
+        const rate =
+          i === 0 || prev == null || s.v == null || prev === 0
+            ? null
+            : Math.round((s.v / prev) * 1000) / 10;
+        return (
+          <div
+            key={s.label}
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr auto auto",
+              gap: 12,
+              alignItems: "baseline",
+              padding: "6px 0",
+              borderTop: i === 0 ? undefined : "1px solid var(--border)",
+            }}
+          >
+            <span style={{ fontSize: 13 }}>{s.label}</span>
+            <b style={{ fontSize: 16, fontVariantNumeric: "tabular-nums" }}>
+              {s.v == null ? "—" : `${s.v} 人`}
+            </b>
+            <span
+              style={{
+                fontSize: 12,
+                color: "var(--text-dim)",
+                minWidth: 72,
+                textAlign: "right",
+                fontVariantNumeric: "tabular-nums",
+              }}
+            >
+              {i === 0 ? "" : rate == null ? "—" : `前段の ${rate}%`}
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 }
