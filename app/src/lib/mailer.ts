@@ -15,6 +15,8 @@
  * **別のドメインから出すと SPF/DKIM が付かず迷惑メールに落ちる。**
  */
 
+import { scrubSensitive } from "./pii-mask";
+
 const RESEND_ENDPOINT = "https://api.resend.com/emails";
 
 /** 送信元。Supabase の認証メールと**同じ**にすること。 */
@@ -57,14 +59,29 @@ export async function sendMail(params: {
       signal: AbortSignal.timeout(10_000),
     });
     if (!res.ok) {
-      const detail = await res.text().catch(() => "");
-      // 🔴 本文に宛先を出さない。ログに個人情報を残さないため。
-      return { ok: false, reason: "failed", detail: `${res.status} ${detail.slice(0, 200)}` };
+      const raw = await res.text().catch(() => "");
+      // 🔴 **プロバイダの応答をそのまま返さない。**（2026-09-06 データ保護監査 レーン 7）
+      //
+      //    ここには長く「本文に宛先を出さない」とだけ書いてあった。**足りない。**
+      //    こちらが `to` を足していないだけで、**相手が足してくる** ——
+      //    Resend は 422 の本文に `Invalid \`to\` field: user@example.com` のような
+      //    形で宛先を返す。呼び出し側（`email-change-notice`）はこれを
+      //    `console.error` へ出すので、そのまま Vercel のログに残る。
+      //
+      //    🔴 **伏せてから切る。** 先に 200 文字で切ると、境界で途中まで残った
+      //    アドレス（`user@exa`）が `EMAIL_RE` の `\.[a-z]{2,}` に当たらず、
+      //    **断片だけが生き残る。**
+      return {
+        ok: false,
+        reason: "failed",
+        detail: `${res.status} ${(scrubSensitive(raw) ?? "").slice(0, 200)}`,
+      };
     }
     const json = (await res.json().catch(() => null)) as { id?: string } | null;
     return { ok: true, id: json?.id ?? null };
   } catch (e) {
-    return { ok: false, reason: "failed", detail: String(e).slice(0, 200) };
+    // 例外文にも宛先や URL が混じりうる。上と同じく**伏せてから切る**。
+    return { ok: false, reason: "failed", detail: (scrubSensitive(String(e)) ?? "").slice(0, 200) };
   }
 }
 
