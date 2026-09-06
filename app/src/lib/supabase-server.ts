@@ -38,7 +38,18 @@ export async function createClient() {
  */
 export async function authenticateRequest(
   request: Request
-): Promise<{ sb: SupabaseClient; userId: string; isAnonymous: boolean } | null> {
+): Promise<{
+  sb: SupabaseClient;
+  userId: string;
+  isAnonymous: boolean;
+  /**
+   * 検証済みユーザーの `user_metadata`。
+   *
+   * 🔴 **トークンの中身ではなく `getUser` が返した現在値。** 許諾は
+   * ここに入っており（`ai-consent.ts`）、**古いトークンでも最新が読める。**
+   */
+  userMetadata: Record<string, unknown>;
+} | null> {
   const authHeader = request.headers.get("authorization");
   if (authHeader?.toLowerCase().startsWith("bearer ")) {
     const token = authHeader.slice(7).trim();
@@ -54,6 +65,7 @@ export async function authenticateRequest(
       sb: sb as unknown as SupabaseClient,
       userId: data.user.id,
       isAnonymous: data.user.is_anonymous === true,
+      userMetadata: (data.user.user_metadata ?? {}) as Record<string, unknown>,
     };
   }
   const sb = await createClient();
@@ -63,5 +75,6 @@ export async function authenticateRequest(
     sb: sb as unknown as SupabaseClient,
     userId: data.user.id,
     isAnonymous: data.user.is_anonymous === true,
+    userMetadata: (data.user.user_metadata ?? {}) as Record<string, unknown>,
   };
 }

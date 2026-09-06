@@ -23,6 +23,21 @@
 # misc
 .DS_Store
 *.pem
+# 🔴 **鍵の拡張子を並べる**（2026-09-06・JR000216）。
+#    ここは長く `*.pem` の 1 行だけだった。**アプリ側（toritavi_app）で
+#    2026-08-31 に起きた事故そのものの条件** —— `.gitignore` に `.p8` が無く、
+#    土台コミットに `tool/AuthKey_*.p8` が紛れて origin/main まで出た（JR000183）。
+#    アプリ側は 2026-09-06 に塞いだが、**複製先に入っていなかった。**
+#    いま追跡されている秘密は無い。**これは予防。**
+*.p8
+*.p12
+*.pfx
+*.cer
+*.der
+*.mobileprovision
+*.keystore
+*.jks
+AuthKey_*
 
 # debug
 npm-debug.log*
