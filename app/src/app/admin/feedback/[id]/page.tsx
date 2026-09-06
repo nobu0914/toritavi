@@ -36,7 +36,7 @@ export default async function AdminFeedbackDetailPage({
   // 添付を開いたことは監査に残す。搭乗券・予約票が写りうる画像なので、
   // 「誰がいつ見たか」を後から辿れるようにしておく。
   const h = await headers();
-  await recordAuditLog(ctx, {
+  const recorded = await recordAuditLog(ctx, {
     action: row.attachmentPath
       ? "admin.feedback.attachment_viewed"
       : "admin.feedback.detail_viewed",
@@ -47,9 +47,28 @@ export default async function AdminFeedbackDetailPage({
     userAgent: h.get("user-agent"),
   });
 
-  const attachmentUrl = row.attachmentPath
-    ? await signFeedbackAttachment(row.userId, row.attachmentPath, 120)
-    : null;
+  // 🔴 **閲覧専用ロールに添付を出さない**（2026-09-06 の監査 レーン 6・JR000212）。
+  //    中身は搭乗券・予約票が写る画像。`data-privacy-spec.md` §2-1 は
+  //    「閲覧専用ロールからは面ごと出さない」と決めていて、**対象に
+  //    フィードバック添付を含めている。** 利用者ファイル面（`files/route.ts`）は
+  //    そう直してあったのに、ここだけ残っていた。
+  //
+  // 🔴 **記録に失敗したら画像を出さない。** 同じく §2-1。
+  //    `recordAuditLog` は「監査の失敗で業務を止めない」設計で false を返すが、
+  //    **画像を出す前に必ず記録が要る面**では、その既定は合わない。
+  //    ここは戻り値を捨てていたので、**記録に失敗しても署名 URL が出ていた。**
+  const canViewAttachment = ctx.role !== "support_viewer";
+  const attachmentUrl =
+    row.attachmentPath && canViewAttachment && recorded
+      ? await signFeedbackAttachment(row.userId, row.attachmentPath, 120)
+      : null;
+  const attachmentBlockedReason = !row.attachmentPath
+      ? null
+      : !canViewAttachment
+        ? "閲覧専用ロールでは添付を表示しません"
+        : !recorded
+          ? "監査記録を残せなかったため、添付を表示しません"
+          : null;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -124,7 +143,8 @@ export default async function AdminFeedbackDetailPage({
               />
             ) : (
               <div style={{ fontSize: 13, color: "var(--text-dim)" }}>
-                画像を読み込めませんでした（削除済み、またはパスが不正）。
+                {attachmentBlockedReason ??
+                  "画像を読み込めませんでした（削除済み、またはパスが不正）。"}
               </div>
             )}
           </div>

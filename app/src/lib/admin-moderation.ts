@@ -424,7 +424,13 @@ export async function deleteUserFile(
     // 🔴 **ここはパスを残す。** 閲覧（`files_viewed`）では件数だけにしたが、
     //    削除は「どれを消したか」が記録の本体で、消した後は他に辿る術が無い。
     //    頻度も低い。**同じ表に見えて要件が逆**なので、両方に理由を書いておく。
-    summary: `bucket=${bucket} path=${path}`,
+    // 🔴 **パスを書かない**（2026-09-06 のデータ保護監査 レーン 6・JR000212）。
+    //    `step-attachments/{uid}/{stepId}/…` の stepId から旅程が辿れる。
+    //    しかも監査ログの summary 列は `/admin/security` が描画するので、
+    //    **support_viewer にも読める。** `data-privacy-spec.md` §2-1 が
+    //    「パスは書かない」と決めているのに、ここだけ書いていた。
+    //    面（バケット）と、何段の深さだったかまでに留める。
+    summary: `bucket=${bucket} depth=${path.split("/").length}`,
     ip: meta.ip,
     userAgent: meta.userAgent,
   });

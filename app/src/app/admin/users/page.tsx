@@ -1,3 +1,5 @@
+import { headers } from "next/headers";
+import { recordAuditLog } from "@/lib/admin-audit";
 import { requireAdmin } from "@/lib/admin-auth";
 import { fetchAdminUserList } from "@/lib/admin-queries";
 import Link from "next/link";
@@ -30,7 +32,7 @@ export default async function AdminUsersPage({
 }: {
   searchParams: SearchParams;
 }) {
-  await requireAdmin("support_viewer");
+  const ctx = await requireAdmin("support_viewer");
   const sp = await searchParams;
 
   const page = Math.max(parseInt(sp.page ?? "1", 10) || 1, 1);
@@ -38,6 +40,25 @@ export default async function AdminUsersPage({
   const query = await currentUserSearch();
 
   const result = await fetchAdminUserList({ page, perPage, query });
+
+  // 🔴 **一覧と検索が無記録だった**（2026-09-06 に本番で実測・JR000212）。
+  //    ダッシュボード・詳細・添付は記録されるのに、**生メールを最大 200 件
+  //    返すこの経路と、特定の人を名指しで探す検索にだけ入っていなかった。**
+  //    つまり運営が全利用者のメールを列挙しても、誰にも痕跡が残らない。
+  //
+  // 🔴 **検索語を書かない。** 語は利用者のメールアドレスそのもので、
+  //    監査ログの summary 列は `/admin/security` が描画するため
+  //    **support_viewer にも読める**（`data-privacy-spec.md` §2-1）。
+  //    「検索したか」「何件返したか」までに留める。
+  const h = await headers();
+  await recordAuditLog(ctx, {
+    action: query ? "admin.users.searched" : "admin.users.listed",
+    targetType: "user",
+    targetId: null,
+    summary: `page=${page} perPage=${perPage} returned=${result.rows.length} total=${result.total}`,
+    ip: h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
+    userAgent: h.get("user-agent"),
+  });
   const totalPages = perPage > 0 ? Math.max(Math.ceil(result.total / perPage), 1) : 1;
 
   return (
