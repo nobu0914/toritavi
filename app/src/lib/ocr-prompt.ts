@@ -70,7 +70,7 @@ export const buildSystemPrompt = (outputLang: string, today: string) => `あな�
         "to": "到着地（移動のときだけ）",
         "airline": "運行航空会社（飛行機のみ。コードシェア便は実運航キャリア名。例: ANA便名 NZ90 で Air New Zealand 運航表記あり → 'Air New Zealand'。明記なし・非飛行機はnull）",
         "confNumber": "確認番号",
-        "timezone": "出発地のタイムゾーン。IANA ID を優先（例 Asia/Tokyo, America/Los_Angeles, Pacific/Honolulu）。判らなければ略称（JST 等）。国内線・単一地点で自明ならnull",
+        "timezone": "出発地のタイムゾーン。IANA ID を優先（例 Asia/Tokyo, America/Los_Angeles, Europe/London, Australia/Sydney）。判らなければ略称（JST, PST, GMT 等）。**書類にも地名にも手がかりが無く特定できないときだけ null**。推測で埋めない",
         "arrivalTimezone": "到着地のタイムゾーン（同じ形式）。移動で出発地と異なる場合に必ず入れる。同じ・不明ならnull"
       },
       "variable": [

@@ -30,14 +30,39 @@ export const TIME_RULES = {
   format: "HH:MM（24時間制）",
   ampm: "AM/PMは24時間制に変換する（例: 2:30PM → 14:30）",
 
+  // 🔴 **「国内」という概念を使わない**（2026-09-07・JR000221）。
+  //
+  //    ここは長く `domestic: "国内の場合はtimezoneは省略する（JSTが前提）"` だった。
+  //    日本だけに配信していたときは、**省略＝日本時間**で正しかった。
+  //
+  //    **省略されたゾーンは、端末のゾーンとして解釈される**
+  //    （アプリの `reminder_builder.dart` の `_toUtc` が `local.toUtc()` に落ちる）。
+  //    日本は単一タイムゾーンで、利用者もたいてい国内に居るので当たっていた。
+  //
+  //    🔴 **米国は 6 つ、カナダも豪州もタイムゾーンが複数ある。**
+  //    ニューヨークに居る人がロサンゼルス発の便を登録すると、
+  //    **出発時刻が 3 時間ずれたまま通知が飛ぶ。** 落ちも警告も出ない
+  //    （`CLAUDE.md` §6-1「出ないのに落ちない」）。
+  //
+  //    **省略してよいのは「本当に特定できないとき」だけ**にする。
   timezone: {
-    rule: "国際線・海外予約の場合、出発地と到着地それぞれの現地時間で返す",
-    field: "timezoneフィールドに出発地のタイムゾーン略称を入れる（例: JST, CET, EST）",
-    arrival: "到着時刻のタイムゾーンが異なる場合、endTimezoneとして変動項目に入れる",
-    domestic: "国内の場合はtimezoneは省略する（JSTが前提）",
+    rule: "時刻は出発地の現地時間（壁時計）で返す。到着地のゾーンが違う場合は到着も現地時間",
+    field:
+      "timezone に出発地のタイムゾーンを入れる。IANA ID を優先" +
+      "（例 Asia/Tokyo, America/Los_Angeles, Europe/London, Australia/Sydney）。" +
+      "判らなければ略称（JST, PST, GMT, AEST）",
+    arrival: "到着地のゾーンが出発地と違う場合、endTimezone として変動項目に入れる",
+    unknown:
+      "書類にも地名にも手がかりが無く、出発地のゾーンを特定できないときだけ timezone を省略する。" +
+      "推測で埋めない",
   },
 
-  // UI表示ルール
+  // UI表示ルール。
+  // 🔴 **ここはプロンプトに入らない。** `buildOcrRulesPrompt` は timezone.* だけを使う。
+  //    使っているのは `src/app/trips/[id]/TripDetailClient.tsx`（**Web 版・開発停止**）
+  //    の `formatTimeDisplay` / `isInternational` だけ。**iOS アプリは参照しない。**
+  //    日本前提（「日本時間を併記」）が残っているが、**出荷物に影響しない**ので
+  //    ここでは触らない。Web 版を再開する日に直すこと。
   display: {
     primary: "「現地時間」「日本時間」をラベルとして使う",
     noAbbreviation: "JST/CET等の略称だけでは表示しない。補助情報として小さく添える",
@@ -137,7 +162,7 @@ export const VARIABLE_RULES = {
     "料金・合計金額",
     "予約者名",
     "乗り継ぎ情報",
-    "到着地タイムゾーン（国際線の場合）",
+    "到着地タイムゾーン（出発地とゾーンが違う場合）",
     "食事・プラン情報",
     "キャンセルポリシー",
     "緊急連絡先",
@@ -164,6 +189,9 @@ export type FixedFieldDef = {
   placeholder: string;
 };
 
+// 🔴 **どこからも参照されていない**（2026-09-07 に実測）。プロンプトにも UI にも
+//    出ていない。消さずに残すのは、読み取り確認画面を作り直すときの下敷きに
+//    なるため。**ここを直しても本番の挙動は変わらない。**
 export const CATEGORY_FIXED_FIELDS: Record<string, FixedFieldDef[]> = {
   飛行機: [
     { key: "title", label: "便名", placeholder: "NH225" },
@@ -174,7 +202,7 @@ export const CATEGORY_FIXED_FIELDS: Record<string, FixedFieldDef[]> = {
     { key: "endTime", label: "到着時刻", placeholder: "12:00" },
     { key: "from", label: "出発地", placeholder: "NRT" },
     { key: "to", label: "到着地", placeholder: "KIX" },
-    { key: "timezone", label: "タイムゾーン", placeholder: "JST（国内は省略可）" },
+    { key: "timezone", label: "タイムゾーン", placeholder: "Asia/Tokyo・America/Los_Angeles など" },
     { key: "confNumber", label: "確認番号", placeholder: "ANA-882541" },
   ],
   列車: [
@@ -372,7 +400,7 @@ ${Object.entries(DATE_RULES.split).map(([k, v]) => `  - ${k}: ${v}`).join("\n")}
 - ${TIME_RULES.timezone.rule}
 - ${TIME_RULES.timezone.field}
 - ${TIME_RULES.timezone.arrival}
-- ${TIME_RULES.timezone.domestic}
+- ${TIME_RULES.timezone.unknown}
 
 ## 文書分割ルール
 - ${SPLIT_RULES.roundTrip.rule}
