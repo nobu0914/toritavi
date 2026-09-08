@@ -55,7 +55,11 @@ export async function readAiConsent(userId: string): Promise<ServerConsentState>
     .select("document_version, legal_locale, accepted_at, withdrawn_at")
     .eq("user_id", userId)
     .eq("consent_type", "ai_processing")
-    .order("accepted_at", { ascending: false })
+    // 🔴 **`created_at desc, seq desc` で引く**（2026-09-08）。
+    //    `accepted_at` だけだと、同じ時刻の行が 2 つあったときに
+    //    **順序が決まらず、日によって違う行が「最新」になる。**
+    .order("created_at", { ascending: false })
+    .order("seq", { ascending: false })
     .limit(1);
 
   if (error) {
@@ -90,7 +94,8 @@ export async function readAiConsent(userId: string): Promise<ServerConsentState>
 export async function recordAiConsent(args: {
   userId: string;
   legalLocale: "ja" | "en";
-  acceptedAt: string;
+  /** クライアントが申告した時刻。**参考情報。正式な受付時刻にしない。** */
+  clientReportedAt?: string;
   appVersion?: string;
 }): Promise<{ ok: true } | { ok: false; reason: string }> {
   try {
@@ -100,7 +105,10 @@ export async function recordAiConsent(args: {
       consent_type: "ai_processing",
       document_version: AI_CONSENT_VERSION, // 🔴 サーバの定数
       legal_locale: args.legalLocale,
-      accepted_at: args.acceptedAt,
+      // 🔴 **`accepted_at` を渡さない**（2026-09-08）。DB の `default now()`
+      //    が入る。端末の時計は利用者が変えられるので、クライアントの値を
+      //    正式な受付時刻にすると**同意した時刻を自分で決められる。**
+      client_reported_at: args.clientReportedAt ?? null,
       recipient: "Anthropic PBC",
       destination_country: "US",
       app_version: args.appVersion ?? null,
@@ -120,11 +128,79 @@ export async function withdrawAiConsent(
     const svc = createServiceClient();
     const { error } = await svc
       .from(CONSENT_TABLE)
-      .update({ withdrawn_at: new Date().toISOString() })
+      // 🔴 **DB の時刻で立てる**（2026-09-08）。サーバのプロセス時刻でも
+      //    ずれうるので `now()` を使う。`.is("withdrawn_at", null)` により
+      //    **何度呼んでも結果が変わらない**（冪等）。
+      .update({ withdrawn_at: "now()" })
       .eq("user_id", userId)
       .eq("consent_type", "ai_processing")
-      .is("withdrawn_at", null);
+      .is("withdrawn_at", null)
+      .select("id");
     if (error) return { ok: false, reason: error.code ?? "update_error" };
+    // 🔴 **0 行でも成功。** 既に撤回済み＝目的は達している（冪等）。
+    //    ここで失敗にすると、再送のたびにエラーになる。
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, reason: (e as Error).name };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 🔴 規約・プライバシーポリシーの同意（§5・2026-09-08）
+// ---------------------------------------------------------------------------
+
+/**
+ * サーバが認める文書の版。**クライアントの申告値は使わない。**
+ *
+ * 🔴 **日英で別の文書。** 日本語 PP は Maptint と共有する `shared-privacy`、
+ * 英語 PP は JUNROS 専用の `junros-privacy` で、訳ではない。
+ * **片方の日付をもう片方へ写すと必ず間違う。**
+ *
+ * 🔴 **アプリ側の `legal_consent.dart` と同じ値。** ずれると、
+ * 記録した版と画面に出した版が食い違う。`legal-versions.test.ts` が
+ * アプリ側のファイルを読んで突き合わせる。
+ */
+export const TERMS_VERSIONS = { ja: "2026-08-30", en: "2026-09-07" } as const;
+export const PRIVACY_VERSIONS = { ja: "2026-08-31", en: "2026-09-07" } as const;
+
+export type LegalLocale = keyof typeof TERMS_VERSIONS;
+
+/**
+ * 規約とプライバシーポリシーの同意を**まとめて**記録する。
+ *
+ * 🔴 **片方だけ入る状態を作らない。** 1 回の insert で 2 行を入れる ——
+ * PostgREST の複数行 insert は 1 文なので、**どちらか失敗すれば両方入らない。**
+ * 別々に呼ぶと「規約だけ記録されて PP は失敗」が起こりうる。
+ *
+ * 🔴 **版も受付時刻もサーバが決める。** 引数は言語とアプリの版だけ。
+ */
+export async function recordLegalConsent(args: {
+  userId: string;
+  legalLocale: LegalLocale;
+  clientReportedAt?: string;
+  appVersion?: string;
+}): Promise<{ ok: true } | { ok: false; reason: string }> {
+  const common = {
+    user_id: args.userId,
+    legal_locale: args.legalLocale,
+    client_reported_at: args.clientReportedAt ?? null,
+    app_version: args.appVersion ?? null,
+  };
+  try {
+    const svc = createServiceClient();
+    const { error } = await svc.from(CONSENT_TABLE).insert([
+      {
+        ...common,
+        consent_type: "terms",
+        document_version: TERMS_VERSIONS[args.legalLocale],
+      },
+      {
+        ...common,
+        consent_type: "privacy",
+        document_version: PRIVACY_VERSIONS[args.legalLocale],
+      },
+    ]);
+    if (error) return { ok: false, reason: error.code ?? "insert_error" };
     return { ok: true };
   } catch (e) {
     return { ok: false, reason: (e as Error).name };
