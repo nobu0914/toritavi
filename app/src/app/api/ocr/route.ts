@@ -26,7 +26,7 @@ import {
 } from "@/lib/guest-device-lock";
 import { createServiceClient } from "@/lib/supabase-service";
 import { authenticateRequest } from "@/lib/supabase-server";
-import { observeAiConsent } from "@/lib/ai-consent";
+import { decideAiConsent } from "@/lib/ai-consent";
 import {
   audienceOf,
   beginOcrRequest,
@@ -155,8 +155,18 @@ export async function POST(request: NextRequest) {
   //    （許諾は初回スキャンで訊くので、まだ読み取っていない人は当然そうなる）。
   //    ここで 403 にすると**課金中の利用者の OCR が止まる**
   //    ——「払った人が損をする経路」そのもの。
-  //    ログで 0 件になったら拒否へ切り替える（`ai-consent.ts` の冒頭に手順）。
-  observeAiConsent(userMetadata, "/api/ocr");
+  //    ログで 0 件になったら `AI_CONSENT_ENFORCE` を true にする
+  //    （手順は `ai-consent.ts` の同定数の注記）。
+  //
+  //    🔴 **判定そのものは今日から走らせる。** 閉める日に初めて動く経路を
+  //    作らない —— そこにだけ穴があると、閉めた瞬間に落ちる。
+  const consent = decideAiConsent(userMetadata, "/api/ocr");
+  if (!consent.allow) {
+    return NextResponse.json(
+      { error: consent.code, message: "AI 送信の許諾が必要です" },
+      { status: consent.status },
+    );
+  }
 
   // 🔴 **ゲスト（未登録）での読み取りは提供しない**（2026-08-31 の決定）。
   //    アプリのフラグでは閉じない —— サーバは匿名 JWT を受けるので、

@@ -74,3 +74,50 @@ export function observeAiConsent(meta: UserMetadata, route: string): ConsentObse
   }
   return o;
 }
+
+/**
+ * 🔴 **2 段目の門を閉めるか。**
+ *
+ * `false` のあいだは**観測だけ**で、通す・通さないは変わらない。
+ *
+ * ## 閉めるまでの手順
+ *
+ * 1. Vercel のログで `[ai-consent]` の警告が **0 件**になるのを確かめる
+ *    （残っているうちに閉めると、**課金中の利用者の OCR が止まる**）
+ * 2. ここを `true` にして出す
+ * 3. 出したあと、`403 ai_consent_required` が出ていないことを確かめる
+ *
+ * ## 🔴 環境変数にしない
+ *
+ * 環境変数だと**コードに痕跡が残らず、git で戻せない**（`CLAUDE.md` §4）。
+ * 「いつ誰が閉めたか」が分からなくなる。**定数にして、変更をコミットに残す。**
+ *
+ * ## 🔴 これは悪意ある利用者を止めない
+ *
+ * メタデータは利用者自身が書き換えられる。止まるのは
+ * 「改造していないクライアント」「将来の別入口」「うっかりの素通り」。
+ */
+export const AI_CONSENT_ENFORCE = false;
+
+export type ConsentDecision =
+  | { allow: true; observation: ConsentObservation }
+  | { allow: false; status: 403; code: "ai_consent_required"; observation: ConsentObservation };
+
+/**
+ * 通すかどうかを決める。**投げない・書かない。** 呼ぶ側が応答を組む。
+ *
+ * `AI_CONSENT_ENFORCE` が false のあいだは**必ず通す**（観測は残る）。
+ * 判定そのものは常に走らせる —— 閉める日に初めて動く経路を作らないため。
+ */
+export function decideAiConsent(meta: UserMetadata, route: string): ConsentDecision {
+  const observation = observeAiConsent(meta, route);
+  if (!AI_CONSENT_ENFORCE || observation.state === "ok") {
+    return { allow: true, observation };
+  }
+  return {
+    allow: false,
+    status: 403,
+    code: "ai_consent_required",
+    observation,
+  };
+}

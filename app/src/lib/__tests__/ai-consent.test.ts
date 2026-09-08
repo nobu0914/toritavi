@@ -7,8 +7,10 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import {
+  AI_CONSENT_ENFORCE,
   AI_CONSENT_VERSION,
   classifyAiConsent,
+  decideAiConsent,
   hasAiConsent,
   observeAiConsent,
 } from "../ai-consent.ts";
@@ -88,4 +90,47 @@ describe("アプリ側と版が一致している", () => {
       "🔴 サーバとアプリで許諾の版がずれている"
     );
   });
+});
+
+// ============================================================================
+// 🔴 2 段目の門（JR000206）
+//
+// `AI_CONSENT_ENFORCE` が false のあいだは**観測だけ**。
+// ここで固定するのは「閉めていないあいだ、挙動が変わらないこと」と、
+// 「閉めたときに正しく拒否すること」の**両方**。
+//
+// 片方だけだと、閉める日に初めて動く経路ができる ——
+// そこにだけ穴があると、閉めた瞬間に落ちる。
+// ============================================================================
+test("🔴 閉めていないあいだは、許諾が無くても通す", () => {
+  // ここが false でなくなったら、それは意図的な変更のはず。
+  // **黙って true になっていたら、課金中の利用者の OCR が止まる。**
+  assert.equal(
+    AI_CONSENT_ENFORCE,
+    false,
+    "AI_CONSENT_ENFORCE を true にした。\n" +
+      "  🔴 Vercel のログで [ai-consent] が 0 件になったことを確かめたか？\n" +
+      "  残っているうちに閉めると、課金中の利用者の OCR が止まる。\n" +
+      "  意図した変更なら、この検査も一緒に直すこと",
+  );
+  for (const meta of [null, {}, { ai_consent_version: "1999-01-01" }]) {
+    assert.equal(decideAiConsent(meta, "/api/ocr").allow, true);
+  }
+});
+
+test("🔴 許諾済みなら、閉めていても通る", () => {
+  const meta = { ai_consent_version: AI_CONSENT_VERSION };
+  const d = decideAiConsent(meta, "/api/ocr");
+  assert.equal(d.allow, true);
+  assert.equal(d.observation.state, "ok");
+});
+
+test("陰性対照: 判定そのものは、閉めていなくても走っている", () => {
+  // 「閉めるまで何も見ない」実装だと、閉めた日に初めて動く経路になる。
+  assert.equal(decideAiConsent(null, "/api/ocr").observation.state, "missing");
+  assert.equal(
+    decideAiConsent({ ai_consent_version: "1999-01-01" }, "/api/ocr").observation
+      .state,
+    "stale",
+  );
 });
