@@ -54,6 +54,17 @@ export const NON_CASCADING_USER_TABLES = [
   "trip_contacts",
   "trip_task_states",
   "affiliate_clicks",
+  // 🔴 **アップロード遮断の記録**（`user_id` uuid PK / `reason` / `created_at`）。
+  //    2026-09-08 に追加（JR000213）。台帳にも退会処理にも入っておらず、
+  //    **退会後も残っていた。**
+  //
+  //    残す理由が無い —— `auth.users` への FK が無いので退会で消えないが、
+  //    **その uuid は二度と発行されない。** 再登録すれば別の uuid になるので、
+  //    残しても濫用防止の役には立たない。**目的の無い個人データが残るだけ。**
+  //
+  //    ⚠️ `toritavi_deletion_failures` とは別。あちらは「消し損ねた記録」
+  //    そのものなので、**残すことに目的がある**（下記）。
+  "toritavi_storage_blocks",
 ] as const;
 
 /**
