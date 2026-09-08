@@ -15,6 +15,7 @@
 // ルート・ai-guard・moderation は本物が動く（support/loader.mjs）。
 // ============================================================================
 import assert from "node:assert/strict";
+import { CONCIERGE_ENABLED } from "../concierge-flags.ts";
 import { test } from "node:test";
 import type { NextRequest } from "next/server";
 import { POST as ocrPost } from "../../app/api/ocr/route.ts";
@@ -86,7 +87,14 @@ test("🔴 /api/ai-usage: プランが読めなければ 503 plan_unavailable（
   assert.equal((await body(res)).error, "plan_unavailable");
 });
 
-test("🔴 /api/concierge: プランが読めなければ 503 plan_unavailable（生 500 にも free にもしない）", async () => {
+// 🔴 **コンシェルジュを閉じているあいだ、この検査は成立しない**（JR000187）。
+//    ルートが 404 で先に落ちるので、plan の 503 まで届かない。
+//    **skip を定数に連動させる。** 手で消すと、開けたときに戻らない。
+test("🔴 /api/concierge: プランが読めなければ 503 plan_unavailable（生 500 にも free にもしない）", {
+  skip: CONCIERGE_ENABLED
+    ? false
+    : "CONCIERGE_ENABLED = false のあいだはルートが 404 で落ちる（JR000187）",
+}, async () => {
   login(fakeSb(dbDown));
   const res = await conciergePost(
     makeRequest({ body: JSON.stringify({ text: "上限を確認したい" }) }) as NextRequest,

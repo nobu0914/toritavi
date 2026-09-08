@@ -12,6 +12,7 @@
  */
 
 import Anthropic from "@anthropic-ai/sdk";
+import { CONCIERGE_ENABLED } from "@/lib/concierge-flags";
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateRequest } from "@/lib/supabase-server";
 import { enforceAiLimits, CONCIERGE_GUARD } from "@/lib/ai-guard";
@@ -92,6 +93,17 @@ type AssistantPayload = {
 };
 
 export async function POST(request: NextRequest) {
+  // 🔴 **アプリのフラグはサーバを閉じない**（JR000187・`CLAUDE.md` §5）。
+  //    `kConciergeEnabled = false` は導線を消すだけで、ここは生きていた。
+  //    `concierge-context.ts` は**確認番号とメモ**を文脈に含めるので、
+  //    素通しだと旅程の題名・メモ・確認番号が Anthropic へ出うる。
+  //
+  //    **いちばん先に置く。** 認証や本文の読み取りより前で落とす ——
+  //    閉じている機能のために、本文を読む理由が無い。
+  if (!CONCIERGE_ENABLED) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
   const origin = request.headers.get("origin");
   if (origin && !ALLOWED_ORIGINS.has(origin)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
