@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { authenticateRequest } from "@/lib/supabase-server";
 import { createServiceClient } from "@/lib/supabase-service";
 import { sendMail, maskEmail } from "@/lib/mailer";
+import { EMAIL_CHANGE_NOTICE_ENABLED } from "@/lib/email-notice-flags";
 
 /**
  * POST /api/account/email-change-notice
@@ -53,6 +54,12 @@ const FRESH_MS = 10 * 60 * 1000;
 const NOTICE_KEY = "email_change_notice_at";
 
 export async function POST(request: NextRequest) {
+  // 🔴 **門は認証より前。** 閉じている機能のために利用者を引き直す理由が無く、
+  //    後ろに置くと閉じているのに DB を読むことになる（JR000187 と同じ形）。
+  //    フェイルクローズ —— 明示的に true のときだけ通す。
+  if (!EMAIL_CHANGE_NOTICE_ENABLED) {
+    return NextResponse.json({ error: "not_found" }, { status: 404 });
+  }
   const auth = await authenticateRequest(request);
   if (!auth) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
