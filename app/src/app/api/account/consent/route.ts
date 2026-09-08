@@ -81,6 +81,18 @@ export async function POST(request: NextRequest) {
       ? body.app_version
       : undefined;
 
+  // 🔴 **知らない値を既定へ倒さない**（2026-09-08・外部レビュー指摘 2）。
+  //    直す前は `kind !== "legal"` を全部 `ai_processing` にしていたので、
+  //    `"legal_typo"` のような打ち間違いが **AI 同意として保存され 200 が返る。**
+  //    規約・PP を記録したつもりで、片方も入っていない状態になる。
+  //    **未指定だけを後方互換で `ai_processing` に倒す。**
+  if (
+    body.kind !== undefined &&
+    body.kind !== "legal" &&
+    body.kind !== "ai_processing"
+  ) {
+    return NextResponse.json({ error: "bad_kind" }, { status: 400 });
+  }
   const kind = body.kind === "legal" ? "legal" : "ai_processing";
   const r =
     kind === "legal"

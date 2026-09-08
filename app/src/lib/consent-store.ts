@@ -120,26 +120,33 @@ export async function recordAiConsent(args: {
   }
 }
 
-/** 撤回。**行を消さず `withdrawn_at` を立てる。** */
+/**
+ * 撤回。**行を消さず `withdrawn_at` を立てる。**
+ *
+ * 🔴 **時刻の決め方を SQL 側に置く**（2026-09-08・外部レビュー指摘 1）。
+ *
+ * 直す前は `.update({ withdrawn_at: "now()" })` を送っていた。
+ * **これは動く** —— PostgreSQL の日時入力パーサは末尾の `()` を許容し、
+ * `'now()'::timestamptz` は現在時刻になる（手元で実測）。
+ * ただし文書化された入力形式は `'now'` の方で、**括弧つきが通るのは
+ * パーサの寛容さに寄りかかっている。** 意図が読めず、壊れても静か。
+ *
+ * `withdraw_consent` は未撤回の行だけを対象にするので**冪等**。
+ * 既に撤回済みなら 0 行が返るが、それは失敗ではない。
+ */
 export async function withdrawAiConsent(
   userId: string,
-): Promise<{ ok: true } | { ok: false; reason: string }> {
+): Promise<{ ok: true; rows: number } | { ok: false; reason: string }> {
   try {
     const svc = createServiceClient();
-    const { error } = await svc
-      .from(CONSENT_TABLE)
-      // 🔴 **DB の時刻で立てる**（2026-09-08）。サーバのプロセス時刻でも
-      //    ずれうるので `now()` を使う。`.is("withdrawn_at", null)` により
-      //    **何度呼んでも結果が変わらない**（冪等）。
-      .update({ withdrawn_at: "now()" })
-      .eq("user_id", userId)
-      .eq("consent_type", "ai_processing")
-      .is("withdrawn_at", null)
-      .select("id");
-    if (error) return { ok: false, reason: error.code ?? "update_error" };
-    // 🔴 **0 行でも成功。** 既に撤回済み＝目的は達している（冪等）。
+    const { data, error } = await svc.rpc("withdraw_consent", {
+      p_user_id: userId,
+      p_consent_type: "ai_processing",
+    });
+    if (error) return { ok: false, reason: error.code ?? "rpc_error" };
+    // 🔴 **0 行でも成功。** 既に撤回済み＝目的は達している。
     //    ここで失敗にすると、再送のたびにエラーになる。
-    return { ok: true };
+    return { ok: true, rows: typeof data === "number" ? data : 0 };
   } catch (e) {
     return { ok: false, reason: (e as Error).name };
   }
