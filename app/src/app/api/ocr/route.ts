@@ -26,7 +26,7 @@ import {
 } from "@/lib/guest-device-lock";
 import { createServiceClient } from "@/lib/supabase-service";
 import { authenticateRequest } from "@/lib/supabase-server";
-import { decideAiConsent } from "@/lib/ai-consent";
+import { decideAiConsentFromServer } from "@/lib/ai-consent";
 import {
   audienceOf,
   beginOcrRequest,
@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
 
   const auth = await authenticateRequest(request);
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const { sb, userId, isAnonymous, userMetadata } = auth;
+  const { sb, userId, isAnonymous } = auth;
 
   // 🔴 **AI 送信の許諾を、サーバ側でも見る**（2026-09-06・JR000206）。
   //    門はクライアントの 1 か所だけで、サーバは `consent` の出現が 0 件だった。
@@ -160,7 +160,10 @@ export async function POST(request: NextRequest) {
   //
   //    🔴 **判定そのものは今日から走らせる。** 閉める日に初めて動く経路を
   //    作らない —— そこにだけ穴があると、閉めた瞬間に落ちる。
-  const consent = decideAiConsent(userMetadata, "/api/ocr");
+  // 🔴 **サーバ側の記録で決める**（2026-09-08・§5.1）。
+  //    raw_user_meta_data は利用者が書き換えられるので材料にしない。
+  //    引数は認証から来た userId だけ。リクエストボディを見ない。
+  const consent = await decideAiConsentFromServer(auth.userId, "/api/ocr");
   if (!consent.allow) {
     return NextResponse.json(
       { error: consent.code, message: "AI 送信の許諾が必要です" },

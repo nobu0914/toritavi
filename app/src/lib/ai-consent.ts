@@ -121,3 +121,59 @@ export function decideAiConsent(meta: UserMetadata, route: string): ConsentDecis
     observation,
   };
 }
+
+// ---------------------------------------------------------------------------
+// 🔴 サーバ側の記録で決める（2026-09-08・§5.1）
+// ---------------------------------------------------------------------------
+
+/**
+ * **信頼できる記録**で通す・通さないを決める。
+ *
+ * 上の `decideAiConsent` は `raw_user_meta_data` を見るが、そこは
+ * **利用者自身が書き換えられる。** こちらは `toritavi_consent_records` を
+ * service role で読む（`consent-store.ts`）。
+ *
+ * ## 🔴 フェイルクローズ
+ *
+ * `ok` 以外はすべて通さない —— 記録なし・撤回済み・版違い・**読めない**。
+ * 「読めない」を通すと、表が消えた日に全員が素通りする。
+ *
+ * ## 🔴 クライアントの申告は材料にしない
+ *
+ * 引数は認証から来た `userId` だけ。リクエストボディを見ない。
+ *
+ * ## 移行のあいだ（`AI_CONSENT_ENFORCE = false`）
+ *
+ * **判定は常に走らせ、結果はログに残すが、通す。** 閉める日に初めて動く
+ * 経路を作らないため。表が未適用のあいだは `unavailable` が出続けるので、
+ * それが `ok` に変わるのを見てから閉める。
+ */
+export async function decideAiConsentFromServer(
+  userId: string,
+  route: string,
+): Promise<ConsentDecision> {
+  const { readAiConsent } = await import("@/lib/consent-store");
+  const server = await readAiConsent(userId);
+
+  // 🔴 **利用者を特定できる値を書かない**（レーン 7）。状態と版だけ。
+  if (server.state !== "ok") {
+    console.warn(
+      `[ai-consent] ${route}: サーバ記録=${server.state}` +
+        (server.state === "stale" ? ` recorded=${server.recorded}` : "") +
+        (server.state === "unavailable" ? ` reason=${server.reason}` : "") +
+        (AI_CONSENT_ENFORCE ? "（止める）" : "（いまは通す）"),
+    );
+  }
+
+  const observation: ConsentObservation =
+    server.state === "ok"
+      ? { state: "ok" }
+      : server.state === "stale"
+        ? { state: "stale", recorded: server.recorded }
+        : { state: "missing" };
+
+  if (!AI_CONSENT_ENFORCE || server.state === "ok") {
+    return { allow: true, observation };
+  }
+  return { allow: false, status: 403, code: "ai_consent_required", observation };
+}
