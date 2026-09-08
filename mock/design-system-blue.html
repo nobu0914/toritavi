@@ -2781,6 +2781,71 @@ body{font-family:var(--font);background:var(--bg);color:var(--fg);-webkit-font-s
         </div>
       </div>
 
+      <!-- 8.x 取込み元シート（2026-09-08 追加） -->
+      <div class="comp full">
+        <div class="lbl">取込み元シート（写真 / PDF）— iOS 実装 2026-09-08</div>
+        <p class="hint" style="margin:0 0 12px">
+          「ファイル・画像」から下に出るシート。<strong style="color:var(--fg)">中央モーダルにはしない</strong>（採用案 A）。
+          直す前は <code class="mono">ListTile</code> が 2 行並ぶだけで、
+          <strong style="color:var(--fg)">タップした先に何が開くのか読み取れなかった</strong> ——
+          見出しだけで補足も、進むことを示す印も無い。
+          実装: <code class="mono">lib/features/scan/presentation/intake_source_sheet.dart</code>
+        </p>
+
+        <div class="s08-sheet-demo" style="max-width:380px;margin:0 auto;background:#fff;border-radius:24px 24px 0 0;border:1px solid var(--n-200);border-bottom:none;padding:8px 16px 16px">
+          <div style="width:40px;height:4px;background:var(--n-200);border-radius:2px;margin:0 auto 16px"></div>
+          <div style="font-size:18px;font-weight:600;color:var(--fg)">追加するものを選ぶ</div>
+          <div style="font-size:13px;color:var(--fg-mute);margin-top:4px">予約情報が写っている資料を選択してください</div>
+
+          <div style="display:flex;align-items:center;gap:12px;border:1px solid var(--n-200);border-radius:14px;padding:12px 14px;margin-top:16px;min-height:72px;box-sizing:border-box">
+            <div style="width:44px;height:44px;border-radius:12px;background:var(--t-a14);display:flex;align-items:center;justify-content:center;flex:0 0 auto">
+              <svg viewBox="0 0 24 24" fill="none" stroke="var(--t-700)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px"><rect x="3" y="7" width="14" height="12" rx="2"/><path d="M7 7V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-2"/><circle cx="8.5" cy="12" r="1.5"/><path d="m3 17 4-3 4 3"/></svg>
+            </div>
+            <div style="flex:1 1 auto;min-width:0">
+              <div style="font-size:15px;font-weight:600;color:var(--fg)">写真・スクリーンショット</div>
+              <div style="font-size:12px;color:var(--fg-mute);margin-top:2px">写真ライブラリから選択</div>
+            </div>
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--n-300)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;flex:0 0 auto"><path d="m9 18 6-6-6-6"/></svg>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:12px;border:1px solid var(--n-200);border-radius:14px;padding:12px 14px;margin-top:10px;min-height:72px;box-sizing:border-box">
+            <div style="width:44px;height:44px;border-radius:12px;background:var(--t-a14);display:flex;align-items:center;justify-content:center;flex:0 0 auto">
+              <svg viewBox="0 0 24 24" fill="none" stroke="var(--t-700)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></svg>
+            </div>
+            <div style="flex:1 1 auto;min-width:0">
+              <div style="font-size:15px;font-weight:600;color:var(--fg)">PDF・ファイル</div>
+              <div style="font-size:12px;color:var(--fg-mute);margin-top:2px">ファイルアプリから選択</div>
+            </div>
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--n-300)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;flex:0 0 auto"><path d="m9 18 6-6-6-6"/></svg>
+          </div>
+
+          <div style="text-align:center;color:var(--fg-mute);font-size:15px;padding:14px 0 4px">閉じる</div>
+        </div>
+
+        <div class="s08-sheet-rules" style="margin-top:16px">
+          <p class="hint" style="margin:0 0 8px"><strong style="color:var(--fg)">決まりごと</strong></p>
+          <ul class="hint" style="margin:0;padding-left:20px;line-height:1.9">
+            <li>カード<strong style="color:var(--fg)">全体</strong>が 1 つのボタン。最低 <strong style="color:var(--fg)">44pt</strong>（実装は <code class="mono">minHeight:72</code>）</li>
+            <li>アイコンの地は <code class="mono">--t-a14</code>（ブランド 14%）、線は <code class="mono">--t-700</code>。<strong style="color:var(--fg)">影は使わない</strong> —— 背後が暗くなるので二重に強調しない</li>
+            <li>境界線は <code class="mono">--n-200</code>（薄いブルーグレー）。角丸 14px、シート上部は 24px</li>
+            <li><strong style="color:var(--fg)">色だけで写真と PDF を区別しない。</strong> アイコンの形・見出し・補足の 3 つで区別する</li>
+            <li>右端のシェブロンは「次に何かが開く」ことの印。<strong style="color:var(--fg)">押した先で終わりではない</strong>ことを示す</li>
+            <li>文字を拡大すると縦に伸びるので <strong style="color:var(--fg)">シートごとスクロールさせる</strong>（実測: 2.0 倍で 244px あふれた）</li>
+            <li>VoiceOver は「見出し。補足」を <strong style="color:var(--fg)">1 つのボタン</strong>として読む（<code class="mono">excludeSemantics</code>）</li>
+          </ul>
+        </div>
+
+        <div class="s08-sheet-nogo" style="margin-top:14px;border-left:3px solid var(--danger, #D85A40);padding-left:12px">
+          <p class="hint" style="margin:0"><strong style="color:var(--fg)">やらないこと</strong></p>
+          <ul class="hint" style="margin:6px 0 0;padding-left:20px;line-height:1.9">
+            <li><strong style="color:var(--fg)">シートは「選ぶ」だけ。</strong> ピッカーを開くのも権限を求めるのも読み取り枠を使うのも呼び出し側</li>
+            <li><strong style="color:var(--fg)">閉じたら何も起きない。</strong> データも作らず、送信もせず、枠も減らない</li>
+            <li><strong style="color:var(--fg)">選択肢を押す前に権限を求めない。</strong> 何に使うか分からないまま許可を迫ることになる</li>
+            <li>戻り値を文字列にしない。<code class="mono">IntakeSource</code> の enum で<strong style="color:var(--fg)">写真とファイルの取り違えを型で止める</strong>（以前は <code class="mono">'library'</code> / <code class="mono">'file'</code> で、綴り違いに気づけなかった）</li>
+          </ul>
+        </div>
+      </div>
+
       <!-- Processing overlay -->
       <div class="comp">
         <div class="lbl">OCR処理中オーバーレイ + プログレスバー</div>
