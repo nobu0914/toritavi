@@ -34,7 +34,7 @@
  * ずれると、アプリは「許諾済み」と思っているのにサーバは「未許諾」と数える。
  * `src/lib/__tests__/ai-consent.test.ts` が両方を読んで突き合わせる。
  */
-export const AI_CONSENT_VERSION = "2026-08-18";
+export const AI_CONSENT_VERSION = "2026-09-08";
 
 export type UserMetadata = Record<string, unknown> | null | undefined;
 
