@@ -13,6 +13,8 @@
  */
 import { MAX_FILE_BYTES, MAX_PDF_PAGES } from "./ocr-limits.ts";
 
+import { inspectPdfEncryption } from "./pdf-encryption";
+
 export type DetectedKind = "image/jpeg" | "image/png" | "image/webp" | "image/gif" | "application/pdf";
 
 export type ValidateOk = {
@@ -148,7 +150,9 @@ export function readImageSize(
  * ## 分類
  *
  * - import が失敗 → `pdf_unreadable`（**こちら側の問題**）
- * - 暗号化 → `pdf_encrypted`
+ * - 暗号化されていて、**空パスワードでは開けない** → `pdf_encrypted`
+ * - 暗号化されているが**空パスワードで開ける** → 通す（`pdf-encryption.ts`）。
+ *   航空会社の e チケットは所有者パスワードだけを掛けた形が多い
  * - それ以外の例外 → `pdf_corrupt`。pdf-lib は環境に依存しないので、
  *   ここまで来たら**中身の問題**である可能性が高い。
  *   ただし**必ずログに残す**（決めつけない）
@@ -167,10 +171,31 @@ export async function readPdfPages(
     return { error: "pdf_unreadable" };
   }
 
+  // 🔴 **暗号化は pdf-lib の例外で判定しない**（2026-09-09）。
+  //
+  //    ここには `e instanceof lib.EncryptedPDFError` と書いてあったが、
+  //    **原理的に true にならない。** pdf-lib は ES5 を吐いており、
+  //    `EncryptedPDFError` の中で `_super.call(this, msg) || this` が
+  //    **素の Error を返す**ので、プロトタイプ鎖が `Error → Object` になる
+  //    （実測: `Object.getPrototypeOf(e).constructor === lib.EncryptedPDFError`
+  //    が false）。**暗号化 PDF は全部 `pdf_corrupt` に落ちていた** ——
+  //    画面には「ファイルが壊れている可能性があります」と出るが、壊れていない。
+  //
+  //    落ちも警告も出ない形（`CLAUDE.md` §6-1）。**例外の型に頼らず、
+  //    自分で中身を見る。**
+  const enc = inspectPdfEncryption(b);
+  if (enc.encrypted && enc.userPasswordEmpty !== true) {
+    // 本当にパスワードが要る（か、判定できない）。**送らない。**
+    return { error: "pdf_encrypted" };
+  }
+
   try {
     const doc = await lib.PDFDocument.load(b, {
-      // 暗号化はここで例外にしたい（黙って開かない）。
-      ignoreEncryption: false,
+      // 🔴 **空パスワードで開けると確かめた場合だけ true にする。**
+      //    `true` は復号ではなく**判定を飛ばすだけ**なので、
+      //    無条件に付けると「読めないファイルを読めたことにして」
+      //    Claude へ送り、枠だけ消費する。
+      ignoreEncryption: enc.encrypted,
       // 何も書き換えない。読むだけ。
       updateMetadata: false,
     });
@@ -178,7 +203,6 @@ export async function readPdfPages(
     if (!Number.isFinite(pages) || pages < 1) return { error: "pdf_corrupt" };
     return { pages };
   } catch (e) {
-    if (e instanceof lib.EncryptedPDFError) return { error: "pdf_encrypted" };
     const name = (e as { name?: string })?.name ?? "";
     const message = (e as { message?: string })?.message ?? String(e);
     // **決めつけない。** 中身の問題である可能性が高いが、必ず残す。
