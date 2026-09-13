@@ -168,7 +168,17 @@ export async function withdrawAiConsent(
  * アプリ側のファイルを読んで突き合わせる。
  */
 export const TERMS_VERSIONS = { ja: "2026-08-30", en: "2026-09-07" } as const;
-export const PRIVACY_VERSIONS = { ja: "2026-08-31", en: "2026-09-07" } as const;
+// 🔴 **2026-09-13 に公開ページへ揃えた。** それまで ja=2026-08-31 /
+//    en=2026-09-07 のままで、アプリ（2026-09-09 に揃えた）とずれていた ——
+//    **画面に 2026-09-08 と出しながら、記録には 2026-08-31 を書いていた。**
+//    出典は公開ページの「最終更新」:
+//      日本語 https://coyoteandpowell.com/junros/privacy/    2026年9月8日
+//      英語   https://coyoteandpowell.com/en/junros/privacy/ 2026-09-08
+//    （`~/Dev/company-site` の `junros/privacy/index.html` と
+//      `en/junros/privacy/index.html`。どちらも push 済み＝公開中）
+//    🔴 **日付が一致しているのは偶然**（別文書を同じ日に直した）。
+//    片方が動いたときに、もう片方へ写さないこと。
+export const PRIVACY_VERSIONS = { ja: "2026-09-08", en: "2026-09-08" } as const;
 
 export type LegalLocale = keyof typeof TERMS_VERSIONS;
 

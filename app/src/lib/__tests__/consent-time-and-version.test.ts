@@ -190,11 +190,37 @@ test("🔴 規約と PP は 1 文で入れる（片方だけ入らない）", ()
 });
 
 test("🔴 日英で別の版を持ち、混同していない", () => {
+  // 🔴 **「ja と en の値が違うこと」で分岐を証明しない**（2026-09-13 に直した）。
+  //
+  //    直す前はここが `notEqual(PRIVACY_VERSIONS.ja, PRIVACY_VERSIONS.en)`
+  //    だった。**日英の PP を同じ日に直したら落ちる** —— 実際 2026-09-08 に
+  //    両方を改訂したので、値を公開ページへ揃えた時点で赤くなった。
+  //    値が偶然一致することは**正しい状態**であって、欠陥ではない。
+  //
+  //    証明したいのは「locale で引いているか」なので、そこを直接見る。
+  const c = code(STORE);
+  for (const name of ["TERMS_VERSIONS", "PRIVACY_VERSIONS"]) {
+    assert.ok(
+      new RegExp(`${name}\\[args\\.legalLocale\\]`).test(c),
+      `🔴 ${name} を locale で引いていない（片方へ寄せている）`,
+    );
+    assert.ok(
+      new RegExp(`${name} = \\{ ja: "[^"]+", en: "[^"]+" \\}`).test(c),
+      `🔴 ${name} が日英の 2 つを持っていない`,
+    );
+  }
+
+  // 🔴 **分岐が実際に違う値を出すことは、規約で証明する。**
+  //    規約は ja=2026-08-30 / en=2026-09-07 で別の日に改訂しており、
+  //    PP と違って**同じ日になる可能性が低い**。ここが一致し始めたら、
+  //    この検査は分岐を証明できなくなるので、そのときは
+  //    上の構造の確認だけが残る（それで足りる）。
   assert.notEqual(
-    PRIVACY_VERSIONS.ja,
-    PRIVACY_VERSIONS.en,
-    "🔴 日英の PP の版が同じ。偶然一致なら、この検査は分岐を証明していない",
+    TERMS_VERSIONS.ja,
+    TERMS_VERSIONS.en,
+    "🔴 規約の日英が同じ。分岐を値で確かめられなくなっている（構造の確認は上）",
   );
+
   for (const v of [
     TERMS_VERSIONS.ja,
     TERMS_VERSIONS.en,
