@@ -6,6 +6,7 @@ import {
   IconLayoutDashboard,
   IconUsers,
   IconChartBar,
+  IconActivity,
   IconShieldLock,
   IconAlertTriangle,
   IconTool,
@@ -42,6 +43,10 @@ const NAV: NavItem[] = [
   //    作り直す前に、二重管理にならないか確かめること。
   { href: "/admin/users", label: "利用者", Icon: IconUsers, matchPrefix: true },
   { href: "/admin/analytics", label: "集計・広告", Icon: IconChartBar, matchPrefix: true },
+  // 🔴 **「集計・広告」と分けてある。** あちらはアフィリの成果と登録ファネル
+  //    （auth と ocr_usage が元）。こちらは画面・タップの記録（toritavi_events）。
+  //    元にしている表が違うので、片方が読めなくてももう片方は出る。
+  { href: "/admin/usage", label: "利用解析", Icon: IconActivity, matchPrefix: true },
   { href: "/admin/feedback", label: "フィードバック", Icon: IconMessageDots, matchPrefix: true },
   { href: "/admin/abuse", label: "違反検知", Icon: IconAlertTriangle, matchPrefix: true },
   { href: "/admin/security", label: "セキュリティ", Icon: IconShieldLock, matchPrefix: true },
