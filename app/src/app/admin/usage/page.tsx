@@ -135,11 +135,12 @@ export default async function AdminUsagePage({
         }}
       >
         <Stat label="イベント" value={val(u.rows)} />
-        <Stat label="利用者（ログイン中）" value={val(u.users)} />
+        {/* 🔴 **「人数」と書かない。** user_id を取っていないので、
+            同じ人の 3 回は 3 と出る（2026-09-13・利用者の決定 C）。 */}
         <Stat label="起動（セッション）" value={val(u.sessions)} />
       </section>
 
-      <Card title="日次のアクティブ利用者">
+      <Card title="日次の起動数">
         {u.dailyActive.length === 0 ? (
           <Empty unavailable={unavailable} />
         ) : (
@@ -147,7 +148,7 @@ export default async function AdminUsagePage({
         )}
       </Card>
 
-      <Card title="節目（期間中に到達した人数）">
+      <Card title="節目（到達した起動の数）">
         {u.milestones.length === 0 ? (
           <Empty unavailable={unavailable} />
         ) : (
@@ -166,7 +167,7 @@ export default async function AdminUsagePage({
                       fontWeight: 600,
                     }}
                   >
-                    {num(m.users)}
+                    {num(m.sessions)}
                   </td>
                 </tr>
               ))}
@@ -184,7 +185,7 @@ export default async function AdminUsagePage({
               <tr style={{ color: "var(--text-dim)", fontSize: 12 }}>
                 <th style={{ textAlign: "left", padding: "4px" }}>画面</th>
                 <th style={{ textAlign: "right", padding: "4px" }}>閲覧</th>
-                <th style={{ textAlign: "right", padding: "4px" }}>人数</th>
+                <th style={{ textAlign: "right", padding: "4px" }}>起動</th>
                 <th style={{ textAlign: "right", padding: "4px" }}>滞在（中央値）</th>
               </tr>
             </thead>
@@ -195,7 +196,7 @@ export default async function AdminUsagePage({
                     <code>{s.screen}</code>
                   </td>
                   <td style={cellNum}>{num(s.views)}</td>
-                  <td style={cellNum}>{num(s.users)}</td>
+                  <td style={cellNum}>{num(s.sessions)}</td>
                   <td style={cellNum}>{ms(s.medianMs)}</td>
                 </tr>
               ))}
@@ -235,9 +236,14 @@ export default async function AdminUsagePage({
         🔴 <strong>旅程の中身は記録していません。</strong>
         便名・確認番号・地名・氏名・写真・自由入力は 1 バイトも入りません
         （値は「英小文字始まりの識別子」しか受け取らない形にしてあります）。
-        IP アドレスと端末識別子も持ちません。イベントは 180 日で消えます。
-        「利用者」は<strong>ログイン中の人だけ</strong>の数で、登録前の画面は
-        「起動（セッション）」にだけ入ります。
+        IP アドレスと端末識別子も持ちません。
+        🔴 <strong>誰のものかも記録していません</strong>（2026-09-13 の決定）。
+        数えているのは<strong>アプリの起動 1 回</strong>で、
+        <strong>人数ではありません</strong> —— 同じ人が 3 回起動すれば 3 と出ます。
+        <strong>日をまたぐ追跡はできません</strong>（「登録した人が後日購入した」は
+        繋がりません）。節目は「1 回の起動の中でどこまで進んだか」です。
+        🔴 保持は 180 日ですが、<strong>掃除の cron はまだ登録していません</strong>
+        （課題 265）。
       </p>
     </div>
   );

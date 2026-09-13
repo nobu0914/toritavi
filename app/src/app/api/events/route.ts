@@ -1,15 +1,17 @@
 /*
  * POST /api/events — 利用解析のイベントを受け取る。
  *
- * 🔴 **端末から表へ直接書かせない。** 書かせると、他人の user_id を名乗った
- *    行を誰でも作れる。件数を水増しされると解析そのものが意味を失うので、
- *    受け口をここ 1 本にして、本人はトークンから決める
- *    （body の user_id は**見ない**）。
+ * 🔴 **誰のものかを持たない**（2026-09-13・利用者の決定「C」）。
+ *    トークンを見ない。`user_id` を書かない。body に何が入っていても使わない。
+ *    **サーバは原理的に「誰か」を知れない。**
  *
- * 🔴 **未ログインでも受ける。** ようこそ画面・新規登録画面のイベントは
- *    登録前に出る。そこが見えないと「どこで諦めたか」が分からない
- *    —— いま埋めたい穴はまさにそこ（登録 5 → Pro 0）。
- *    未ログインの行は `user_id = null` で、誰のものでもない。
+ *    アプリ側も Authorization ヘッダを付けない（`analytics.dart`）。
+ *    二重にしてあるのは、片方の配線が戻ったときに黙って属性が付くのを
+ *    防ぐため —— **付いたことは、集計の画面では見えない。**
+ *
+ * 🔴 **代わりに分かることが減る。** `session_id` はアプリの起動 1 回ごとなので、
+ *    **日をまたぐ追跡はできない。**「登録した人が後日購入した」は繋がらない。
+ *    分かるのは「1 回の起動の中でどこまで進んだか」。
  *
  * 🔴 **失敗しても 200 を返す。** 解析はアプリの機能ではない。ここが
  *    500 を返すと、アプリ側の送信経路が例外処理に入り、**本来の操作の
@@ -17,7 +19,6 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { authenticateRequest } from "@/lib/supabase-server";
 import { createServiceClient } from "@/lib/supabase-service";
 import { ALLOWED_ORIGINS } from "@/lib/allowed-origins";
 import { sanitizeEvents, sanitizeContext, isUuid } from "@/lib/events";
@@ -51,18 +52,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ accepted: 0, dropped }, { status: 200 });
   }
 
-  // 本人はトークンから。未ログインなら null。
-  let userId: string | null = null;
-  try {
-    const auth = await authenticateRequest(request);
-    userId = auth?.userId ?? null;
-  } catch {
-    userId = null;
-  }
-
+  // 🔴 **誰かを決めない。** トークンを読まない。`user_id` を書かない。
+  //    ここに認証を戻すと、**黙って個人に紐づく表になる。**
+  //    `events_anonymous_test.ts` がこのファイルを読んで見張っている。
   const ctx = sanitizeContext(body);
   const rows = events.map((e) => ({
-    user_id: userId,
     session_id: body.sessionId as string,
     name: e.name,
     screen: e.screen,
