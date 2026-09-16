@@ -95,29 +95,68 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true, sent: false, reason: "already_sent" });
   }
 
+  // 🔴 **言語はサーバが DB から取る。クライアントからは受け取らない。**
+  //    宛先と同じ理由（上記「宛先はサーバが DB から取る」）。送れると、
+  //    第三者が本人の受け取る言語を選べることになる。
+  //
+  //    源は認証メール 4 本（`email-templates.ts` の `.Data.lang`）と同じ
+  //    `raw_user_meta_data.lang`。アプリ側は `legalLanguage()` で
+  //    "ja" / "en" の 2 値に正規化して書く（`auth_repository.dart`）。
+  //    🔴 **判定できないときは日本語に倒す** —— 公開中の利用者の大半が
+  //    日本語で、既定を英語にすると読めない人が出る（`l10n-plan.md` §6）。
+  const lang = meta["lang"] === "en" ? "en" : "ja";
+  const masked = maskEmail(newEmail);
+  const mail =
+    lang === "en"
+      ? {
+          subject: "[JUNROS] A request to change your email address",
+          text: [
+            "We received a request to change your registered JUNROS email address to",
+            `  ${masked}`,
+            "",
+            "The change completes when the confirmation link sent to the new address is opened.",
+            "No action is required for this message.",
+            "",
+            "■ If you did not request this",
+            "Someone else may be accessing your account. Please do the following right away.",
+            "  1. Change your JUNROS password",
+            "  2. If you cannot change it, contact us below",
+            "",
+            "Contact: support@coyoteandpowell.com",
+            "",
+            "――――――――――――――――",
+            "JUNROS / Coyote and Powell LLC",
+            "https://junros.coyoteandpowell.com",
+          ].join("\n"),
+        }
+      : {
+          subject: "【JUNROS】メールアドレスの変更が要求されました",
+          text: [
+            "JUNROS のご登録メールアドレスを",
+            `  ${masked}`,
+            "へ変更する要求を受け付けました。",
+            "",
+            "新しいアドレス宛の確認メールのリンクが開かれると、変更が完了します。",
+            "このメールに対する操作は必要ありません。",
+            "",
+            "■ 心当たりがない場合",
+            "第三者があなたのアカウントを操作している可能性があります。",
+            "すぐに次を行ってください。",
+            "  1. JUNROS のパスワードを変更する",
+            "  2. 変更できない場合は下記へご連絡ください",
+            "",
+            "お問い合わせ: support@coyoteandpowell.com",
+            "",
+            "――――――――――――――――",
+            "JUNROS / 合同会社 Coyote and Powell",
+            "https://junros.coyoteandpowell.com",
+          ].join("\n"),
+        };
+
   const result = await sendMail({
     to: oldEmail,
-    subject: "【JUNROS】メールアドレスの変更が要求されました",
-    text: [
-      "JUNROS のご登録メールアドレスを",
-      `  ${maskEmail(newEmail)}`,
-      "へ変更する要求を受け付けました。",
-      "",
-      "新しいアドレス宛の確認メールのリンクが開かれると、変更が完了します。",
-      "このメールに対する操作は必要ありません。",
-      "",
-      "■ 心当たりがない場合",
-      "第三者があなたのアカウントを操作している可能性があります。",
-      "すぐに次を行ってください。",
-      "  1. JUNROS のパスワードを変更する",
-      "  2. 変更できない場合は下記へご連絡ください",
-      "",
-      "お問い合わせ: support@coyoteandpowell.com",
-      "",
-      "――――――――――――――――",
-      "JUNROS / 合同会社 Coyote and Powell",
-      "https://junros.coyoteandpowell.com",
-    ].join("\n"),
+    subject: mail.subject,
+    text: mail.text,
   });
 
   if (!result.ok) {
