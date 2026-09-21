@@ -27,8 +27,12 @@ function code(src: string): string {
 }
 
 describe("確定仕様の件数", () => {
-  test("Free 5 / Pro 50 / ゲスト 3", () => {
-    assert.equal(SPEC_FREE_REQUESTS, 5);
+  // 🔴 無料は 2026-09-21 に 5 → 15（利用者の決定・計測用の暫定値）。
+  //    見直しは「実利用者 20〜30 人」か「2026-11-30」の早い方。
+  //    **数字を動かすときは公開文書 5 か所も一緒に動かすこと**
+  //    （特商法・LP 日英・台帳・App Store 掲載文）。
+  test("Free 15 / Pro 50 / ゲスト 3", () => {
+    assert.equal(SPEC_FREE_REQUESTS, 15);
     assert.equal(SPEC_PRO_REQUESTS, 50);
     assert.equal(SPEC_GUEST_REQUESTS, 3);
   });
