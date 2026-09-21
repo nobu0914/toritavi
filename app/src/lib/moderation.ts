@@ -14,6 +14,7 @@ import "server-only";
 import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServiceClient } from "@/lib/supabase-service";
+import { apiMessage, DEFAULT_LANG, type Lang } from "@/lib/api-messages";
 
 export type UserStatus = "active" | "suspended" | "banned";
 
@@ -50,7 +51,8 @@ export async function getUserStatus(
  */
 export async function assertActiveOr403(
   sb: SupabaseClient,
-  userId: string
+  userId: string,
+  lang: Lang = DEFAULT_LANG,
 ): Promise<NextResponse | null> {
   const { status, reason } = await getUserStatus(sb, userId);
   if (status === "active") return null;
@@ -98,7 +100,8 @@ export async function logAiRejection(
  * 通すのは **status を実際に読めて active だったときだけ**。
  */
 export async function assertActiveOr403Strict(
-  userId: string
+  userId: string,
+  lang: Lang = DEFAULT_LANG,
 ): Promise<NextResponse | null> {
   try {
     const admin = createServiceClient();
@@ -112,7 +115,9 @@ export async function assertActiveOr403Strict(
     const status = (data?.status as UserStatus | undefined) ?? "active";
     if (status === "active") return null;
     return NextResponse.json(
-      { error: "account_" + status, message: data?.reason ?? "ご利用を停止しています。" },
+      { error: "account_" + status, // 🔴 `reason` は運営が個別に入れた文面。**翻訳しない**
+        //    （運営の言葉を機械が言い換えると意味が変わる）。既定文だけ出し分ける。
+        message: data?.reason ?? apiMessage("account_blocked_fallback", lang) },
       { status: 403 }
     );
   } catch (e) {
@@ -120,7 +125,7 @@ export async function assertActiveOr403Strict(
     return NextResponse.json(
       {
         error: "moderation_unavailable",
-        message: "ただいま自動読み取りをご利用いただけません。しばらくしてからお試しください。",
+        message: apiMessage("ocr_suspended", lang),
       },
       { status: 503 }
     );

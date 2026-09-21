@@ -28,6 +28,11 @@ import { createServiceClient } from "@/lib/supabase-service";
 import { authenticateRequest } from "@/lib/supabase-server";
 import { decideAiConsentFromServer } from "@/lib/ai-consent";
 import {
+  apiMessage,
+  apiMessageN,
+  resolveLang,
+} from "@/lib/api-messages";
+import {
   audienceOf,
   beginOcrRequest,
   jstToday,
@@ -145,7 +150,17 @@ export async function POST(request: NextRequest) {
 
   const auth = await authenticateRequest(request);
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const { sb, userId, isAnonymous } = auth;
+  const { sb, userId, isAnonymous, userMetadata } = auth;
+
+  // 🔴 **この利用者に出す言語**（2026-09-21）。アプリは全訳済みなのに、
+  //    ここから返す `message` だけが日本語固定で、**英語の利用者が日本語の
+  //    エラーを読んでいた**（画面はサーバの message を優先する）。
+  //    源は `raw_user_meta_data.lang` —— アプリが表示言語を変えるたびに
+  //    `syncMailLanguage()` が同期しており、**認証メールと同じ源**。
+  const lang = resolveLang({
+    userMetadata,
+    acceptLanguage: request.headers.get("accept-language"),
+  });
 
   // 🔴 **AI 送信の許諾を、サーバ側でも見る**（2026-09-06・JR000206）。
   //    門はクライアントの 1 か所だけで、サーバは `consent` の出現が 0 件だった。
@@ -166,7 +181,7 @@ export async function POST(request: NextRequest) {
   const consent = await decideAiConsentFromServer(auth.userId, "/api/ocr");
   if (!consent.allow) {
     return NextResponse.json(
-      { error: consent.code, message: "AI 送信の許諾が必要です" },
+      { error: consent.code, message: apiMessage("ai_consent_required", lang) },
       { status: consent.status },
     );
   }
@@ -179,7 +194,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         error: "registration_required",
-        message: "読み取りのご利用には、メールアドレスでのご登録が必要です。",
+        message: apiMessage("registration_required", lang),
       },
       { status: 403 },
     );
@@ -194,7 +209,7 @@ export async function POST(request: NextRequest) {
     plan = await resolvePlan(sb, userId);
   } catch {
     return NextResponse.json(
-      { error: "plan_unavailable", message: "混み合っています。しばらくしてからお試しください。" },
+      { error: "plan_unavailable", message: apiMessage("plan_unavailable", lang) },
       { status: 503 },
     );
   }
@@ -216,7 +231,7 @@ export async function POST(request: NextRequest) {
 
   // --- モデレーション: **高原価の処理はフェイルクローズ** ---
   // 判定できないまま通すと、凍結した相手に外部への支払いを続けることになる。
-  const blocked = await assertActiveOr403Strict(userId);
+  const blocked = await assertActiveOr403Strict(userId, lang);
   if (blocked) return blocked;
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -241,7 +256,7 @@ export async function POST(request: NextRequest) {
     if (!UUID_RE.test(requestId)) {
       // 🔴 冪等性 ID はクライアントが作る。**無いと再送で二重に課金される。**
       return NextResponse.json(
-        { error: "request_id_required", message: "リクエストを識別できませんでした。もう一度お試しください。" },
+        { error: "request_id_required", message: apiMessage("request_id_required", lang) },
         { status: 400 },
       );
     }
@@ -255,19 +270,19 @@ export async function POST(request: NextRequest) {
     }
     if (rawImages.length > 0 && text.length > 0) {
       return NextResponse.json(
-        { error: "ambiguous_input", message: "画像とテキストは同時に送れません。" },
+        { error: "ambiguous_input", message: apiMessage("ambiguous_input", lang) },
         { status: 400 },
       );
     }
     if (rawImages.length > MAX_FILES) {
       return NextResponse.json(
-        { error: "too_many_images", message: `ファイルは一度に最大 ${MAX_FILES} 件までです。` },
+        { error: "too_many_images", message: apiMessageN("too_many_images", lang, MAX_FILES) },
         { status: 413 },
       );
     }
     if (text.length > MAX_TEXT_CHARS) {
       return NextResponse.json(
-        { error: "payload_too_large", message: "テキストが長すぎます。必要な部分だけ貼り付けてください。" },
+        { error: "payload_too_large", message: apiMessage("payload_too_large_text", lang) },
         { status: 413 },
       );
     }
@@ -275,7 +290,7 @@ export async function POST(request: NextRequest) {
     // 🔴 **重い検証より前に、安価な試行制限を通す。**
     //    PDF を開くのは高い（解析 DoS の的）。ここを抜けていないと開かない。
     // 分間の試行上限も audience で引く（ゲストは会員より厳しい）。
-    const attempt = await tryOcrAttempt(userId, audience);
+    const attempt = await tryOcrAttempt(userId, audience, lang);
     if (attempt) return attempt;
 
     // --- ゲストの端末側の関門（DeviceCheck）---
@@ -510,7 +525,7 @@ export async function POST(request: NextRequest) {
     const cb = countBudget(startedAt, Date.now());
     if (!cb.ok) {
       return NextResponse.json(
-        { error: "timeout", message: "時間内に処理できませんでした。もう一度お試しください。" },
+        { error: "timeout", message: apiMessage("timeout", lang) },
         { status: 503 },
       );
     }
@@ -526,7 +541,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: "estimate_unavailable",
-          message: "読み取りの準備に失敗しました。しばらくしてからお試しください。",
+          message: apiMessage("reserve_failed", lang),
         },
         { status: 503 },
       );
@@ -537,7 +552,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: "input_too_large",
-          message: "読み取る量が多すぎます。ページ数を減らすか、ファイルを分けてお試しください。",
+          message: apiMessage("too_large_to_read", lang),
           measuredTokens: counted.measured,
           maxTokens: MAX_INPUT_TOKENS,
         },
@@ -647,7 +662,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: "guest_quota_exhausted",
-          message: `お試しでご利用いただけるのは残り ${guestDecision.remaining} 件です。ページ数を減らすか、無料登録してお試しください。`,
+          message: apiMessageN("guest_remaining", lang, guestDecision.remaining),
         },
         { status: 429 },
       );
@@ -677,13 +692,14 @@ export async function POST(request: NextRequest) {
       limitTokens: OCR_GUARD.tiers[audience].quotaTokens,
       countedInput: counted.measured,
       reservedInput: counted.reserve,
+      lang,
     });
     if (begun instanceof NextResponse) return begun;
 
     if (begun.kind === "duplicate") {
       if (begun.inFlight) {
         return NextResponse.json(
-          { error: "in_flight", message: "処理中です。しばらくお待ちください。" },
+          { error: "in_flight", message: apiMessage("in_flight", lang) },
           { status: 409 },
         );
       }
@@ -692,7 +708,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(begun.cached);
       }
       return NextResponse.json(
-        { error: "already_processed", message: "この読み取りは完了済みです。旅程をご確認ください。" },
+        { error: "already_processed", message: apiMessage("already_processed", lang) },
         { status: 409 },
       );
     }
@@ -757,7 +773,7 @@ export async function POST(request: NextRequest) {
       if (!ab.ok) {
         await settleOcrFailure({ requestId, userId, reason: "no_time_before_send" });
         return NextResponse.json(
-          { error: "timeout", message: "時間内に処理できませんでした。回数は消費していません。" },
+          { error: "timeout", message: apiMessage("timeout_not_charged", lang) },
           { status: 503 },
         );
       }
@@ -814,7 +830,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           {
             error: "settle_failed",
-            message: "読み取りは完了しましたが、記録に失敗しました。しばらくしてからもう一度お試しください。",
+            message: apiMessage("settle_failed", lang),
           },
           { status: 500 },
         );
@@ -841,7 +857,7 @@ export async function POST(request: NextRequest) {
       });
       console.error("[OCR] ai call failed");
       return NextResponse.json(
-        { error: "ai_unavailable", message: "読み取りに失敗しました。回数は消費していません。" },
+        { error: "ai_unavailable", message: apiMessage("ai_unavailable", lang) },
         { status: 502 },
       );
     }

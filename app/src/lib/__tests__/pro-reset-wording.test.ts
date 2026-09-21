@@ -24,12 +24,25 @@ test("🔴 Pro 向けの文言に「今月」「翌月」が無い", () => {
 });
 
 test("無料の文言は変えていない（暦月なので「今月」で正しい）", () => {
-  assert.equal(msgsFor(OCR_GUARD, "free").quotaRequest, OCR_GUARD.messages.quotaRequest);
-  assert.ok(msgsFor(OCR_GUARD, "free").quotaRequest.includes("今月"));
+  assert.equal(
+    msgsFor(OCR_GUARD, "free", "ja").quotaRequest,
+    OCR_GUARD.messages.quotaRequest.ja,
+  );
+  assert.ok(msgsFor(OCR_GUARD, "free", "ja").quotaRequest.includes("今月"));
+  // 英語も同じ意味であること（暦月なので "this month" で正しい）。
+  assert.ok(
+    msgsFor(OCR_GUARD, "free", "en").quotaRequest.toLowerCase().includes("this month"),
+  );
 });
 
 test("🔴 差し替えは quotaUnits の関数まで届く", () => {
-  assert.notEqual(msgsFor(OCR_GUARD, "pro").quotaUnits(1), OCR_GUARD.messages.quotaUnits(1));
+  for (const lang of ["ja", "en"] as const) {
+    assert.notEqual(
+      msgsFor(OCR_GUARD, "pro", lang).quotaUnits(1),
+      OCR_GUARD.messages.quotaUnits[lang](1),
+      `🔴 ${lang} で Pro の quotaUnits が差し替わっていない`,
+    );
+  }
 });
 
 test("🔴 リセット日を DB に訊いている（サーバで計算しない）", () => {

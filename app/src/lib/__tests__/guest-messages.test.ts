@@ -22,20 +22,41 @@ test("無料会員の文言は変えていない（暦月なので「今月」�
   //    （契約応当日が入ると「翌月 1 日」が嘘になるため。`pro-reset-wording.test.ts`）。
   //    仕様が変わったのでこの期待値も変えた —— **テストの更新は変更の一部**
   //    （`CLAUDE.md` §5）。
-  assert.equal(msgsFor(OCR_GUARD, "free").quotaRequest, OCR_GUARD.messages.quotaRequest);
+  assert.equal(
+    msgsFor(OCR_GUARD, "free", "ja").quotaRequest,
+    OCR_GUARD.messages.quotaRequest.ja,
+  );
 });
 
 test("🔴 Pro は差し替わっている（無料と同じにしない）", () => {
-  assert.notEqual(msgsFor(OCR_GUARD, "pro").quotaRequest, OCR_GUARD.messages.quotaRequest);
+  assert.notEqual(
+    msgsFor(OCR_GUARD, "pro", "ja").quotaRequest,
+    OCR_GUARD.messages.quotaRequest.ja,
+  );
+  // 🔴 **英語でも差し替わっていること。** 日本語だけ直して英語が
+  //    会員向けのまま、という壊れ方をする（2026-09-21）。
+  assert.notEqual(
+    msgsFor(OCR_GUARD, "pro", "en").quotaRequest,
+    OCR_GUARD.messages.quotaRequest.en,
+  );
 });
 
 test("🔴 差し替えは quotaUnits の関数まで届く", () => {
   // spread が浅いと関数だけ会員向けのまま残る。
-  assert.notEqual(msgsFor(OCR_GUARD, "guest").quotaUnits(1), OCR_GUARD.messages.quotaUnits(1));
+  for (const lang of ["ja", "en"] as const) {
+    assert.notEqual(
+      msgsFor(OCR_GUARD, "guest", lang).quotaUnits(1),
+      OCR_GUARD.messages.quotaUnits[lang](1),
+      `🔴 ${lang} でゲストの quotaUnits が差し替わっていない`,
+    );
+  }
 });
 
 test("guestMessages を持たない設定はそのまま", () => {
-  assert.equal(msgsFor(CONCIERGE_GUARD, "guest"), CONCIERGE_GUARD.messages);
+  assert.equal(
+    msgsFor(CONCIERGE_GUARD, "guest", "ja").quotaRequest,
+    CONCIERGE_GUARD.messages.quotaRequest.ja,
+  );
 });
 
 test("🔴 文言はすべて msgsFor を通る（直読みが残っていない）", () => {

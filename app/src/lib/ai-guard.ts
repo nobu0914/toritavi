@@ -64,13 +64,19 @@ export type AiGuardConfig = {
   quotaPeriod: QuotaPeriod;
   /** 指定時は分間カウントの events を role=該当 で絞る（concierge='user'）。 */
   eventsRoleFilter?: string;
+  /**
+   * 🔴 **日英の対で持つ**（2026-09-21）。アプリは全訳済みなのに、ここだけ
+   *    日本語固定で**英語の利用者が日本語のエラーを読んでいた**。
+   *    型が両方を要求するので、**片方だけ足すとコンパイルで落ちる。**
+   *    選ぶのは `msgsFor(cfg, audience, lang)` の 1 か所だけ。
+   */
   messages: {
-    budgetExceeded: string;
-    quotaRequest: string;
-    quotaToken: string;
+    budgetExceeded: L;
+    quotaRequest: L;
+    quotaToken: L;
     /** 残量より多いファイル数を一度に送った場合（残 n 件）。 */
-    quotaUnits: (remaining: number) => string;
-    rateLimit: (perMin: number) => string;
+    quotaUnits: LN;
+    rateLimit: LN;
   };
   /** ゲストにだけ差し替える文言。無ければ `messages` をそのまま使う。 */
   guestMessages?: Partial<AiGuardConfig["messages"]>;
@@ -178,6 +184,10 @@ async function quotaKey(
   return { col: "month", val: data };
 }
 
+export type { Lang } from "./api-messages.ts";
+import type { L, LN, Lang } from "./api-messages.ts";
+import { apiMessage, DEFAULT_LANG } from "./api-messages.ts";
+
 export {
   SPEC_FREE_REQUESTS,
   SPEC_GUEST_REQUESTS,
@@ -265,16 +275,32 @@ export const OCR_GUARD: AiGuardConfig = {
     // 残っているのに諦める人が出る。これはサービス全体を止めている状態で、
     // 個人のクォータ（429）とは原因も復旧手段も違う
     // （docs/monetization-spec.md §2「429 と 503 を同一文言にまとめない」）。
-    budgetExceeded:
-      "現在混み合っています（JUNROS 全体で画像解析を一時停止中です）。" +
-      "あなたの読み取り可能数は減っていません。翌月 1 日に再開します。",
-    quotaRequest:
-      "今月の読み取り上限に達しました。翌月 1 日にリセットされます。",
-    quotaToken: "今月の使用量が上限に達しました。翌月 1 日にリセットされます。",
-    quotaUnits: (n) =>
-      `今月の残りは ${n} 件です。選択した枚数を減らしてお試しください。`,
-    rateLimit: (n) =>
-      `少しお待ちください。短時間に解析が多すぎます（1 分あたり ${n} 回まで）。`,
+    budgetExceeded: {
+      ja:
+        "現在混み合っています（JUNROS 全体で画像解析を一時停止中です）。" +
+        "あなたの読み取り可能数は減っていません。翌月 1 日に再開します。",
+      // 🔴 英語でも「あなたの枠は減っていない」を落とさない。
+      //    ここが 503 と 429 を分ける唯一の手がかり。
+      en:
+        "We have paused image scanning across JUNROS because of demand. " +
+        "Your own scan allowance has not been used up. It resumes on the 1st of next month.",
+    },
+    quotaRequest: {
+      ja: "今月の読み取り上限に達しました。翌月 1 日にリセットされます。",
+      en: "You have used all of this month's scans. It resets on the 1st of next month.",
+    },
+    quotaToken: {
+      ja: "今月の使用量が上限に達しました。翌月 1 日にリセットされます。",
+      en: "You have reached this month's usage limit. It resets on the 1st of next month.",
+    },
+    quotaUnits: {
+      ja: (n) => `今月の残りは ${n} 件です。選択した枚数を減らしてお試しください。`,
+      en: (n) => `You have ${n} scans left this month. Please select fewer files.`,
+    },
+    rateLimit: {
+      ja: (n) => `少しお待ちください。短時間に解析が多すぎます（1 分あたり ${n} 回まで）。`,
+      en: (n) => `Please wait a moment. Too many scans in a short time (up to ${n} per minute).`,
+    },
   },
   // 🔴 **ゲストに「今月」「翌月 1 日」と言わない。** お試し枠にリセットは
   //    無く、待てば戻ると読ませてしまう（2026-08-31 に実機で発覚）。
@@ -286,20 +312,34 @@ export const OCR_GUARD: AiGuardConfig = {
   //    `/api/ai-usage` の `resetAt` が返し、画面がそれを出す。
   //    外部レビュー（2026-08-31）P1 の指摘。
   proMessages: {
-    quotaRequest:
-      "ご契約期間の読み取り上限に達しました。次の更新日にリセットされます。",
-    quotaToken:
-      "ご契約期間の使用量が上限に達しました。次の更新日にリセットされます。",
-    quotaUnits: (n) =>
-      `ご契約期間の残りは ${n} 件です。選択した枚数を減らしてお試しください。`,
+    // 🔴 英語でも**日付を書かない**。契約応当日は人によって違う。
+    quotaRequest: {
+      ja: "ご契約期間の読み取り上限に達しました。次の更新日にリセットされます。",
+      en: "You have used all the scans in your current billing period. They reset on your next renewal date.",
+    },
+    quotaToken: {
+      ja: "ご契約期間の使用量が上限に達しました。次の更新日にリセットされます。",
+      en: "You have reached the usage limit for your current billing period. It resets on your next renewal date.",
+    },
+    quotaUnits: {
+      ja: (n) => `ご契約期間の残りは ${n} 件です。選択した枚数を減らしてお試しください。`,
+      en: (n) => `You have ${n} scans left in this billing period. Please select fewer files.`,
+    },
   },
   guestMessages: {
-    quotaRequest:
-      "お試しの読み取り上限に達しました。ご登録いただくと続けてご利用いただけます。",
-    quotaToken:
-      "お試しの使用量が上限に達しました。ご登録いただくと続けてご利用いただけます。",
-    quotaUnits: (n) =>
-      `お試しの残りは ${n} 件です。選択した枚数を減らしてお試しください。`,
+    // 🔴 英語でも「今月」「翌月 1 日」と言わない。**お試し枠は戻らない。**
+    quotaRequest: {
+      ja: "お試しの読み取り上限に達しました。ご登録いただくと続けてご利用いただけます。",
+      en: "You have used all your trial scans. Sign up to keep going.",
+    },
+    quotaToken: {
+      ja: "お試しの使用量が上限に達しました。ご登録いただくと続けてご利用いただけます。",
+      en: "You have reached the trial usage limit. Sign up to keep going.",
+    },
+    quotaUnits: {
+      ja: (n) => `お試しの残りは ${n} 件です。選択した枚数を減らしてお試しください。`,
+      en: (n) => `You have ${n} trial scans left. Please select fewer files.`,
+    },
   },
 };
 
@@ -339,13 +379,26 @@ export const CONCIERGE_GUARD: AiGuardConfig = {
   quotaPeriod: "day",
   eventsRoleFilter: "user",
   messages: {
-    budgetExceeded:
-      "コンシェルジュを一時停止中です。今月の想定利用量を超えたため翌月 1 日に再開します。",
-    quotaRequest: "本日の利用上限に達しました。翌日 0:00 にリセットされます。",
-    quotaToken: "本日の使用量が上限に達しました。翌日 0:00 にリセットされます。",
-    quotaUnits: (n) => `本日の残りは ${n} 件です。`,
-    rateLimit: (n) =>
-      `少しお待ちください。短時間に送信が多すぎます（1 分あたり ${n} 回まで）。`,
+    budgetExceeded: {
+      ja: "コンシェルジュを一時停止中です。今月の想定利用量を超えたため翌月 1 日に再開します。",
+      en: "The concierge is paused. Usage exceeded the monthly allowance; it resumes on the 1st of next month.",
+    },
+    quotaRequest: {
+      ja: "本日の利用上限に達しました。翌日 0:00 にリセットされます。",
+      en: "You have reached today's limit. It resets at midnight.",
+    },
+    quotaToken: {
+      ja: "本日の使用量が上限に達しました。翌日 0:00 にリセットされます。",
+      en: "You have reached today's usage limit. It resets at midnight.",
+    },
+    quotaUnits: {
+      ja: (n) => `本日の残りは ${n} 件です。`,
+      en: (n) => `You have ${n} left today.`,
+    },
+    rateLimit: {
+      ja: (n) => `少しお待ちください。短時間に送信が多すぎます（1 分あたり ${n} 回まで）。`,
+      en: (n) => `Please wait a moment. Too many messages in a short time (up to ${n} per minute).`,
+    },
   },
 };
 
@@ -371,6 +424,12 @@ export type AiGuardPass = {
   remaining: number;
   /** この期間の上限件数。**原子的な予約（reserveOcrUnits）に要る。** */
   limitRequests: number;
+  /**
+   * この利用者に出す言語。**`audience` と同じ理由でここに持たせる**
+   * （2026-09-21）。引数で回すと、呼び出しが増えたときに渡し忘れて
+   * **英語の利用者にだけ日本語が出る。** 落ちも警告も出ない。
+   */
+  lang: Lang;
 };
 
 /**
@@ -390,10 +449,15 @@ export async function enforceAiLimits(
   //    既定 `false` にしてあるのは既存の呼び出しを壊さないためだが、
   //    **新しい呼び出しでは必ず渡すこと**（省略は「会員として扱う」の意味）。
   isAnonymous = false,
+  // 🔴 **利用者の表示言語**（`resolveLang`）。既定は日本語。
+  //    省略できるのは既存の呼び出しを壊さないためで、**新しい呼び出しでは
+  //    必ず渡すこと**（省略は「日本語で出す」の意味）。
+  lang: Lang = DEFAULT_LANG,
 ): Promise<NextResponse | AiGuardPass> {
   const plan = await resolvePlan(sb, userId);
   const audience = audienceOf(plan, isAnonymous);
   const tier = cfg.tiers[audience];
+  const msgs = msgsFor(cfg, audience, lang);
 
   // 拒否は toritavi_ai_rejections に記録して繰り返し違反者を可視化する
   // （規約 第9条6/7/8号）。記録はベストエフォートで await しても安全。
@@ -415,7 +479,7 @@ export async function enforceAiLimits(
       .eq("month", jstFirstOfMonth())
       .maybeSingle();
     if (budget && budget.spend_cents >= cfg.budgetMonthlyCents) {
-      return reject("monthly_budget_exceeded", cfg.messages.budgetExceeded, 503);
+      return reject("monthly_budget_exceeded", msgs.budgetExceeded, 503);
     }
   }
 
@@ -430,10 +494,10 @@ export async function enforceAiLimits(
   const used = usage?.requests_count ?? 0;
   if (usage) {
     if (used >= tier.quotaRequests) {
-      return reject("quota_request_limit", msgsFor(cfg, audience).quotaRequest, 429);
+      return reject("quota_request_limit", msgs.quotaRequest, 429);
     }
     if (usage.tokens_total >= tier.quotaTokens) {
-      return reject("quota_token_limit", msgsFor(cfg, audience).quotaToken, 429);
+      return reject("quota_token_limit", msgs.quotaToken, 429);
     }
   }
 
@@ -447,7 +511,7 @@ export async function enforceAiLimits(
   if (cfg.eventsRoleFilter) q = q.eq("role", cfg.eventsRoleFilter);
   const { count: recentCount } = await q;
   if ((recentCount ?? 0) >= tier.ratePerMin) {
-    return reject("rate_limit", cfg.messages.rateLimit(tier.ratePerMin), 429);
+    return reject("rate_limit", msgs.rateLimit(tier.ratePerMin), 429);
   }
 
   return {
@@ -455,6 +519,7 @@ export async function enforceAiLimits(
     audience,
     remaining: Math.max(0, tier.quotaRequests - used),
     limitRequests: tier.quotaRequests,
+    lang,
   };
 }
 
@@ -502,7 +567,12 @@ export async function reserveOcrUnits(
     //    DB が不調な間だけ上限が消える（019 の事故と同じ形）。
     console.error("[ai-guard] reserve failed:", error.message);
     return NextResponse.json(
-      { error: "quota_unavailable", message: cfg.messages.rateLimit(0) },
+      {
+        error: "quota_unavailable",
+        // 🔴 以前は `rateLimit(0)` を流用していた ——「1 分あたり 0 回まで」と
+        //    出る。**原因（予約できなかった）とも噛み合わない。**
+        message: apiMessage("plan_unavailable", pass.lang),
+      },
       { status: 503 },
     );
   }
@@ -516,7 +586,7 @@ export async function reserveOcrUnits(
     return NextResponse.json(
       {
         error: "quota_request_limit",
-        message: msgsFor(cfg, pass.audience).quotaUnits(remaining),
+        message: msgsFor(cfg, pass.audience, pass.lang).quotaUnits(remaining),
         remaining,
       },
       { status: 429 },
@@ -553,7 +623,7 @@ export async function assertUnitsWithinQuota(
   return NextResponse.json(
     {
       error: "quota_request_limit",
-      message: msgsFor(cfg, pass.audience).quotaUnits(pass.remaining),
+      message: msgsFor(cfg, pass.audience, pass.lang).quotaUnits(pass.remaining),
       remaining: pass.remaining,
     },
     { status: 429 },
@@ -645,14 +715,28 @@ export type Audience = "guest" | "free" | "pro";
  * 🔴 ここを通さずに `cfg.messages.…` を直接読むと、ゲストに
  *    「今月」「翌月 1 日」と出る。**リセットが無いので嘘になる。**
  */
-export function msgsFor(cfg: AiGuardConfig, audience: Audience) {
-  if (audience === "guest" && cfg.guestMessages) {
-    return { ...cfg.messages, ...cfg.guestMessages };
-  }
-  if (audience === "pro" && cfg.proMessages) {
-    return { ...cfg.messages, ...cfg.proMessages };
-  }
-  return cfg.messages;
+export function msgsFor(
+  cfg: AiGuardConfig,
+  audience: Audience,
+  // 🔴 **既定を置くが、呼び出し側は必ず渡すこと。** 既定は「古い呼び出しを
+  //    壊さない」ためだけにあり、省略は「日本語で出す」の意味になる。
+  lang: Lang = DEFAULT_LANG,
+) {
+  const m =
+    audience === "guest" && cfg.guestMessages
+      ? { ...cfg.messages, ...cfg.guestMessages }
+      : audience === "pro" && cfg.proMessages
+        ? { ...cfg.messages, ...cfg.proMessages }
+        : cfg.messages;
+  // 🔴 **ここが言語を選ぶ唯一の場所。** 呼び出し側は文字列だけを受け取る。
+  //    各所で `[lang]` を書くと、1 か所忘れたときに**そこだけ日本語**になる。
+  return {
+    budgetExceeded: m.budgetExceeded[lang],
+    quotaRequest: m.quotaRequest[lang],
+    quotaToken: m.quotaToken[lang],
+    quotaUnits: (n: number) => m.quotaUnits[lang](n),
+    rateLimit: (n: number) => m.rateLimit[lang](n),
+  };
 }
 
 export function audienceOf(plan: Plan, isAnonymous: boolean): Audience {
@@ -675,6 +759,7 @@ export async function checkMinuteRate(
   // 🔴 **`Plan` ではなく `Audience`。** ゲストの分間上限を効かせるため。
   //    `Plan` は `Audience` の部分型なので、既存の呼び出しはそのまま通る。
   audience: Audience,
+  lang: Lang = DEFAULT_LANG,
 ): Promise<NextResponse | null> {
   const perMin = cfg.tiers[audience].ratePerMin;
   const since = new Date(Date.now() - 60_000).toISOString();
@@ -692,7 +777,7 @@ export async function checkMinuteRate(
   if ((count ?? 0) >= perMin) {
     await logAiRejection(userId, cfg.feature as "ocr" | "concierge", "rate_limit");
     return NextResponse.json(
-      { error: "rate_limit", message: cfg.messages.rateLimit(perMin) },
+      { error: "rate_limit", message: msgsFor(cfg, audience, lang).rateLimit(perMin) },
       { status: 429 },
     );
   }
@@ -753,6 +838,7 @@ export function globalCapFor(audience: Audience): number {
 export async function tryOcrAttempt(
   userId: string,
   audience: Audience,
+  lang: Lang = DEFAULT_LANG,
 ): Promise<NextResponse | null> {
   const perMin = OCR_GUARD.tiers[audience].ratePerMin;
   try {
@@ -772,7 +858,7 @@ export async function tryOcrAttempt(
     if (data === true) return null;
     await logAiRejection(userId, "ocr", "rate_limit");
     return NextResponse.json(
-      { error: "rate_limit", message: OCR_GUARD.messages.rateLimit(perMin) },
+      { error: "rate_limit", message: msgsFor(OCR_GUARD, audience, lang).rateLimit(perMin) },
       { status: 429 },
     );
   } catch (e) {
@@ -781,7 +867,10 @@ export async function tryOcrAttempt(
     //    フェイルクローズにしても失うものが小さい。
     console.error("[ai-guard] attempt limiter failed; blocking:", e);
     return NextResponse.json(
-      { error: "rate_limit_unavailable", message: "混み合っています。しばらくしてからお試しください。" },
+      {
+        error: "rate_limit_unavailable",
+        message: apiMessage("plan_unavailable", lang),
+      },
       { status: 503 },
     );
   }
@@ -818,6 +907,8 @@ export async function beginOcrRequest(args: {
   countedInput: number;
   /** 安全余裕を掛けた入力トークン（出力ぶんを含まない）。記録だけ。 */
   reservedInput: number;
+  /** 利用者の表示言語。省略時は日本語。 */
+  lang?: Lang;
 }): Promise<NextResponse | BeginOk | BeginDuplicate> {
   const admin = createServiceClient();
   const { data, error } = await admin.rpc("toritavi_ocr_begin_request", {
@@ -839,7 +930,10 @@ export async function beginOcrRequest(args: {
     //    上限も予算も消える（019 の事故と同じ形）。
     console.error("[ai-guard] begin failed:", error.message);
     return NextResponse.json(
-      { error: "quota_unavailable", message: "混み合っています。しばらくしてからお試しください。" },
+      {
+        error: "quota_unavailable",
+        message: apiMessage("plan_unavailable", args.lang ?? DEFAULT_LANG),
+      },
       { status: 503 },
     );
   }

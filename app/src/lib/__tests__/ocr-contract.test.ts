@@ -106,6 +106,9 @@ describe("確定仕様の件数", () => {
 
 describe("🔴 処理の並び順", () => {
   const c = code(route);
+  // 🔴 **呼び出し名だけで探す。** 引数まで書くと、引数が 1 つ増えただけで
+  //    **並び順とは無関係に赤くなる**（2026-09-21 に言語を足して実際に落ちた）。
+  //    見張りたいのは順序であって、引数の数ではない。
   const at = (needle: string) => {
     const i = c.indexOf(needle);
     assert.ok(i > 0, `${needle} が見つからない`);
@@ -115,7 +118,7 @@ describe("🔴 処理の並び順", () => {
   test("安価な試行制限が、重いファイル検証より前にある", () => {
     // ここが逆だと、PDF を開かせるだけの解析 DoS が素通りする。
     assert.ok(
-      at("tryOcrAttempt(userId, audience)") < at("await validateFile("),
+      at("tryOcrAttempt(") < at("await validateFile("),
       "試行制限が validateFile より後ろにある",
     );
   });
@@ -227,7 +230,7 @@ describe("🔴 処理の並び順", () => {
   });
 
   test("モデレーションが予約より前で、フェイルクローズ版を使っている", () => {
-    assert.ok(at("assertActiveOr403Strict(userId)") < at("beginOcrRequest({"));
+    assert.ok(at("assertActiveOr403Strict(") < at("beginOcrRequest({"));
   });
 });
 

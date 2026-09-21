@@ -10,6 +10,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateRequest } from "@/lib/supabase-server";
+import { apiMessage, resolveLang } from "@/lib/api-messages";
 import {
   OCR_GUARD,
   CONCIERGE_GUARD,
@@ -38,7 +39,14 @@ export async function GET(request: NextRequest) {
   if (!auth) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const { sb, userId, isAnonymous } = auth;
+  const { sb, userId, isAnonymous, userMetadata } = auth;
+
+  // 🔴 利用者の表示言語（`raw_user_meta_data.lang`）。
+  //    アプリは全訳済みなので、ここから返す `message` も合わせる（2026-09-21）。
+  const lang = resolveLang({
+    userMetadata,
+    acceptLanguage: request.headers.get("accept-language"),
+  });
 
   // 🔴 **読めなかったら 200 で `free` を返さない**（2026-08-30 レーン 3）。
   //    アプリは「サーバに聞けた・無料だった」と解釈し、契約者に
@@ -49,7 +57,7 @@ export async function GET(request: NextRequest) {
     plan = await resolvePlan(sb, userId);
   } catch {
     return NextResponse.json(
-      { error: "plan_unavailable", message: "利用状況を取得できませんでした。" },
+      { error: "plan_unavailable", message: apiMessage("usage_unavailable", lang) },
       { status: 503 },
     );
   }
@@ -68,7 +76,7 @@ export async function GET(request: NextRequest) {
     ]);
   } catch {
     return NextResponse.json(
-      { error: "plan_unavailable", message: "利用状況を取得できませんでした。" },
+      { error: "plan_unavailable", message: apiMessage("usage_unavailable", lang) },
       { status: 503 },
     );
   }

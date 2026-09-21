@@ -15,6 +15,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { CONCIERGE_ENABLED } from "@/lib/concierge-flags";
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateRequest } from "@/lib/supabase-server";
+import { apiMessage, resolveLang } from "@/lib/api-messages";
 import { enforceAiLimits, CONCIERGE_GUARD } from "@/lib/ai-guard";
 import { recordConciergeUsage } from "@/lib/ai-usage-record";
 import { assertActiveOr403 } from "@/lib/moderation";
@@ -118,7 +119,14 @@ export async function POST(request: NextRequest) {
   if (!auth) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const { sb, userId, isAnonymous } = auth;
+  const { sb, userId, isAnonymous, userMetadata } = auth;
+
+  // 🔴 利用者の表示言語（`raw_user_meta_data.lang`）。
+  //    アプリは全訳済みなので、ここから返す `message` も合わせる（2026-09-21）。
+  const lang = resolveLang({
+    userMetadata,
+    acceptLanguage: request.headers.get("accept-language"),
+  });
 
   type Body = {
     threadId?: string;
@@ -143,7 +151,7 @@ export async function POST(request: NextRequest) {
   }
 
   /* ---- モデレーション: 停止/凍結ユーザーは 403（フェイルオープン）---- */
-  const suspended = await assertActiveOr403(sb, userId);
+  const suspended = await assertActiveOr403(sb, userId, lang);
   if (suspended) return suspended;
 
   /* ---- AI 利用制限（月予算 → 日次 → 分間。@/lib/ai-guard で共通化）---- */
@@ -157,7 +165,7 @@ export async function POST(request: NextRequest) {
     guard = await enforceAiLimits(sb, userId, CONCIERGE_GUARD, isAnonymous);
   } catch {
     return NextResponse.json(
-      { error: "plan_unavailable", message: "混み合っています。しばらくしてからお試しください。" },
+      { error: "plan_unavailable", message: apiMessage("plan_unavailable", lang) },
       { status: 503 },
     );
   }
