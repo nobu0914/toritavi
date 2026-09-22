@@ -25,16 +25,61 @@ function code(path: string): string {
 
 const ROUTE = "src/app/api/concierge/route.ts";
 
-test("🔴 コンシェルジュは閉じたまま", () => {
-  assert.equal(
-    CONCIERGE_ENABLED,
-    false,
-    "CONCIERGE_ENABLED を true にした。\n" +
-      "  🔴 開けるときは 4 つ同時に動かす —— アプリの kConciergeEnabled ／\n" +
-      "  ここ ／ AI 許諾（decideAiConsent）をこの経路にも配線 ／\n" +
-      "  docs/feature-flags.md §1.4 の表。\n" +
-      "  2026-08-01 に降ろした理由（実在しない URL を出しうるのに検査が無い）が\n" +
-      "  片付いているかも確かめること",
+test("🔴 開いているなら、開ける条件がすべて配線されている", () => {
+  // 🔴 **値そのものは固定しない**（2026-09-22 に書き換えた）。
+  //    それまでは `assert.equal(CONCIERGE_ENABLED, false)` で釘付けていたが、
+  //    **開け閉めは判断であって誤りではない。** `isFalse` に釘付けると
+  //    開けた人が必ずここを書き換えることになり、見張りとして働かない
+  //    （`toritavi_app/test/core/purchases_gate_test.dart` と同じ考え方）。
+  //
+  //    代わりに「**開いているなら、開ける条件が揃っていること**」を見る。
+  //    閉じているあいだは何も要求しない。
+  if (!CONCIERGE_ENABLED) return;
+
+  const c = code(ROUTE);
+
+  // 1) 🔴 降ろした本体の理由 —— 実在しない URL の担保。
+  assert.ok(
+    c.includes("stripDisallowedUrls("),
+    "🔴 許可リストを通していない。**2026-08-01 に降ろした理由そのもの** ——\n" +
+      "  AI が実在しない URL を出しうるのに検査が無い状態へ戻る。\n" +
+      "  プロンプトの「実在する公式サイトのみ」は指示であって担保ではない",
+  );
+
+  // 2) 🔴 AI 送信の許諾（サーバ側）。アプリ側のゲートはサーバを閉じない。
+  assert.ok(
+    c.includes("decideAiConsentFromServer("),
+    "🔴 許諾をサーバで見ていない。`/api/concierge` を直接叩けば素通りする。\n" +
+      "  `concierge-context.ts` は確認番号とメモを文脈に含める",
+  );
+
+  // 3) 🔴 非常停止スイッチ。
+  assert.ok(
+    c.includes('getAiMode("concierge")') && c.includes("modeAllows("),
+    "🔴 非常停止スイッチが効かない。off にしても API を直接叩けば呼べる",
+  );
+
+  // 4) 🔴 原子的な予約（「見てから足す」に戻さない）。
+  assert.ok(
+    c.includes("beginConcierge("),
+    "🔴 予約していない。同時に投げた分が全部通り、上限も予算も超えられる",
+  );
+
+  // 5) 🔴 SDK の自動再送を切る（実費が最大 3 倍になる）。
+  assert.ok(
+    /new Anthropic\(\s*\{[^}]*maxRetries:\s*0/.test(c),
+    "🔴 `maxRetries: 0` が無い。5xx / 429 のたびに再送され、そのたびに課金される",
+  );
+
+  // 6) 🔴 モデレーションはフェイルクローズ（支払いが発生する経路だから）。
+  assert.ok(
+    c.includes("assertActiveOr403Strict("),
+    "🔴 フェイルオープン版を使っている。判定が読めない間、\n" +
+      "  凍結済みの利用者が支払いを発生させられる",
+  );
+  assert.ok(
+    !/\bassertActiveOr403\(/.test(c),
+    "🔴 フェイルオープン版が残っている",
   );
 });
 

@@ -23,6 +23,7 @@ import { assertActiveOr403Strict } from "@/lib/moderation";
 import { getAiMode, modeAllows, MODE_MESSAGE } from "@/lib/ai-switch";
 import { beginConcierge, releaseConcierge } from "@/lib/concierge-quota";
 import { stripDisallowedUrls } from "@/lib/url-allowlist";
+import { decideAiConsentFromServer } from "@/lib/ai-consent";
 import { buildConciergeContext } from "@/lib/concierge-context";
 import type { Journey, Step } from "@/lib/types";
 import { ALLOWED_ORIGINS } from "@/lib/allowed-origins";
@@ -165,15 +166,26 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "too many context journeys" }, { status: 400 });
   }
 
-  /* ---- モデレーション: 停止/凍結ユーザーは 403（フェイルオープン）---- */
-  // 🔴 **フェイルクローズ版を使う**（2026-09-22）。
-  //    以前は `assertActiveOr403`（読めなければ通す）だった。
-  //    OCR は「高原価の処理はフェイルクローズ」と判断して Strict に替えたが、
-  //    **理由は機能名ではなく「1 回ごとに外部への支払いが発生する」性質**で、
-  //    コンシェルジュにも当てはまる（レーン 9）。
-  //    判定が読めない間、凍結済みの利用者が支払いを発生させられていた。
-  const suspended = await assertActiveOr403Strict(userId, lang);
-  if (suspended) return suspended;
+  // 🔴 **AI 送信の許諾を、サーバ側でも見る**（2026-09-22）。
+  //
+  //    `concierge-flags.ts` 自身が「開けるときに一緒に動かすもの」の 3 つ目に
+  //    **「AI 送信の許諾をこの経路にも配線する —— いまは /api/ocr だけ」**
+  //    と書いていた。**アプリ側のゲートはサーバを閉じない** ——
+  //    `/api/concierge` を直接叩けば素通りする。
+  //    アプリのフラグがサーバを閉じなかったのと**まったく同じ型**。
+  //
+  //    🔴 **`concierge-context.ts` は確認番号とメモを文脈に含める。**
+  //    素通しだと、旅程の題名・メモ・確認番号が許諾なしで Anthropic へ出る。
+  //
+  //    🔴 **サーバ側の記録で決める。** `raw_user_meta_data` は利用者が
+  //    書き換えられるので材料にしない（`/api/ocr` と同じ）。
+  const consent = await decideAiConsentFromServer(userId, "/api/concierge");
+  if (!consent.allow) {
+    return NextResponse.json(
+      { error: consent.code, message: apiMessage("ai_consent_required", lang) },
+      { status: consent.status },
+    );
+  }
 
   /* ---- AI 利用制限（月予算 → 日次 → 分間。@/lib/ai-guard で共通化）---- */
   // コンシェルジュは 1 リクエスト 1 件なので、通過後の件数チェックは不要。
@@ -191,6 +203,23 @@ export async function POST(request: NextRequest) {
     );
   }
   const audience = audienceOf(plan, isAnonymous);
+
+  // 🔴 **並びは `/api/ocr` と同じにする**（許諾 → プラン → モデレーション）。
+  //    順序が違うと、DB が落ちたときに**同じ状況で違うコードが返る** ——
+  //    実際 2026-09-22 に `plan_unavailable` を期待する検査が
+  //    `moderation_unavailable` を受け取って落ちた。
+  //    **どちらも 503 で止まるので実害は無いが、2 本の経路が別々に
+  //    振る舞うと、片方で直した不具合がもう片方に残る。**
+  /* ---- モデレーション: 停止/凍結ユーザーは 403（フェイルオープン）---- */
+  // 🔴 **フェイルクローズ版を使う**（2026-09-22）。
+  //    以前は `assertActiveOr403`（読めなければ通す）だった。
+  //    OCR は「高原価の処理はフェイルクローズ」と判断して Strict に替えたが、
+  //    **理由は機能名ではなく「1 回ごとに外部への支払いが発生する」性質**で、
+  //    コンシェルジュにも当てはまる（レーン 9）。
+  //    判定が読めない間、凍結済みの利用者が支払いを発生させられていた。
+  const suspended = await assertActiveOr403Strict(userId, lang);
+  if (suspended) return suspended;
+
 
   // 🔴 **非常停止スイッチを当てる。** ここで audience が分かる。
   if (!modeAllows(mode, audience)) {
