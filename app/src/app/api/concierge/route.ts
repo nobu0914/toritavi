@@ -16,9 +16,13 @@ import { CONCIERGE_ENABLED } from "@/lib/concierge-flags";
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateRequest } from "@/lib/supabase-server";
 import { apiMessage, resolveLang } from "@/lib/api-messages";
-import { enforceAiLimits, CONCIERGE_GUARD } from "@/lib/ai-guard";
+import { CONCIERGE_GUARD, audienceOf } from "@/lib/ai-guard";
+import { resolvePlan } from "@/lib/plan-resolve";
 import { recordConciergeUsage } from "@/lib/ai-usage-record";
-import { assertActiveOr403 } from "@/lib/moderation";
+import { assertActiveOr403Strict } from "@/lib/moderation";
+import { getAiMode, modeAllows, MODE_MESSAGE } from "@/lib/ai-switch";
+import { beginConcierge, releaseConcierge } from "@/lib/concierge-quota";
+import { stripDisallowedUrls } from "@/lib/url-allowlist";
 import { buildConciergeContext } from "@/lib/concierge-context";
 import type { Journey, Step } from "@/lib/types";
 import { ALLOWED_ORIGINS } from "@/lib/allowed-origins";
@@ -115,6 +119,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "API key not configured" }, { status: 500 });
   }
 
+  // 🔴 **非常停止スイッチ**（2026-09-22 に足した）。
+  //    2026-08-30 のレーン 9 —— `getAiMode` の呼び出しは OCR の 2 か所だけで、
+  //    **コンシェルジュはコード側にも DB 側にも関門が無かった。**
+  //    事故対応で mode を `off` にしても、認証済みなら API を直接叩いて
+  //    Claude を呼び続けられる状態だった。
+  //
+  //    🔴 **DB 側にも同じ関門がある**（`toritavi_concierge_begin`）。
+  //    ここが落ちてもあちらで止まる —— OCR と同じ二重化
+  //    （`ocr_switch_db_enforce.sql` の理屈）。
+  const mode = await getAiMode("concierge");
+
   const auth = await authenticateRequest(request);
   if (!auth) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -151,7 +166,13 @@ export async function POST(request: NextRequest) {
   }
 
   /* ---- モデレーション: 停止/凍結ユーザーは 403（フェイルオープン）---- */
-  const suspended = await assertActiveOr403(sb, userId, lang);
+  // 🔴 **フェイルクローズ版を使う**（2026-09-22）。
+  //    以前は `assertActiveOr403`（読めなければ通す）だった。
+  //    OCR は「高原価の処理はフェイルクローズ」と判断して Strict に替えたが、
+  //    **理由は機能名ではなく「1 回ごとに外部への支払いが発生する」性質**で、
+  //    コンシェルジュにも当てはまる（レーン 9）。
+  //    判定が読めない間、凍結済みの利用者が支払いを発生させられていた。
+  const suspended = await assertActiveOr403Strict(userId, lang);
   if (suspended) return suspended;
 
   /* ---- AI 利用制限（月予算 → 日次 → 分間。@/lib/ai-guard で共通化）---- */
@@ -160,16 +181,43 @@ export async function POST(request: NextRequest) {
   //    包まないと、プラン読み取り失敗が**未処理例外の生 500** になる。
   //    `/api/ocr` と `/api/ai-usage` は包んだのに**ここだけ見落としていた**
   //    （2026-08-30・`CLAUDE.md` §6-1 の 3「同じ経路を通る呼び出しを数える」）。
-  let guard;
+  let plan;
   try {
-    guard = await enforceAiLimits(sb, userId, CONCIERGE_GUARD, isAnonymous);
+    plan = await resolvePlan(sb, userId);
   } catch {
     return NextResponse.json(
       { error: "plan_unavailable", message: apiMessage("plan_unavailable", lang) },
       { status: 503 },
     );
   }
-  if (guard instanceof NextResponse) return guard;
+  const audience = audienceOf(plan, isAnonymous);
+
+  // 🔴 **非常停止スイッチを当てる。** ここで audience が分かる。
+  if (!modeAllows(mode, audience)) {
+    return NextResponse.json(
+      { error: "ai_disabled", message: MODE_MESSAGE[mode as "guest_off" | "off"] },
+      { status: 503 },
+    );
+  }
+
+  // 🔴 **「見てから足す」をやめ、原子的に予約する**（2026-09-22・レーン 8）。
+  //    以前は `enforceAiLimits`（見る）→ AI → `recordConciergeUsage`（足す）で、
+  //    **同時に投げた分は全部が判定を通っていた。**
+  //    残り 1 件の状態で 10 本同時に投げれば 10 本とも通り、
+  //    上限も予算も超えられた。実費は Anthropic に発生する。
+  //
+  //    🔴 **予約は AI を呼ぶ前。** 後だと、落ちたときに実費だけ残る。
+  //    落ちたら `releaseConcierge` で戻す（戻し損ねても上限が緩む方向には
+  //    壊れない＝フェイルクローズ）。
+  const reserved = await beginConcierge({
+    userId,
+    audience,
+    // 見積りは「入力の文字数 ÷ 2 ＋ 出力上限」。**多めに見る** ——
+    //   少なく見ると、上限すれすれで超過できる。
+    estTokens: Math.ceil(text.length / 2) + MAX_TOKENS,
+    lang,
+  });
+  if (!reserved.ok) return reserved.response;
 
   /* ---- 4) Ensure thread ---- */
   let threadId = body.threadId;
@@ -209,15 +257,33 @@ export async function POST(request: NextRequest) {
   });
 
   /* ---- 6) Save user message ---- */
-  await sb.from("toritavi_concierge_messages").insert({
-    thread_id: threadId,
-    user_id: userId,
-    role: "user",
-    content: text,
-  });
+  // 🔴 **戻り値を捨てない**（2026-09-22）。保存に失敗しても AI は呼ばれ、
+  //    200 が返っていた —— 利用者の画面には答えが出るのに、
+  //    次に開くと会話が消えている。**静かに嘘をつく**形（`CLAUDE.md` §5）。
+  {
+    const { error } = await sb.from("toritavi_concierge_messages").insert({
+      thread_id: threadId,
+      user_id: userId,
+      role: "user",
+      content: text,
+    });
+    if (error) {
+      console.error("[concierge] save user message failed:", error.message);
+      await releaseConcierge(userId);
+      return NextResponse.json(
+        { error: "save_failed", message: apiMessage("plan_unavailable", lang) },
+        { status: 503 },
+      );
+    }
+  }
 
   /* ---- 7) Build Anthropic request ---- */
-  const client = new Anthropic({ apiKey });
+  // 🔴 **自動再送を切る**（2026-09-22・レーン 8）。
+  //    既定で 5xx / 429 に 2 回まで再送し、**そのたびに課金される。**
+  //    `/api/ocr` は `maxRetries: 0` を明示していたのに、
+  //    **同じ対処がここに入っていなかった** —— 開けると
+  //    **最大 3 倍の実費が 1 回ぶんの記録で通る。**
+  const client = new Anthropic({ apiKey, maxRetries: 0 });
 
   // 同スレッドの直近 20 件を履歴として注入
   const { data: history } = await sb
@@ -241,22 +307,58 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[concierge] Anthropic error:", msg);
-    return NextResponse.json({ error: "ai_error", message: msg }, { status: 502 });
+    // 🔴 **予約を戻す。** 実費が発生していないのに枠だけ減るのを避ける。
+    await releaseConcierge(userId);
+    // 🔴 **生のエラー文を利用者へ返さない。** SDK の文面には URL や
+    //    内部の識別子が混ざりうる。ログには残す。
+    return NextResponse.json(
+      { error: "ai_error", message: apiMessage("ai_unavailable", lang) },
+      { status: 502 },
+    );
   }
 
   /* ---- 8) Extract text + tool_use ---- */
-  const assistant = extractAssistantPayload(response);
+  const assistantRaw = extractAssistantPayload(response);
+
+  // 🔴 **許可していない宛先のリンクを落とす**（2026-09-22）。
+  //    **これがコンシェルジュを降ろした理由そのもの** ——
+  //    「AI が実在しない URL を出しうるのに誰も検査していない」
+  //    （`docs/feature-flags.md` §1.4）。
+  //
+  //    🔴 **プロンプトの「実在する公式サイトのみ」は指示であって担保ではない。**
+  //    `info_ai_service.dart` は実際にそう書いていて、それでも
+  //    「担保が無い」と判定されていた。**仕組みで落とす。**
+  //
+  //    保存する内容も落としたあとにする —— **履歴から復活させない。**
+  const stripped = stripDisallowedUrls(assistantRaw.content);
+  if (stripped.removed.length > 0) {
+    // 🔴 落とした宛先は**ログだけ**。利用者へ返すと、消したはずの URL を
+    //    返すことになる。
+    console.warn(
+      `[concierge] dropped ${stripped.removed.length} disallowed url(s)`,
+    );
+  }
+  const assistant = { ...assistantRaw, content: stripped.text };
 
   /* ---- 9) Save assistant message ---- */
-  await sb.from("toritavi_concierge_messages").insert({
-    thread_id: threadId,
-    user_id: userId,
-    role: "assistant",
-    content: assistant.content,
-    tool_use: assistant.toolUse ?? null,
-    tokens_in: assistant.tokensIn,
-    tokens_out: assistant.tokensOut,
-  });
+  // 🔴 ここは**失敗しても要求は通す。** AI は既に呼ばれて実費が出ており、
+  //    答えも返せる。**記録だけが欠ける。**
+  //    利用者メッセージ側（6）と扱いを変えているのは、あちらは
+  //    「AI を呼ぶ前」で、やり直しが効くから。
+  {
+    const { error } = await sb.from("toritavi_concierge_messages").insert({
+      thread_id: threadId,
+      user_id: userId,
+      role: "assistant",
+      content: assistant.content,
+      tool_use: assistant.toolUse ?? null,
+      tokens_in: assistant.tokensIn,
+      tokens_out: assistant.tokensOut,
+    });
+    if (error) {
+      console.error("[concierge] save assistant message failed:", error.message);
+    }
+  }
 
   /* ---- 10) Increment usage ---- */
   const cost = estimateCostCents(assistant.tokensIn, assistant.tokensOut);
