@@ -42,6 +42,16 @@ export type ConciergeBegin =
  *   - `budget_exceeded` … 月予算（全体共有・無料のみ）
  *   - `quota_exceeded`  … その人の日次件数
  *   - `quota_tokens`    … その人の日次トークン
+ *   - `rate_limited`    … その人の**分間**レート（2026-09-23 に追加）
+ *
+ * 🔴 **分間レートは、定義してあるのに誰も呼んでいなかった。**
+ *    `CONCIERGE_GUARD.tiers.*.ratePerMin`（無料 5 / Pro 10）は env でも
+ *    設定でき、429 の文面まで用意されていたのに、`/api/concierge` から
+ *    **一度も参照されていなかった** —— それでいて `route.ts` の冒頭は
+ *    「3 階層キャップ（**分** / 日 / 月予算）」と宣言していた。
+ *    原因は 2026-09-22 の作り替えで、`enforceAiLimits`（分を見ていた）を
+ *    この関数に置き換えたときに**分だけが落ちた**（`CLAUDE.md` §6-1）。
+ *    **日次 500 件（Pro）を数十秒で焼き切れる**状態だった。
  */
 export async function beginConcierge(args: {
   userId: string;
@@ -60,6 +70,8 @@ export async function beginConcierge(args: {
     p_limit_tokens: tier.quotaTokens,
     p_est_tokens: args.estTokens,
     p_budget_cents: CONCIERGE_GUARD.budgetMonthlyCents,
+    // 🔴 **分間レート。** DB 側で席を取る前に見る（`toritavi_concierge_rate_buckets`）。
+    p_rate_per_min: tier.ratePerMin,
   });
 
   if (error) {
@@ -98,6 +110,15 @@ export async function beginConcierge(args: {
       response: NextResponse.json(
         { error: "monthly_budget_exceeded", message: msgs.budgetExceeded },
         { status: 503 },
+      ),
+    };
+  }
+  if (status === "rate_limited") {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        { error: "rate_limit", message: msgs.rateLimit(tier.ratePerMin) },
+        { status: 429 },
       ),
     };
   }

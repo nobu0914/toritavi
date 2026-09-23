@@ -2,7 +2,7 @@
  * POST /api/concierge — AI Concierge のメッセージ送信エンドポイント。
  *
  * - 認証必須（auth.uid() ベース）
- * - 3 階層キャップ（分 / 日 / 月予算）
+ * - 3 階層キャップ（分 / 日 / 月予算）—— **3 つとも DB 側で原子的に見る**
  * - Journey context を PII マスクして system prompt に注入
  * - Claude Haiku 4.5 呼び出し、tool_use: add_step 提案
  * - user / assistant メッセージを DB 保存
