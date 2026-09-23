@@ -30,6 +30,17 @@ export type TierLimits = {
   quotaRequests: number;
   quotaTokens: number;
   ratePerMin: number;
+  /**
+   * 🔴 **その利用者 1 人あたりの、月の原価の蓋**（センド。2026-09-23 に追加）。
+   *
+   * `0` は蓋なし。`toritavi_concierge_user_budget` の当月分と突き合わせる。
+   *
+   * 上の `budgetMonthlyCents` は**全体で共有**で、意図どおり
+   * **有料には効かせていない。** その結果 **Pro には金額の蓋が 1 つも
+   * 無かった。** ここがその穴を塞ぐ ——
+   * 全体を止めずに、**使いすぎた 1 人だけ**を止められる。
+   */
+  userBudgetMonthlyCents: number;
 };
 
 export type AiGuardConfig = {
@@ -40,7 +51,13 @@ export type AiGuardConfig = {
    *
    * ⚠️ **無料プランにのみ適用する。** 共有のまま有料に効かせると、無料ユーザーが
    * 使い切った時点で課金者にも 503 が返り、返金請求と低評価に直結する。
-   * 有料の原価は「人数 × 件数上限」で上界が計算できるので、予算という別軸は不要。
+   * 有料の原価は「人数 × 件数上限」で上界が計算できる。
+   * 🔴 **ただし、その上界が手取りを大きく超えていた**（2026-09-23 に実測）——
+   *    コンシェルジュ 1 通の原価は ¥0.96〜¥4.22 で **98% が入力**。
+   *    Pro の日次上限（100 万トークン）まで使われると **月 ¥4,000〜5,200**
+   *    に達し、手取り **月 ¥602.7** を大きく割る。
+   *    **「計算できる」と「引き合う」は別。** `userBudgetMonthlyCents` で
+   *    1 人あたりの蓋を足した。
    */
   budgetMonthlyCents: number;
   /**
@@ -244,11 +261,14 @@ export const OCR_GUARD: AiGuardConfig = {
       quotaRequests: cappedQuota(["AI_OCR_MONTHLY_REQUESTS"], SPEC_FREE_REQUESTS),
       quotaTokens: envNum(["AI_OCR_MONTHLY_TOKENS"], 500_000),
       ratePerMin: envNum(["AI_OCR_RATE_PER_MIN", "OCR_RATE_LIMIT_PER_MIN"], 5),
+      // OCR は件数で縛れている（1 件の原価が読める）ので蓋を置かない。
+      userBudgetMonthlyCents: envNum(["AI_OCR_USER_BUDGET_CENTS"], 0),
     },
     pro: {
       quotaRequests: cappedQuota(["AI_OCR_PRO_MONTHLY_REQUESTS"], SPEC_PRO_REQUESTS),
       quotaTokens: envNum(["AI_OCR_PRO_MONTHLY_TOKENS"], 3_000_000),
       ratePerMin: envNum(["AI_OCR_PRO_RATE_PER_MIN"], 10),
+      userBudgetMonthlyCents: envNum(["AI_OCR_PRO_USER_BUDGET_CENTS"], 0),
     },
     // 🔴 **ゲスト（未登録）。件数は「生涯 3 件」で、月ごとには戻らない。**
     //    戻らないのはここではなく DB が決める —— `ocr_period_start()` が
@@ -261,6 +281,7 @@ export const OCR_GUARD: AiGuardConfig = {
       // 会員より厳しくする。ゲストは 1 台 3 件しか無いので、
       // まとめ撮りの必要が薄い一方、攻撃の入口になりやすい。
       ratePerMin: envNum(["AI_OCR_GUEST_RATE_PER_MIN"], 3),
+      userBudgetMonthlyCents: 0,
     },
   },
   tables: {
@@ -354,11 +375,19 @@ export const CONCIERGE_GUARD: AiGuardConfig = {
       quotaRequests: envNum(["AI_CONCIERGE_DAILY_REQUESTS"], 100),
       quotaTokens: envNum(["AI_CONCIERGE_DAILY_TOKENS"], 200_000),
       ratePerMin: envNum(["AI_CONCIERGE_RATE_PER_MIN"], 5),
+      // 無料は全体の月予算（$50）でも縛られているが、**1 人が食い切る**のを防ぐ。
+      //   $1 ≒ ¥150。1 通 ¥0.96〜¥4.22 なので 35〜150 通ぶん。
+      userBudgetMonthlyCents: envNum(["AI_CONCIERGE_USER_BUDGET_CENTS"], 100),
     },
     pro: {
       quotaRequests: envNum(["AI_CONCIERGE_PRO_DAILY_REQUESTS"], 500),
       quotaTokens: envNum(["AI_CONCIERGE_PRO_DAILY_TOKENS"], 1_000_000),
       ratePerMin: envNum(["AI_CONCIERGE_PRO_RATE_PER_MIN"], 10),
+      // 🔴 **Pro の手取りは月 ¥602.7**（¥780 − 消費税 − Apple 15%）。
+      //    $3 ≒ ¥450 で、手取りの 75% を原価の上限に充てる。
+      //    1 通 ¥1.3（旅程を畳んだ後の実測）なら **約 346 通/月 ≒ 11 通/日**。
+      //    🔴 **数字は判断。** 足りなければ env で上げる（デプロイ不要）。
+      userBudgetMonthlyCents: envNum(["AI_CONCIERGE_PRO_USER_BUDGET_CENTS"], 300),
     },
     // 🔴 **ゲストはコンシェルジュを使えない。すべて 0。**
     //
@@ -368,7 +397,12 @@ export const CONCIERGE_GUARD: AiGuardConfig = {
     //    **env で開けられるようにしない**（`envNum` を使わない）。
     //    設定 1 つでゲストにチャットが開くのは、意図しない開放になる。
     //    開けると決めた日に、ここを書き換えること。
-    guest: { quotaRequests: 0, quotaTokens: 0, ratePerMin: 0 },
+    guest: {
+      quotaRequests: 0,
+      quotaTokens: 0,
+      ratePerMin: 0,
+      userBudgetMonthlyCents: 0,
+    },
   },
   tables: {
     budget: "toritavi_concierge_budget",

@@ -96,6 +96,13 @@ export const API_MESSAGES = {
   },
   // 🔴 アプリはスレッドを 1 本しか持たない（一覧も削除も無い）ので、
   //    通常の利用でここに当たることは無い。API を直接叩く経路への蓋。
+  // 🔴 **全体の停止と区別する。** 全体の月予算は「混み合っています」で、
+  //    こちらは**その人が今月使い切った**という別のこと。
+  //    同じ文言にすると、有料の利用者が「自分のせいではない」と読む。
+  concierge_user_budget: {
+    ja: "今月ぶんのご相談の上限に達しました。翌月 1 日に再開します。",
+    en: "You have reached this month's limit for the concierge. It resumes on the 1st of next month.",
+  },
   thread_limit: {
     ja: "本日の相談の開始回数が上限に達しました。明日またお試しください。",
     en: "You have started too many conversations today. Please try again tomorrow.",

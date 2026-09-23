@@ -76,10 +76,30 @@ describe("確定仕様の件数", () => {
   test("🔴 コンシェルジュはゲストに開いていない（0 で固定）", () => {
     // env で開けられる形にしない（`envNum` を使わない）。
     // 設定 1 つでゲストにチャットが開くのは、意図しない開放になる。
+    //
+    // 🔴 **書き方そのものを固定しない**（2026-09-23 に直した）。
+    //    以前は 1 行の綴りを `includes` で見ていたので、
+    //    **項目を 1 つ足して複数行に整形しただけで落ちた。**
+    //    見るべきは「ゲストの枠が全部 0 で、env から動かせない」こと。
     const c = code(guard);
+    const i = c.lastIndexOf("guest:");
+    assert.ok(i >= 0, "コンシェルジュの guest 枠が見つからない");
+    const block = c.slice(i, c.indexOf("}", c.indexOf("{", i)) + 1);
+
+    for (const key of [
+      "quotaRequests",
+      "quotaTokens",
+      "ratePerMin",
+      "userBudgetMonthlyCents",
+    ]) {
+      assert.ok(
+        new RegExp(`${key}\\s*:\\s*0\\b`).test(block),
+        `コンシェルジュのゲスト枠 ${key} が 0 で固定されていない: ${block}`,
+      );
+    }
     assert.ok(
-      c.includes("guest: { quotaRequests: 0, quotaTokens: 0, ratePerMin: 0 }"),
-      "コンシェルジュのゲスト枠が 0 で固定されていない",
+      !block.includes("envNum"),
+      "🔴 ゲスト枠が env から動かせる形になっている（設定 1 つで開く）",
     );
   });
 

@@ -44,6 +44,7 @@ export type ConciergeBegin =
  *   - `quota_exceeded`  … その人の日次件数
  *   - `quota_tokens`    … その人の日次トークン
  *   - `rate_limited`    … その人の**分間**レート（2026-09-23 に追加）
+ *   - `user_budget_exceeded` … **その人の月の原価**（2026-09-23 に追加）
  *
  * 🔴 **分間レートは、定義してあるのに誰も呼んでいなかった。**
  *    `CONCIERGE_GUARD.tiers.*.ratePerMin`（無料 5 / Pro 10）は env でも
@@ -73,6 +74,10 @@ export async function beginConcierge(args: {
     p_budget_cents: CONCIERGE_GUARD.budgetMonthlyCents,
     // 🔴 **分間レート。** DB 側で席を取る前に見る（`toritavi_concierge_rate_buckets`）。
     p_rate_per_min: tier.ratePerMin,
+    // 🔴 **その人 1 人あたりの月の原価の蓋**（2026-09-23 に追加）。
+    //    上の `budgetMonthlyCents` は全体共有で、意図どおり **Pro には
+    //    効かせていない。** その結果 **Pro には金額の蓋が 1 つも無かった。**
+    p_user_budget_cents: tier.userBudgetMonthlyCents,
   });
 
   if (error) {
@@ -121,6 +126,20 @@ export async function beginConcierge(args: {
       ok: false,
       response: NextResponse.json(
         { error: "monthly_budget_exceeded", message: msgs.budgetExceeded },
+        { status: 503 },
+      ),
+    };
+  }
+  if (status === "user_budget_exceeded") {
+    // 🔴 **429 ではなく 503。** 全体の月予算と同じ「時間が経てば戻る」形で、
+    //    翌月 1 日に開く。利用者側に直せることは無い。
+    return {
+      ok: false,
+      response: NextResponse.json(
+        {
+          error: "user_budget_exceeded",
+          message: apiMessage("concierge_user_budget", args.lang),
+        },
         { status: 503 },
       ),
     };

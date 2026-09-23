@@ -31,6 +31,21 @@ function code(path: string): string {
 const QUOTA = "src/lib/concierge-quota.ts";
 const SQL = "../../toritavi_app/tool/concierge_reopen.sql";
 
+/**
+ * `toritavi_concierge_begin` の本体だけを切り出す。
+ *
+ * 🔴 **ファイル全体で `indexOf` しない**（2026-09-23 に踏んだ）。
+ *    正本に `increment_concierge_usage_srv` を移したら、そちらの
+ *    `insert into toritavi_concierge_usage` を先に拾って落ちた。
+ *    **見たいのは「予約関数の中の順番」。**
+ */
+function beginBody(sql: string): string {
+  const i = sql.indexOf("function public.toritavi_concierge_begin");
+  const j = sql.indexOf("$$;", i);
+  return i >= 0 && j > i ? sql.slice(i, j) : "";
+}
+
+
 test("すべての層に分間レートが定義されている", () => {
   for (const [name, tier] of Object.entries(CONCIERGE_GUARD.tiers)) {
     assert.equal(
@@ -66,7 +81,8 @@ test("🔴 rate_limited を 429 で返している", () => {
 
 test("🔴 席を取る前に見る（日次を増やしてから弾かない）", () => {
   // SQL の中で、分間の判定が日次の INSERT より前にあること。
-  const sql = readFileSync(SQL, "utf8");
+  const sql = beginBody(readFileSync(SQL, "utf8"));
+  assert.ok(sql.length > 0, "予約関数の本体が見つからない（検査が空振りしている）");
   const iRate = sql.indexOf("toritavi_concierge_rate_buckets (user_id, bucket, hits)");
   const iUsage = sql.indexOf("insert into toritavi_concierge_usage");
   assert.ok(iRate >= 0, "🔴 分バケットへの書き込みが無い");
