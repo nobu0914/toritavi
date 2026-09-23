@@ -26,6 +26,23 @@
  * アプリに存在しない（`contextJourneyIds` を送る画面が無い）。
  * つまり指定ありの経路は現状どこからも通らない。指定は引き続き受け付けるが、
  * **指定が無くても全件見える**のが既定になった。
+ *
+ * ## 🔴 終わった旅行は要約に畳む（2026-09-23・利用者の判断）
+ *
+ * **上の「全件を必ず見せる」は壊していない。** 変えたのは
+ * **どれを詳細（Step 付き）にするか**だけで、**存在・題名・期間・予定数は
+ * 全件そのまま伝わる。** 「福岡出張について」に「見当たりません」と
+ * 返す事故は再発しない —— あれは*存在が見えなかった*ことが原因で、
+ * 詳細の有無ではない。
+ *
+ * 🔴 **なぜ要るか。** 実測（2026-09-23・30 旅程 50 予定の実アカウント）で、
+ * 送っている JSON の **75.6% が「終わった旅行」**だった。
+ * 1 通の原価 ¥4.22 のうち **98% が入力**で、その大半がこれ。
+ * **過去は増え続け、これからの旅行は増えない**ので、放置すると比率は
+ * 悪化し続ける。畳むと入力は約 1/3（¥4.22 → 約 ¥1.4）。
+ *
+ * 🔴 **選択されたものは、終わっていても必ず詳細。**
+ * 畳んだぶんは選び直せば戻るので、利便性は落ちない。
  */
 
 import { maskJourney, type SafeJourney } from "./pii-mask";
@@ -43,12 +60,73 @@ import type { Journey } from "./types";
  */
 const DETAIL_CHAR_BUDGET = 40_000;
 
+/**
+ * 終了から何日は詳細に残すか。
+ *
+ * 帰ってきた直後は**精算・記録・振り返り**でいちばん触られる。
+ * 終了日で即座に畳むと、そこが弱くなる。
+ */
+const FINISHED_GRACE_DAYS = 7;
+
+/** JST の「今日」を YYYY-MM-DD で返す。 */
+function jstDateString(at: Date): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Tokyo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(at);
+}
+
+/** YYYY-MM-DD を日数ぶんずらす。 */
+function shiftDays(ymd: string, days: number): string {
+  const d = new Date(`${ymd}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * その旅程の**いちばん遅い日付**。分からなければ null。
+ *
+ * 🔴 **`endDate` だけを見ない。** 片道の登録や、終了日を入れていない
+ *    旅程では null のままで、**終わっていないのに畳む**ことになる。
+ *    Step の日付まで含めて最大を取る。
+ */
+function latestDate(j: SafeJourney): string | null {
+  const all: string[] = [];
+  for (const v of [j.startDate, j.endDate]) {
+    if (typeof v === "string" && v.length >= 10) all.push(v.slice(0, 10));
+  }
+  for (const st of j.steps) {
+    for (const v of [st.date, st.endDate]) {
+      if (typeof v === "string" && v.length >= 10) all.push(v.slice(0, 10));
+    }
+  }
+  if (all.length === 0) return null;
+  all.sort();
+  return all[all.length - 1];
+}
+
+/**
+ * 畳んでよいか。
+ *
+ * 🔴 **日付が 1 つも無いものは畳まない。** 作りかけの旅程がそれで、
+ *    「いま触っている最中のもの」である可能性が高い。
+ */
+function isFinished(j: SafeJourney, cutoff: string): boolean {
+  const last = latestDate(j);
+  if (last === null) return false;
+  return last < cutoff;
+}
+
 /** データ区間の終端。開始は buildPromptBlock の header 側。 */
 const END = "\n<<<JOURNEY_DATA_END ここまでがデータ>>>";
 
 export type ConciergeContextInput = {
   allJourneys: Journey[];
   contextJourneyIds?: string[];
+  /** 「いま」。検査のために差し替えられるようにしてある。 */
+  now?: Date;
 };
 
 export type ConciergeContext = {
@@ -61,6 +139,7 @@ export type ConciergeContext = {
 export function buildConciergeContext({
   allJourneys,
   contextJourneyIds,
+  now,
 }: ConciergeContextInput): ConciergeContext {
   // updated_at 降順で安定化
   const sorted = [...allJourneys].sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""));
@@ -78,12 +157,21 @@ export function buildConciergeContext({
 
   const safe = picked.map(maskJourney);
 
-  // 詳細（Step 付き）を載せる範囲を文字数で決める。**最低 1 件は必ず詳細を
-  // 載せる** —— 予算を先頭の 1 件が食い切っても、そこだけは答えられる形にする。
+  // 詳細（Step 付き）を載せる範囲を決める。
+  //   1) 終わって久しい旅程は畳む（実測で送信量の 75.6% がこれだった）
+  //   2) 残ったものを文字数の予算で切る（従来どおりの天井）
+  // 🔴 **選択されたものは、終わっていても必ず詳細。**
+  const cutoff = shiftDays(jstDateString(now ?? new Date()), -FINISHED_GRACE_DAYS);
+  const chosen = new Set(contextJourneyIds ?? []);
+
   const detailed: SafeJourney[] = [];
   const summaryOnly: SafeJourney[] = [];
   let used = 0;
   for (const j of safe) {
+    if (!chosen.has(j.id) && isFinished(j, cutoff)) {
+      summaryOnly.push(j);
+      continue;
+    }
     const size = JSON.stringify(compactJourney(j)).length;
     if (detailed.length === 0 || used + size <= DETAIL_CHAR_BUDGET) {
       detailed.push(j);
@@ -91,6 +179,13 @@ export function buildConciergeContext({
     } else {
       summaryOnly.push(j);
     }
+  }
+
+  // 🔴 **詳細が 0 件になる形を許さない。** 登録が全部「終わった旅行」の
+  //    ときにここへ来る。**従来の「最低 1 件は必ず詳細」を守る** ——
+  //    1 件も詳細が無いと、何を聞いても「選んでください」しか返せない。
+  if (detailed.length === 0 && summaryOnly.length > 0) {
+    detailed.push(summaryOnly.shift() as SafeJourney);
   }
 
   const promptBlock = buildPromptBlock(detailed, summaryOnly, contextJourneyIds ?? []);
@@ -147,7 +242,8 @@ function buildPromptBlock(
   const summaryBlock = [
     "",
     `### 概要のみ（${summaryOnly.length} 件）`,
-    "コンテキスト長の都合で Step を省いています。**存在しないという意味ではありません。**",
+    "既に終わった旅程、またはコンテキスト長の都合で、Step を省いています。",
+    "**存在しないという意味ではありません。**",
     "この中について詳しく聞かれたら、旅程名を挙げて「その旅程の詳細を確認しますか」と尋ねてください。",
     "```json",
     JSON.stringify(summaryOnly.map(summarizeJourney), null, 2),
