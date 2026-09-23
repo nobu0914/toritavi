@@ -32,6 +32,14 @@ export const EVENT_NAMES = [
   "purchase.started",
   "purchase.completed",
   "offline.notice.shown", // props: { where: string }
+  // 🔴 2026-09-23 に利用者の指示で追加（「使われているかを確認する時に使う」）。
+  //    **アプリ側 `lib/core/analytics/analytics.dart` の
+  //    `kAnalyticsEventNames` と対。** 片方だけに足すと、
+  //    送っているのに**ここで黙って捨てられて集計に出ない。**
+  "calendar.opened",
+  "concierge.asked",
+  "concierge.journey_picked",
+  "concierge.limits_opened",
 ] as const;
 
 export type EventName = (typeof EVENT_NAMES)[number];
