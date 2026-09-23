@@ -23,6 +23,7 @@ import { assertActiveOr403Strict } from "@/lib/moderation";
 import { getAiMode, modeAllows, MODE_MESSAGE } from "@/lib/ai-switch";
 import { beginConcierge, releaseConcierge } from "@/lib/concierge-quota";
 import { stripDisallowedUrls } from "@/lib/url-allowlist";
+import { stripMarkdown } from "@/lib/strip-markdown";
 import { decideAiConsentFromServer } from "@/lib/ai-consent";
 import { buildConciergeContext } from "@/lib/concierge-context";
 import { buildNowBlock } from "@/lib/concierge-now";
@@ -46,7 +47,9 @@ const SYSTEM_PROMPT_HEAD = `あなたは JUNROS の旅程アシスタント「�
 
 ## 回答スタイル
 - 日本語、簡潔、モバイル画面で読みやすい長さに
-- Markdown 装飾は最小限（太字のみ可）。箇条書きは短文で
+- 🔴 **Markdown 記法を使わない。** アプリは素のテキストで描くので、
+  アスタリスクや井桁は**記号のまま画面に出る**（2026-09-23 に実機で確認）。
+  強調したいときは語順と改行で示す。箇条書きは「・」で短く
 - 時刻は 24 時間制、日付は YYYY-MM-DD で参照
 - 確信がない数値や所要時間は「目安」と明示
 - 旅程データに含まれない情報（特定のレストラン名など）は推測で答えず、検索案内に留める
@@ -381,7 +384,19 @@ export async function POST(request: NextRequest) {
       `[concierge] dropped ${stripped.removed.length} disallowed url(s)`,
     );
   }
-  const assistant = { ...assistantRaw, content: stripped.text };
+  // 🔴 **記号として出てしまう Markdown を落とす**（2026-09-23）。
+  //    アプリは `SelectableText` で素のまま描くので、`**太字**` が
+  //    **アスタリスクごと画面に出ていた。** プロンプト側でも禁じたが、
+  //    **プロンプトは指示であって担保ではない**（この機能を降ろした理由と同じ型）。
+  //
+  //    🔴 **URL を落としたあとに掛ける。** `stripDisallowedUrls` は
+  //    マークダウンリンクの表示文だけを残すので、順が逆だと記法が壊れる。
+  const plain = stripMarkdown(stripped.text);
+  if (plain.removed > 0) {
+    // **本来 0 に近いはず。** 増えていたらプロンプトの指示が効いていない信号。
+    console.warn(`[concierge] stripped ${plain.removed} markdown mark(s)`);
+  }
+  const assistant = { ...assistantRaw, content: plain.text };
 
   /* ---- 9) Save assistant message ---- */
   // 🔴 ここは**失敗しても要求は通す。** AI は既に呼ばれて実費が出ており、
