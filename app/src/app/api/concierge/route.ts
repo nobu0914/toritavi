@@ -33,6 +33,20 @@ import { ALLOWED_ORIGINS } from "@/lib/allowed-origins";
 const MODEL = "claude-haiku-4-5-20251001";
 const MAX_TOKENS = 1024;
 
+/**
+ * 1 日に新しく始められる相談の数。
+ *
+ * 🔴 **総数ではなく「1 日あたり」。** アプリにはスレッドの一覧も削除も無く、
+ *    端末に保存した 1 本を使い回す。総数で蓋をすると、
+ *    **入れ直しで溜まった利用者が、消す手段のないまま永久に締め出される。**
+ *    日ごとなら翌日には戻る。
+ *
+ * 🔴 **通常の利用では当たらない。** 蓋をしたいのは
+ *    「`threadId` を付けずに API を直接叩き続ける」経路で、
+ *    そこは 1 通ごとに行が増える。
+ */
+const MAX_NEW_THREADS_PER_DAY = 10;
+
 // 流量上限は @/lib/ai-guard (CONCIERGE_GUARD) に統一・env 化（DS v2 §15.6）。
 
 // Haiku 4.5 の 2026-04 時点概算: $1 / Mtok in, $5 / Mtok out
@@ -262,6 +276,31 @@ export async function POST(request: NextRequest) {
   /* ---- 4) Ensure thread ---- */
   let threadId = body.threadId;
   if (!threadId) {
+    // 🔴 **際限なく増やせないようにする**（2026-09-23・利用者の指示）。
+    //    `sb` は利用者の client なので RLS で自分の行しか数えない
+    //    （`own threads select` = `user_id = auth.uid()`）。
+    //
+    //    🔴 **「見てから作る」形なので、同時に投げれば数本は超えうる。**
+    //    ここを原子的にしていないのは、**上位の日次件数（無料 100 /
+    //    Pro 500）が既に原子的で、スレッド数はその内側**だから ——
+    //    超えても数本で、実費にも上限にも影響しない。
+    const jstNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
+    const jstMidnightUtc = new Date(
+      Date.UTC(jstNow.getUTCFullYear(), jstNow.getUTCMonth(), jstNow.getUTCDate()) -
+        9 * 60 * 60 * 1000,
+    ).toISOString();
+    const { count } = await sb
+      .from("toritavi_concierge_threads")
+      .select("id", { count: "exact", head: true })
+      .gte("created_at", jstMidnightUtc);
+    if ((count ?? 0) >= MAX_NEW_THREADS_PER_DAY) {
+      await releaseConcierge(userId);
+      return NextResponse.json(
+        { error: "thread_limit", message: apiMessage("thread_limit", lang) },
+        { status: 429 },
+      );
+    }
+
     const { data: created, error: thrErr } = await sb
       .from("toritavi_concierge_threads")
       .insert({
@@ -272,6 +311,9 @@ export async function POST(request: NextRequest) {
       .select("id")
       .single();
     if (thrErr || !created) {
+      // 🔴 **予約を戻す。** AI は呼んでいないのに枠だけ減るのを避ける
+      //    （既存の抜け。2026-09-23 に気づいた）。
+      await releaseConcierge(userId);
       return NextResponse.json({ error: "failed to create thread" }, { status: 500 });
     }
     threadId = created.id;

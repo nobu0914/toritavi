@@ -94,6 +94,12 @@ export const API_MESSAGES = {
     ja: "利用状況を取得できませんでした。",
     en: "We could not load your usage.",
   },
+  // 🔴 アプリはスレッドを 1 本しか持たない（一覧も削除も無い）ので、
+  //    通常の利用でここに当たることは無い。API を直接叩く経路への蓋。
+  thread_limit: {
+    ja: "本日の相談の開始回数が上限に達しました。明日またお試しください。",
+    en: "You have started too many conversations today. Please try again tomorrow.",
+  },
 
   // ---- /api/ocr の入口 ---------------------------------------------------
   ai_consent_required: {
