@@ -48,6 +48,7 @@ const NAV: NavItem[] = [
   //    元にしている表が違うので、片方が読めなくてももう片方は出る。
   { href: "/admin/usage", label: "利用解析", Icon: IconActivity, matchPrefix: true },
   { href: "/admin/feedback", label: "フィードバック", Icon: IconMessageDots, matchPrefix: true },
+  { href: "/admin/concierge", label: "コンシェルジュ", Icon: IconMessageDots, matchPrefix: true },
   { href: "/admin/abuse", label: "違反検知", Icon: IconAlertTriangle, matchPrefix: true },
   { href: "/admin/security", label: "セキュリティ", Icon: IconShieldLock, matchPrefix: true },
   { href: "/admin/email-templates", label: "認証メール", Icon: IconMail, matchPrefix: true },

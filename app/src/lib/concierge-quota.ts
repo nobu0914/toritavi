@@ -28,6 +28,7 @@ import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase-service";
 import { apiMessage, type Lang } from "@/lib/api-messages";
 import { msgsFor, CONCIERGE_GUARD, type Audience } from "@/lib/ai-guard";
+import { logAiRejection } from "@/lib/moderation";
 
 export type ConciergeBegin =
   | { ok: true; usedAfter: number }
@@ -94,6 +95,17 @@ export async function beginConcierge(args: {
   const usedAfter = Number(row?.used_after ?? 0);
 
   if (status === "ok") return { ok: true, usedAfter };
+
+  // 🔴 **拒否を記録する**（2026-09-23）。`toritavi_ai_rejections` が
+  //    `/admin/abuse`（「AI/OCR 制限に繰り返し当たった利用者」）の材料。
+  //
+  //    🔴 **`logAiRejection` は `feature: "concierge"` を受け取る形で
+  //    最初から用意されていたのに、コンシェルジュから一度も呼ばれていなかった。**
+  //    書いていたのは `enforceAiLimits` だけで、2026-09-22 に
+  //    この関数へ置き換えたときに**記録ごと落ちた** ——
+  //    分間レートが落ちたのと同じ作り替えで、同じ型の抜け。
+  //    **違反検知の画面がコンシェルジュを一切見ていなかった。**
+  await logAiRejection(args.userId, "concierge", status);
 
   if (status === "ai_disabled") {
     return {
