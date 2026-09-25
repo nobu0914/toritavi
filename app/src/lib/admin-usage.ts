@@ -71,8 +71,16 @@ export type UsageData = {
   error: string | null;
 };
 
-/** 画面に出す節目と、その順番。 */
+/**
+ * 画面に出す節目と、その順番。
+ *
+ * 🔴 **`events.ts` の `EVENT_NAMES` に足しただけでは、ここに出ない。**
+ * `usageFrom` はこの一覧に無い名前を**黙って捨てる**（落ちも警告も出ない）。
+ * 2026-09-23 に足した 4 つは、送られていたのに 3 日間ここに出ていなかった。
+ * `admin-usage.test.ts` の「節目とラベルは対」がこの対応を見張る。
+ */
 export const MILESTONES = [
+  // 登録 → 読み取り → 旅程 → 購入のファネル
   "signup.started",
   "signup.completed",
   "scan.started",
@@ -80,7 +88,33 @@ export const MILESTONES = [
   "journey.created",
   "paywall.shown",
   "purchase.completed",
+  // 🔴 ここから下はファネルではなく「その機能が使われているか」（2026-09-23 追加）
+  "calendar.opened",
+  "concierge.asked",
+  "concierge.journey_picked",
+  "concierge.limits_opened",
 ] as const;
+
+/**
+ * 節目の日本語。**画面に出すのはこれ**（イベント名は開発者の語）。
+ *
+ * 🔴 **`MILESTONES` と同じファイルに置く。** 以前は画面側に持っていたため、
+ * 一覧に足してもラベルが無く、**`scan.succeeded` のような生の名前が
+ * そのまま画面に出る**（落ちない形の欠陥）。
+ */
+export const MILESTONE_LABEL: Record<string, string> = {
+  "signup.started": "登録を始めた",
+  "signup.completed": "登録できた",
+  "scan.started": "読み取りを押した",
+  "scan.succeeded": "読み取れた",
+  "journey.created": "旅程ができた",
+  "paywall.shown": "購入画面を見た",
+  "purchase.completed": "購入した",
+  "calendar.opened": "カレンダーを開いた",
+  "concierge.asked": "AI に相談した",
+  "concierge.journey_picked": "相談する旅程を選んだ",
+  "concierge.limits_opened": "制限事項を開いた",
+} satisfies Record<(typeof MILESTONES)[number], string>;
 
 const median = (xs: number[]): number | null => {
   if (xs.length === 0) return null;

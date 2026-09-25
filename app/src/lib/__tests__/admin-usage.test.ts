@@ -14,8 +14,10 @@ import {
   usageFrom,
   usageUnavailable,
   MILESTONES,
+  MILESTONE_LABEL,
   type EventRow,
 } from "../admin-usage";
+import { EVENT_NAMES } from "../events";
 
 const row = (o: Partial<EventRow> & { name: string }): EventRow => ({
   created_at: "2026-09-13T10:00:00Z",
@@ -110,6 +112,41 @@ test("🔴 節目は、出ていなくても 0 で並ぶ（欄が消えない）
     0,
     "🔴 出ていない節目が一覧から消えると、どこで止まったか分からない",
   );
+});
+
+test("🔴 節目はアプリが送る名前でなければならない（綴り違いは黙って 0 になる）", () => {
+  const known = new Set<string>(EVENT_NAMES);
+  for (const name of MILESTONES) {
+    assert.ok(
+      known.has(name),
+      `🔴 ${name} は EVENT_NAMES に無い。/api/events が受け取らないので永久に 0 で並ぶ`,
+    );
+  }
+});
+
+test("🔴 節目には必ず日本語のラベルがある（無いとイベント名が画面に出る）", () => {
+  for (const name of MILESTONES) {
+    const label = MILESTONE_LABEL[name];
+    assert.ok(label, `🔴 ${name} のラベルが無い。開発者の語がそのまま画面に出る`);
+    assert.ok(
+      !/[.a-z_]{4,}/.test(label),
+      `🔴 ${name} のラベルがイベント名のまま（${label}）`,
+    );
+  }
+});
+
+test("🔴 2026-09-23 に足した 4 つが集計に出る（送っているのに出ない形を防ぐ）", () => {
+  const added = [
+    "calendar.opened",
+    "concierge.asked",
+    "concierge.journey_picked",
+    "concierge.limits_opened",
+  ];
+  const u = usageFrom(added.map((name) => row({ name })));
+  const byName = Object.fromEntries(u.milestones.map((m) => [m.name, m.sessions]));
+  for (const name of added) {
+    assert.equal(byName[name], 1, `🔴 ${name} が MILESTONES に無く、黙って捨てられている`);
+  }
 });
 
 test("日次は日付順（新しい順に来た行でも並べ直す）", () => {

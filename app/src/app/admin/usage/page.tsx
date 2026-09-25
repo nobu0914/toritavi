@@ -3,23 +3,12 @@ import { headers } from "next/headers";
 import { requireAdmin } from "@/lib/admin-auth";
 import { recordAuditLog } from "@/lib/admin-audit";
 import { createServiceClient } from "@/lib/supabase-service";
-import { fetchUsage, MAX_ROWS } from "@/lib/admin-usage";
+import { fetchUsage, MAX_ROWS, MILESTONE_LABEL } from "@/lib/admin-usage";
 import BarChart from "@/components/admin/BarChart";
 
 export const dynamic = "force-dynamic";
 
 const PERIODS = [7, 30, 90];
-
-/** 節目の日本語。**画面に出すのはこれ**（イベント名は開発者の語）。 */
-const MILESTONE_LABEL: Record<string, string> = {
-  "signup.started": "登録を始めた",
-  "signup.completed": "登録できた",
-  "scan.started": "読み取りを押した",
-  "scan.succeeded": "読み取れた",
-  "journey.created": "旅程ができた",
-  "paywall.shown": "購入画面を見た",
-  "purchase.completed": "購入した",
-};
 
 const num = (n: number) => n.toLocaleString("ja-JP");
 /** 🔴 **null は「—」。0 と書かない。** */
