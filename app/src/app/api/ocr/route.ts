@@ -250,6 +250,7 @@ export async function POST(request: NextRequest) {
       images?: string[];
       text?: string;
       lang?: string;
+      features?: unknown;
     };
 
     requestId = typeof body.requestId === "string" ? body.requestId.trim() : "";
@@ -516,7 +517,12 @@ export async function POST(request: NextRequest) {
       //    予約は 1 件ぶんしか取っていないので、実費が見積りを超える。
       maxRetries: 0,
     });
-    const system = buildSystemPrompt(outputLang, jstToday());
+    // 🔴 **合図を送った版だけ**に指示を足す（`ocr-prompt.ts` の
+    //    `bookingService`）。送らない版（公開中の 1.3.1）の指示文は変わらない。
+    const features = Array.isArray(body.features) ? body.features : [];
+    const system = buildSystemPrompt(outputLang, jstToday(), {
+      bookingService: features.includes("booking_service"),
+    });
     const content = buildContent(files, text);
 
     // --- 🔴 実際の入力トークンを数える（見積りは上界ではない）---

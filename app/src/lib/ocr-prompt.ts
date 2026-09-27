@@ -26,8 +26,23 @@ export const OUTPUT_LANGS: Record<string, string> = {
  * モデルには今日が分からないので**計算できない指示**で、実際に「4月22日」
  * しか書かれていない予約確認メールに `2025-04-22` という**過去の年**を入れ、
  * inferred も立てずに返した（ベンチ T_09 で検出）。
+ *
+ * [opts.bookingService] は**列車の予約サービス名（スマートEX・えきねっと等）を
+ * variable に残す**指示を足す（2026-09-27）。アプリの「交通系 IC カードを
+ * 持っていく」の手がかりで、これが無いと読み取りがサービス名を捨て、
+ * **案内が一度も出ない**（実データで確認）。
+ *
+ * 🔴 **アプリが `features: ["booking_service"]` を送ったときだけ。**
+ *    公開中の版（1.3.1）は送らないので、**指示文は 1 文字も変わらない**
+ *    ＝既存の利用者の読み取り結果は変わらない（`ocr-prompt-booking-service.test.ts`）。
  */
-export const buildSystemPrompt = (outputLang: string, today: string) => `あなたは旅行・予約文書の情報抽出専門家です。
+export type SystemPromptOptions = { bookingService?: boolean };
+
+export const buildSystemPrompt = (
+  outputLang: string,
+  today: string,
+  opts: SystemPromptOptions = {},
+) => `あなたは旅行・予約文書の情報抽出専門家です。
 入力（画像・PDF・**貼り付けられたテキスト**のいずれか）から予約情報を読み取り、
 以下のJSON形式で返してください。どの入力形式でも規則は同じです。
 
@@ -116,7 +131,7 @@ ${buildOcrRulesPrompt()}
 - 予約サイト・代理店・計測用の長い URL は入れない（予約詳細ページへの
   ディープリンク、click. や track. で始まるもの等）。**施設・運行会社自身の
   サイト**だけ。判別できなければ返さない。
-
+${opts.bookingService ? bookingServiceSection(outputLang) : ""}
 ## 日付・時刻の正規化
 - 出力は必ず YYYY-MM-DD と HH:MM（24時間制）に直す。"10:30 PM" → "22:30"。
 - 月が語で書かれていれば、それに従う（"15 APR 2026" / "Apr 15, 2026" / "2026年4月15日"）。
@@ -156,4 +171,20 @@ ${buildOcrRulesPrompt()}
 ## 最終規則
 - 読み取れない固定項目はnullを返す（推測しない）
 - JSONのみ返す（説明文不要）
+`;
+
+/**
+ * 列車の予約サービス名を残す指示（[SystemPromptOptions.bookingService]）。
+ *
+ * 🔴 **書いてあるものを写すだけ。** 運行会社や列車名から推測させない ——
+ *    アプリはこの値で「IC カードで改札を通る」と案内する。紙のきっぷの人に
+ *    推測でサービス名を付けると、**誤った乗り方を教える**ことになる。
+ */
+const bookingServiceSection = (outputLang: string) => `
+## 列車の予約サービス
+- 列車の書類に**予約に使ったサービス名**が書かれていたら、その列車の variable に入れる
+  （label は「予約サービス」に当たる語を **${outputLang}** で。value は書類の表記のまま）。
+  例: スマートEX、EX予約、エクスプレス予約、えきねっと、チケットレス、eチケット
+- 往復など、同じ書類の複数の列車に当てはまるなら、**それぞれの列車に入れる**。
+- **書いてあるものを写すだけ。** 運行会社・列車名・区間から推測しない。書類に無ければ返さない。
 `;
