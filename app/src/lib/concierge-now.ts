@@ -71,3 +71,18 @@ export function buildNowBlock(
 - 🔴 **日付を利用者に尋ね返さないこと。** ここに書いてあります
 `;
 }
+
+/**
+ * YYYY-MM-DD の曜日（日〜土）。読めない値は null。
+ *
+ * 🔴 **曜日は AI に計算させない**（2026-09-28）。旅程の日付だけを渡していたところ、
+ *    17 問の回答のうち 6 か所で曜日を誤った（2026-04-18（土）を「金」「日」、
+ *    2026-11-14（土）を「木」など）。**こちらで計算して、日付の横に渡す。**
+ *    `buildNowBlock` と同じく、確定した Y-M-D から UTC で引く（ゾーンに依らない）。
+ */
+export function weekdayJa(date: string | null | undefined): string | null {
+  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+  const t = new Date(`${date}T00:00:00Z`);
+  if (Number.isNaN(t.getTime())) return null;
+  return WEEKDAY_JA[t.getUTCDay()];
+}

@@ -45,6 +45,7 @@
  * 畳んだぶんは選び直せば戻るので、利便性は落ちない。
  */
 
+import { weekdayJa } from "./concierge-now";
 import { maskJourney, type SafeJourney } from "./pii-mask";
 import type { Journey } from "./types";
 
@@ -221,6 +222,8 @@ function buildPromptBlock(
     "注意:",
     "- 確認番号 / マイレージ / 電話番号は末尾のみ可視。全桁を把握している前提で回答しないこと。",
     "- メール / 決済情報 / パスポートは送信されていません。必要なら「お手元の控えでご確認ください」と案内。",
+    // 🔴 曜日は AI に計算させない（誤りが多い）。`weekdayJa` の注記。
+    "- **曜日は、日付の横の `…Weekday` 欄の値をそのまま使うこと。自分で計算しない。** 欄が無い日付の曜日は書かない。",
     // 🔴 ここが今回の肝。詳細を省いた Journey を「無い」と言わせない。
     "- **下に挙がっている Journey は、すべて実在するものです。**",
     "  「登録が見当たりません」と答えてよいのは、下のどのリストにも無い場合だけです。",
@@ -259,7 +262,9 @@ function summarizeJourney(j: SafeJourney) {
     id: j.id,
     title: j.title,
     startDate: j.startDate,
+    startWeekday: weekdayJa(j.startDate),
     endDate: j.endDate,
+    endWeekday: weekdayJa(j.endDate),
     memo: j.memo ?? null,
     stepCount: j.steps.length,
     detailOmitted: true,
@@ -272,14 +277,18 @@ function compactJourney(j: SafeJourney) {
     id: j.id,
     title: j.title,
     startDate: j.startDate,
+    startWeekday: weekdayJa(j.startDate),
     endDate: j.endDate,
+    endWeekday: weekdayJa(j.endDate),
     memo: j.memo ?? null,
     steps: j.steps.map((s) => ({
       id: s.id,
       category: s.category,
       title: s.title,
       date: s.date ?? null,
+      dateWeekday: weekdayJa(s.date),
       endDate: s.endDate ?? null,
+      endDateWeekday: weekdayJa(s.endDate),
       time: s.time,
       endTime: s.endTime ?? null,
       from: s.from ?? null,
