@@ -39,6 +39,12 @@ export type Step = {
   source?: StepSource;
   sourceImageUrl?: string;
   sourceImageUrls?: string[];
+  /**
+   * 書類の原文（端末で抽出した文字。2026-09-28・B-2）。
+   * コンシェルジュが「書類に何と書いてあるか」を答えるためだけに使う。
+   * 画像と同じ保持期限で消える（`purge-scan-images`）。
+   */
+  sourceText?: string;
   status: StepStatus;
   information: Information[];
   inferred?: string[];      // 推定値のフィールド名リスト

@@ -568,6 +568,7 @@ function rowToStep(row: any): Step {
     inferred: row.inferred ?? undefined,
     needsReview: row.needs_review ?? undefined,
     information: row.information ?? [],
+    sourceText: row.source_text ?? undefined,
   };
 }
 

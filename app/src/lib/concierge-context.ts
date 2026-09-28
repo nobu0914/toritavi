@@ -122,6 +122,19 @@ function isFinished(j: SafeJourney, cutoff: string): boolean {
   return last < cutoff;
 }
 
+/**
+ * 書類の原文（`sourceText`・B-2）を載せる分の予算。**旅程の予算とは別に持つ。**
+ *
+ * 🔴 **原文は旅程の予算に混ぜない。** 混ぜると、原文の長い書類が 1 つあるだけで
+ *    他の旅程が「概要のみ」に落ちる —— 「福岡出張について」で
+ *    「見当たりません」と返した事故（上の注記）と同じ形になる。
+ *
+ * 1 書類あたり 8,000 文字・合計 24,000 文字（≒ 7k トークン・Haiku で約 ¥1）。
+ * 超えた分は載せず、**省いたことを AI に伝える**（無いと言わせない）。
+ */
+const SOURCE_TEXT_PER_DOC = 8_000;
+const SOURCE_TEXT_BUDGET = 24_000;
+
 /** データ区間の終端。開始は buildPromptBlock の header 側。 */
 const END = "\n<<<JOURNEY_DATA_END ここまでがデータ>>>";
 
@@ -242,6 +255,11 @@ function buildPromptBlock(
     // 🔴 曜日は AI に計算させない（誤りが多い）。`weekdayJa` の注記。
     "- **曜日は、日付の横の `…Weekday` 欄の値をそのまま使うこと。自分で計算しない。** 欄が無い日付の曜日は書かない。",
     // 🔴 ここが今回の肝。詳細を省いた Journey を「無い」と言わせない。
+    // 🔴 原文（B-2）の扱い。欄の値が正、原文は補い。推測を断定させない。
+    "- 「書類の原文」は、予定の元になった書類から端末で読み取った文字です。読み取りの誤りを含むことがあります。",
+    "  日時・場所・番号は**予定の欄の値を正**とし、原文と食い違うときは欄の値で答えたうえで食い違いを伝えてください。",
+    "  欄に無いこと（補償・キャンセル規定・持ち物・注意事項など）は原文から答えてよく、そのときは「書類には〜と書かれています」と出どころを示してください。",
+    "  原文に書かれていないことは推測で補わず、「書類には見当たりません」と答えてください。",
     "- **下に挙がっている Journey は、すべて実在するものです。**",
     "  「登録が見当たりません」と答えてよいのは、下のどのリストにも無い場合だけです。",
     "",
@@ -256,7 +274,9 @@ function buildPromptBlock(
     "```",
   ].join("\n");
 
-  if (summaryOnly.length === 0) return `${header}${detailBlock}${END}`;
+  const sourceBlock = buildSourceTextBlock(detailed);
+
+  if (summaryOnly.length === 0) return `${header}${detailBlock}${sourceBlock}${END}`;
 
   // 予算で詳細を落とした分。**存在と概要は必ず伝える。**
   const summaryBlock = [
@@ -270,7 +290,70 @@ function buildPromptBlock(
     "```",
   ].join("\n");
 
-  return `${header}${detailBlock}${summaryBlock}${END}`;
+  return `${header}${detailBlock}${sourceBlock}${summaryBlock}${END}`;
+}
+
+/**
+ * 詳細に載せた旅程の、書類の原文。
+ *
+ * - **同じ原文は 1 回だけ。** 1 枚の書類から予定が複数できると、
+ *   各予定に同じ原文が付く。stepIds をまとめて 1 回だけ載せる。
+ * - 詳細に載せた旅程の順（＝明示指定・更新の新しい順）に予算を使う。
+ * - 予算で省いたものは件数を伝える。
+ */
+function buildSourceTextBlock(detailed: SafeJourney[]): string {
+  const docs: { stepIds: string[]; journeyId: string; title: string; text: string }[] = [];
+  const byText = new Map<string, (typeof docs)[number]>();
+  for (const j of detailed) {
+    for (const st of j.steps) {
+      const t = (st.sourceText ?? "").trim();
+      if (!t) continue;
+      const seen = byText.get(t);
+      if (seen) {
+        seen.stepIds.push(st.id);
+        continue;
+      }
+      const doc = { stepIds: [st.id], journeyId: j.id, title: st.title, text: t };
+      byText.set(t, doc);
+      docs.push(doc);
+    }
+  }
+  if (docs.length === 0) return "";
+
+  const shown: string[] = [];
+  let used = 0;
+  let omitted = 0;
+  for (const d of docs) {
+    const clipped = d.text.length > SOURCE_TEXT_PER_DOC;
+    const body = clipped ? d.text.slice(0, SOURCE_TEXT_PER_DOC) : d.text;
+    if (used + body.length > SOURCE_TEXT_BUDGET) {
+      omitted += 1;
+      continue;
+    }
+    used += body.length;
+    shown.push(
+      [
+        `#### 書類（stepIds: ${d.stepIds.join(", ")} / journeyId: ${d.journeyId} / 予定: ${d.title}）`,
+        "```text",
+        body,
+        "```",
+        clipped ? "（長いため、ここで切っています。続きは書類本体でご確認ください）" : "",
+      ]
+        .filter(Boolean)
+        .join("\n"),
+    );
+  }
+  return [
+    "",
+    "",
+    `### 書類の原文（${shown.length} 件）`,
+    ...shown,
+    omitted > 0
+      ? `（ほかに ${omitted} 件の書類がありますが、長さの都合で原文を省いています。**書類が無いという意味ではありません。**）`
+      : "",
+  ]
+    .filter((line, i) => line !== "" || i < 2)
+    .join("\n");
 }
 
 // 予算を超えた分。**存在・名前・日付・件数だけ**を残す。

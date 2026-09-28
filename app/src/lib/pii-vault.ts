@@ -176,6 +176,8 @@ function protectStep(
     confNumber: vault.token("CONF", s.confNumber) ?? undefined,
     memo: text(s.memo),
     detail: text(s.detail),
+    // 書類の原文も同じ扱い: 番号は記号に、メール・カード・旅券は落とす。
+    sourceText: text(s.sourceText),
     information: (s.information ?? []).map((info) => {
       const k = kindOfLabel(info.label);
       // ① 答えに要らない機微は送らない（従来どおり）。
