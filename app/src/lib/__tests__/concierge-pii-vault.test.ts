@@ -149,3 +149,12 @@ test("🔴 route: 答えを戻し、履歴を隠し直している", () => {
   assert.match(src, /text: hide\(m\.content\)/, "過去の答えを隠していない");
   assert.doesNotMatch(src, /マスクされた状態で届きます/, "古い「末尾だけ」の指示が残っている");
 });
+
+test("🔴 メールを聞かれて「アプリに保存していない」と言わせない（保存はされている）", () => {
+  const ctx = build(journey([{ confNumber: CONF }]));
+  assert.match(ctx.promptBlock, /この会話には渡していません/);
+  assert.match(ctx.promptBlock, /「アプリに保存していない」とは言わない/);
+  assert.doesNotMatch(ctx.promptBlock, /パスポートは送信されていません/);
+  const src = readFileSync(new URL("../../app/api/concierge/route.ts", import.meta.url), "utf8");
+  assert.match(src, /「アプリに保存していない」とは言わない/);
+});
