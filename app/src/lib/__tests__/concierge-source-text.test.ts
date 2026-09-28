@@ -101,3 +101,25 @@ test("route: 行の source_text を読んでいる", async () => {
   const src = readFileSync(new URL("../../app/api/concierge/route.ts", import.meta.url), "utf8");
   assert.match(src, /sourceText: row\.source_text \?\? undefined/);
 });
+
+test("🔴 原文にだけ書かれた電話番号も記号になり、答えで戻る（2026-09-28 に実機で漏れた形）", () => {
+  const text = "予約番号：RC-7781204\nロードサービス 0120-555-0199（24時間）\n新千歳空港店 0123-45-6789\n携帯 09012345678\nTel +81 3 1234 5678";
+  const ctx = buildConciergeContext({
+    allJourneys: [journey("j1", [{ confNumber: "RC-7781204", sourceText: text }])],
+    now: NOW,
+  });
+  for (const v of ["RC-7781204", "0120-555-0199", "0123-45-6789", "09012345678", "+81 3 1234 5678"]) {
+    assert.ok(!ctx.promptBlock.includes(v), `本物が載っている: ${v}`);
+  }
+  const r = ctx.vault.reveal("ロードサービスは [TEL_1]、店舗は [TEL_2] です");
+  assert.equal(r.text, "ロードサービスは 0120-555-0199、店舗は 0123-45-6789 です");
+});
+
+test("日付・時刻・金額は電話番号として拾わない", () => {
+  const text = "貸出 2026-11-14 10:00 / 返却 2026-11-16 17:00 / 精算 1km 20円 / 免責 50000円";
+  const ctx = buildConciergeContext({ allJourneys: [journey("j1", [{ sourceText: text }])], now: NOW });
+  assert.match(ctx.promptBlock, /2026-11-14 10:00/);
+  assert.match(ctx.promptBlock, /50000円/);
+  // 指示文の例（`[TEL_1]`）と混ざらないよう、金庫に登録された数で見る
+  assert.equal(ctx.vault.size, 0, "日付や金額を電話番号として拾った");
+});

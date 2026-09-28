@@ -135,6 +135,27 @@ function kindOfLabel(label: string): PiiKind | "EMAIL" | null {
   return null;
 }
 
+/* ---- 自由文の中の電話番号 ---- */
+
+/**
+ * 自由文（書類の原文・メモ・詳細）に**だけ**書かれた電話番号。
+ *
+ * 🔴 **欄に登録されていない番号は、金庫が知らないので隠れない。**
+ *    2026-09-28 にレンタカーの予約書で実際にそうなった —— 予約番号は
+ *    `[CONF_1]` になったのに、原文にだけ書かれた「ロードサービス
+ *    0120-555-0199」「店舗 0123-45-6789」がそのまま AI へ渡っていた。
+ *
+ * **形で拾う。** 取り違えても害は無い —— 記号は答えの中で本物に戻るので、
+ * 電話番号でないものを拾っても利用者の画面は変わらない。
+ * ただし**日付（2026-11-14）は拾わない**ように、先頭を 0 か + に限る。
+ */
+const PHONE_IN_TEXT = /(?<![0-9A-Za-z+])(?:\+\d{1,3}[- ]?\d{1,4}[- ]\d{1,4}[- ]\d{3,4}|0\d{1,4}-\d{1,4}-\d{3,4}|0\d{9,10})(?![0-9A-Za-z])/g;
+
+function registerPhonesIn(text: string | null | undefined, vault: PiiVault): void {
+  if (!text) return;
+  for (const m of String(text).matchAll(PHONE_IN_TEXT)) vault.token("TEL", m[0]);
+}
+
 /* ---- 旅程単位 ---- */
 
 /**
@@ -151,6 +172,17 @@ export function protectJourneys(journeys: Journey[], vault: PiiVault): SafeJourn
       for (const info of s.information ?? []) {
         const k = kindOfLabel(info.label);
         if (k && k !== "EMAIL") vault.token(k, info.value);
+      }
+    }
+  }
+  // 欄の番号を先に登録してから、自由文にだけある電話番号を拾う
+  // （欄と同じ番号なら、欄の種類の記号のまま使われる）。
+  for (const j of journeys) {
+    registerPhonesIn(j.memo, vault);
+    for (const s of j.steps) {
+      for (const t of [s.memo, s.detail, s.sourceText]) registerPhonesIn(t, vault);
+      for (const info of s.information ?? []) {
+        if (!kindOfLabel(info.label)) registerPhonesIn(info.value, vault);
       }
     }
   }
