@@ -89,8 +89,11 @@ test("🔴 URL を落としたあとに掛ける（順序）", () => {
 
 test("🔴 保存する文も落としたあとのものにする（履歴から復活させない）", () => {
   const src = code(ROUTE);
+  // 2026-09-28: 落としたあとに番号の記号を戻す段が挟まった（`pii-vault.ts`）。
+  //    鎖は 落とす → 戻す → 保存。**戻す元が落としたあとの文であること**を見る。
   assert.ok(
-    /const assistant = \{ \.\.\.assistantRaw, content: plain\.text \}/.test(src),
+    /const revealed = context\.vault\.reveal\(plain\.text\)/.test(src) &&
+      /content: revealed\.text,/.test(src),
     "🔴 assistant の中身が落とす前の文になっている",
   );
 });

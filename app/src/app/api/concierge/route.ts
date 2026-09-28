@@ -75,7 +75,7 @@ const SYSTEM_PROMPT_HEAD = `あなたは JUNROS の旅程アシスタント「�
 ツールを呼ぶ際は content に短い日本語の説明（1 文）も添えて、ユーザーが確認しやすい形にする。
 
 ## PII 規則
-- 確認番号やマイレージ番号はマスクされた状態で届きます。全桁を知っている前提で答えない
+- 確認番号・電話番号・会員番号は [CONF_1] のような記号で届きます。聞かれたら記号をそのまま書く（画面では本物の番号に置き換わる）。記号を作ったり変えたりしない
 - メール / 決済情報は送信されていません。必要なら「お手元の控えで確認してください」と案内
 
 ## 答えてよい範囲（ここから外れる依頼は断る）
@@ -375,7 +375,10 @@ export async function POST(request: NextRequest) {
     .order("created_at", { ascending: true })
     .limit(20);
 
-  const messages = buildAnthropicMessages(history ?? []);
+  // 🔴 **履歴も隠し直す。** 保存しているのは本物の値（画面に出したもの）。
+  //    そのまま送ると、前の答えに戻した番号が AI へ渡る。
+  //    利用者が自分で打った番号も、登録済みの値と一致すれば記号になる。
+  const messages = buildAnthropicMessages(history ?? [], (t) => context.vault.hide(t));
 
   let response;
   try {
@@ -438,7 +441,20 @@ export async function POST(request: NextRequest) {
     // **本来 0 に近いはず。** 増えていたらプロンプトの指示が効いていない信号。
     console.warn(`[concierge] stripped ${plain.removed} markdown mark(s)`);
   }
-  const assistant = { ...assistantRaw, content: plain.text };
+  // 🔴 **記号を本物に戻す**（`pii-vault.ts`）。**必ず最後。** 戻した番号を
+  //    URL や Markdown の処理に通さない。ツールの入力（予定を足す提案）も戻す。
+  const revealed = context.vault.reveal(plain.text);
+  if (revealed.unknown > 0) {
+    // AI が存在しない記号を作った。番号らしいものは出さず、画面で確認を促す文に替えてある。
+    console.warn(`[concierge] ${revealed.unknown} unknown pii token(s)`);
+  }
+  const assistant = {
+    ...assistantRaw,
+    content: revealed.text,
+    toolUse: assistantRaw.toolUse
+      ? { ...assistantRaw.toolUse, input: context.vault.revealDeep(assistantRaw.toolUse.input) }
+      : undefined,
+  };
 
   /* ---- 9) Save assistant message ---- */
   // 🔴 ここは**失敗しても要求は通す。** AI は既に呼ばれて実費が出ており、
@@ -562,17 +578,20 @@ type MessageRow = {
   tool_result: Record<string, unknown> | null;
 };
 
-function buildAnthropicMessages(history: MessageRow[]): Anthropic.MessageParam[] {
+function buildAnthropicMessages(
+  history: MessageRow[],
+  hide: (text: string) => string = (t) => t,
+): Anthropic.MessageParam[] {
   const out: Anthropic.MessageParam[] = [];
   for (const m of history) {
     if (m.role === "user" && m.content) {
-      out.push({ role: "user", content: m.content });
+      out.push({ role: "user", content: hide(m.content) });
     } else if (m.role === "assistant") {
       // 過去の assistant ターンはテキストのみで再構成する。tool_use ブロックを
       // 含めると、対応する tool_result（クライアント確認はローカルのみで未永続化）が
       // 無いため Anthropic API が 400 を返し、提案後は会話を継続できなくなる。
       const blocks: Anthropic.ContentBlockParam[] = [];
-      if (m.content) blocks.push({ type: "text", text: m.content });
+      if (m.content) blocks.push({ type: "text", text: hide(m.content) });
       if (blocks.length > 0) out.push({ role: "assistant", content: blocks });
     }
   }
