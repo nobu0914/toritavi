@@ -26,6 +26,12 @@ import { stripDisallowedUrls } from "@/lib/url-allowlist";
 import { stripMarkdown } from "@/lib/strip-markdown";
 import { decideAiConsentFromServer } from "@/lib/ai-consent";
 import { buildConciergeContext } from "@/lib/concierge-context";
+import {
+  PLACE_SUGGEST_PROMPT,
+  SUGGEST_PLACES_TOOL,
+  sanitizePlaceSuggestion,
+  wantsPlaceSuggest,
+} from "@/lib/concierge-place-suggest";
 import { buildNowBlock } from "@/lib/concierge-now";
 import type { Journey, Step } from "@/lib/types";
 import { ALLOWED_ORIGINS } from "@/lib/allowed-origins";
@@ -173,6 +179,8 @@ export async function POST(request: NextRequest) {
     threadId?: string;
     text: string;
     contextJourneyIds?: string[];
+    /** アプリが対応している追加機能（例: "place_suggest"）。古い版は送らない。 */
+    features?: unknown;
   };
   let body: Body;
   try {
@@ -379,6 +387,7 @@ export async function POST(request: NextRequest) {
   //    そのまま送ると、前の答えに戻した番号が AI へ渡る。
   //    利用者が自分で打った番号も、登録済みの値と一致すれば記号になる。
   const messages = buildAnthropicMessages(history ?? [], (t) => context.vault.hide(t));
+  const placeSuggest = wantsPlaceSuggest(body.features);
 
   let response;
   try {
@@ -390,9 +399,11 @@ export async function POST(request: NextRequest) {
         // 🔴 **いまが何日かを渡す**（2026-09-23）。これが無いと
         //    「今日の予定は？」に **本日の日付が不明** と返る（実機で踏んだ）。
         buildNowBlock() +
+        // 🔴 場所の提案は、合図を送った版にだけ足す（公開中の版は変わらない）。
+        (placeSuggest ? PLACE_SUGGEST_PROMPT : "") +
         SYSTEM_PROMPT_DATA_NOTICE +
         "\n" + context.promptBlock,
-      tools: [ADD_STEP_TOOL],
+      tools: placeSuggest ? [ADD_STEP_TOOL, SUGGEST_PLACES_TOOL] : [ADD_STEP_TOOL],
       messages,
     });
   } catch (err) {
@@ -448,12 +459,21 @@ export async function POST(request: NextRequest) {
     // AI が存在しない記号を作った。番号らしいものは出さず、画面で確認を促す文に替えてある。
     console.warn(`[concierge] ${revealed.unknown} unknown pii token(s)`);
   }
+  let toolUse = assistantRaw.toolUse
+    ? { ...assistantRaw.toolUse, input: context.vault.revealDeep(assistantRaw.toolUse.input) }
+    : undefined;
+  // 場所の提案は**入力をそのまま信じない**（件数・長さ・旅程 id を締める）。
+  // 合図の無い版には、このツールの結果を返さない。
+  if (toolUse?.name === SUGGEST_PLACES_TOOL.name) {
+    const clean = placeSuggest
+      ? sanitizePlaceSuggestion(toolUse.input, context.includedJourneyIds)
+      : null;
+    toolUse = clean ? { ...toolUse, input: clean as unknown as Record<string, unknown> } : undefined;
+  }
   const assistant = {
     ...assistantRaw,
     content: revealed.text,
-    toolUse: assistantRaw.toolUse
-      ? { ...assistantRaw.toolUse, input: context.vault.revealDeep(assistantRaw.toolUse.input) }
-      : undefined,
+    toolUse,
   };
 
   /* ---- 9) Save assistant message ---- */
