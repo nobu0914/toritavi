@@ -79,3 +79,13 @@ test("店名に確信が無いときは種類で返させる（店名を作ら�
   assert.equal(out.places[0].isGenre, true);
   assert.equal(out.places[1].isGenre, false, "真偽値でないものを種類扱いにした");
 });
+
+test("通称・英語名（alt_names）は 3 件まで・空と名前と同じものは落とす", () => {
+  const out = sanitizePlaceSuggestion(
+    { area: "札幌", places: [{ name: "北海道庁旧本庁舎", kind: "観光", reason: "r", alt_names: ["赤れんが庁舎", "", "北海道庁旧本庁舎", "Former Hokkaido Government Office", "a", "b"] }] },
+    [],
+  );
+  assert.ok(out);
+  assert.deepEqual(out.places[0].altNames, ["赤れんが庁舎", "Former Hokkaido Government Office", "a"]);
+  assert.match(PLACE_SUGGEST_PROMPT, /alt_names/);
+});

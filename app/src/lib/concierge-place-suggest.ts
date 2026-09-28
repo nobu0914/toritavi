@@ -57,6 +57,12 @@ export const SUGGEST_PLACES_TOOL: Anthropic.Tool = {
               type: "string",
               description: "正式な施設名（地図で検索できる名前）。is_genre が true なら料理や店の種類（例: スープカレー）",
             },
+            alt_names: {
+              type: "array",
+              maxItems: 3,
+              items: { type: "string" },
+              description: "通称・別名・英語名（例: 北海道庁旧本庁舎 → 赤れんが庁舎, Former Hokkaido Government Office）。地図は通称や英語で登録されていることがある",
+            },
             is_genre: {
               type: "boolean",
               description: "true なら name は店名ではなく種類。アプリが地図で近くの実在の店を探す",
@@ -88,6 +94,7 @@ export const PLACE_SUGGEST_PROMPT = `
 - 本文は 1〜2 文の前置きだけ（例: 「15 日の午後は予定が空いています。ホテルから回れる場所です。」）
 - 旅程の空き時間・泊まる場所・移動手段を踏まえて、無理なく回れる場所を最大 ${MAX_PLACES} 件
 - name は地図で検索できる**正式な施設名**。area は泊まる場所や訪れる街の地域名
+- 通称や英語名があれば alt_names に入れる（地図は「赤れんが庁舎」のように通称で登録されていることがある）
 - **店名に確信が無いとき（特に食事）は、店名を作らず is_genre: true で種類を返す**（例: name「スープカレー」）。アプリが地図で近くの実在の店を探す。「例えば〜」「〜周辺のレストラン」のような名前にしない
 - 営業時間・料金・混雑は書かない（変わるため。アプリが「公式サイトで確認」と添える）
 - 旅程の行き先が分からないときは、ツールを使わずにどの街かを尋ねる
@@ -98,7 +105,7 @@ export type PlaceSuggestion = {
   date: string | null;
   area: string;
   /** isGenre: name は店名ではなく種類（地図で近くの店を探す） */
-  places: { name: string; kind: PlaceKind; reason: string; isGenre: boolean }[];
+  places: { name: string; altNames: string[]; kind: PlaceKind; reason: string; isGenre: boolean }[];
 };
 
 function clip(v: unknown, max: number): string {
@@ -124,7 +131,11 @@ export function sanitizePlaceSuggestion(
     const name = clip(o.name, 60);
     if (!name) continue;
     const kind = (KINDS as readonly string[]).includes(o.kind as string) ? (o.kind as PlaceKind) : "その他";
-    places.push({ name, kind, reason: clip(o.reason, 120), isGenre: o.is_genre === true });
+    const altNames = (Array.isArray(o.alt_names) ? o.alt_names : [])
+      .map((a) => clip(a, 60))
+      .filter((a) => a && a !== name)
+      .slice(0, 3);
+    places.push({ name, altNames, kind, reason: clip(o.reason, 120), isGenre: o.is_genre === true });
     if (places.length >= MAX_PLACES) break;
   }
   if (places.length === 0) return null;
