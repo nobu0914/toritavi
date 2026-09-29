@@ -68,6 +68,16 @@ export const SUGGEST_PLACES_TOOL: Anthropic.Tool = {
               description: "true なら name は店名ではなく種類。アプリが地図で近くの実在の店を探す",
             },
             kind: { type: "string", enum: [...KINDS] },
+            catch: {
+              type: "string",
+              description: "カードに出す短い見出し（24 字まで・例: 札幌の象徴、130年続く時計塔）。営業時間・料金・評価・「必ず」「一番」は書かない",
+            },
+            tags: {
+              type: "array",
+              maxItems: 3,
+              items: { type: "string" },
+              description: "短い目安のタグ（各 10 字まで・例: 見学 30分目安、屋内、雨でも可）。所要時間は必ず「目安」と書く。距離は書かない（アプリが地図で測る）",
+            },
             reason: { type: "string", description: "なぜ勧めるか（1 文・営業時間や料金は書かない）" },
           },
           required: ["name", "kind", "reason"],
@@ -94,6 +104,7 @@ export const PLACE_SUGGEST_PROMPT = `
 - 本文は 1〜2 文の前置きだけ（例: 「15 日の午後は予定が空いています。ホテルから回れる場所です。」）
 - 旅程の空き時間・泊まる場所・移動手段を踏まえて、無理なく回れる場所を最大 ${MAX_PLACES} 件
 - name は地図で検索できる**正式な施設名**。area は泊まる場所や訪れる街の地域名
+- catch はカードの見出し（24 字まで）。tags は目安（所要時間は「〜目安」・屋内/屋外・雨でも可 など最大 3 つ）。**距離・営業時間・料金・評価は書かない**（距離はアプリが地図で測る）
 - 通称や英語名があれば alt_names に入れる（地図は「赤れんが庁舎」のように通称で登録されていることがある）
 - **店名に確信が無いとき（特に食事）は、店名を作らず is_genre: true で種類を返す**（例: name「スープカレー」）。アプリが地図で近くの実在の店を探す。「例えば〜」「〜周辺のレストラン」のような名前にしない
 - 営業時間・料金・混雑は書かない（変わるため。アプリが「公式サイトで確認」と添える）
@@ -105,7 +116,17 @@ export type PlaceSuggestion = {
   date: string | null;
   area: string;
   /** isGenre: name は店名ではなく種類（地図で近くの店を探す） */
-  places: { name: string; altNames: string[]; kind: PlaceKind; reason: string; isGenre: boolean }[];
+  places: {
+    name: string;
+    altNames: string[];
+    kind: PlaceKind;
+    reason: string;
+    isGenre: boolean;
+    /** カードの見出し（AI が書く・事実を言い切らない） */
+    catchCopy: string;
+    /** 目安のタグ（最大 3） */
+    tags: string[];
+  }[];
 };
 
 function clip(v: unknown, max: number): string {
@@ -135,7 +156,22 @@ export function sanitizePlaceSuggestion(
       .map((a) => clip(a, 60))
       .filter((a) => a && a !== name)
       .slice(0, 3);
-    places.push({ name, altNames, kind, reason: clip(o.reason, 120), isGenre: o.is_genre === true });
+    // 🔴 タグに距離・時間の断定が混ざったら落とす（距離はアプリが測る。
+    //    所要時間は「目安」付きだけ通す）。
+    const tags = (Array.isArray(o.tags) ? o.tags : [])
+      .map((t) => clip(t, 10))
+      .filter((t) => t && !/徒歩|車で|km|ｋｍ|メートル|分で着/.test(t))
+      .filter((t) => !/\d+\s*(分|時間)/.test(t) || /目安/.test(t))
+      .slice(0, 3);
+    places.push({
+      name,
+      altNames,
+      kind,
+      reason: clip(o.reason, 120),
+      isGenre: o.is_genre === true,
+      catchCopy: clip(o.catch, 24),
+      tags,
+    });
     if (places.length >= MAX_PLACES) break;
   }
   if (places.length === 0) return null;

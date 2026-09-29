@@ -89,3 +89,21 @@ test("通称・英語名（alt_names）は 3 件まで・空と名前と同じ�
   assert.deepEqual(out.places[0].altNames, ["赤れんが庁舎", "Former Hokkaido Government Office", "a"]);
   assert.match(PLACE_SUGGEST_PROMPT, /alt_names/);
 });
+
+test("見出し（catch）は 24 字まで・タグは目安だけ（距離と断定の時間は落とす）", () => {
+  const out = sanitizePlaceSuggestion(
+    {
+      area: "札幌",
+      places: [{
+        name: "札幌市時計台", kind: "観光", reason: "r",
+        catch: "札幌の象徴、130年続く時計塔です。明治から時を刻み続けています",
+        tags: ["見学 30分目安", "徒歩5分", "所要 1時間", "屋内", "雨でも可"],
+      }],
+    },
+    [],
+  );
+  assert.ok(out);
+  assert.equal(out.places[0].catchCopy.length, 24);
+  assert.deepEqual(out.places[0].tags, ["見学 30分目安", "屋内", "雨でも可"]);
+  assert.match(PLACE_SUGGEST_PROMPT, /距離・営業時間・料金・評価は書かない/);
+});
