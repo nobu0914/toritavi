@@ -34,7 +34,11 @@
  * ずれると、アプリは「許諾済み」と思っているのにサーバは「未許諾」と数える。
  * `src/lib/__tests__/ai-consent.test.ts` が両方を読んで突き合わせる。
  */
-export const AI_CONSENT_VERSION = "2026-09-08";
+// 🔴 2026-09-30 に上げた（アプリの kAiConsentVersion と対）。許諾画面を AI相談込みの
+//    文言にしたため。**公開中の 1.3.1 の利用者は 2026-09-08 で許諾している** ——
+//    いまは観測だけ（AI_CONSENT_ENFORCE = false）なので「版が古い」とログに出るだけで
+//    止まらない。🔴 **拒否に切り替える前に**、9/08 の人が次の版で許諾し直したかを見ること。
+export const AI_CONSENT_VERSION = "2026-09-30";
 
 export type UserMetadata = Record<string, unknown> | null | undefined;
 
