@@ -118,7 +118,7 @@ ${buildOcrRulesPrompt()}
 - variable の label は **${outputLang}** で書く。
 - ただし **title / from / to / airline は原文の表記を保つ**（"Los Angeles Intl" を
   「ロサンゼルス国際空港」に訳さない）。固有名詞を訳すと、利用者が手元の原本と
-  突き合わせられなくなる。
+  突き合わせられなくなる。${readingRule(outputLang)}
 
 ## 施設・運行会社のウェブサイト
 - 書類に**施設や運行会社の URL が書かれていたら variable に入れる**
@@ -180,6 +180,27 @@ ${opts.bookingService ? bookingServiceSection(outputLang) : ""}
  *    アプリはこの値で「IC カードで改札を通る」と案内する。紙のきっぷの人に
  *    推測でサービス名を付けると、**誤った乗り方を教える**ことになる。
  */
+/**
+ * 日本語以外で使う人への「読み」の添え書き（2026-10-04・訪日客向けの改修 2）。
+ *
+ * 日本語の予約票を英語の利用者が読ませると、駅名・宿名が**漢字のまま**届き
+ * 読めなかった。原文は残し（アプリの新幹線の判定や、原本との突き合わせに要る）、
+ * 括弧で読みを添える。説明の文は利用者の言語で書く。
+ *
+ * 🔴 **日本語の利用者には空文字**（公開中の利用者のプロンプトは 1 文字も
+ *    変わらない・`ocr-prompt-reading.test.ts` が見張る）。
+ */
+const readingRule = (outputLang: string) =>
+  outputLang === OUTPUT_LANGS.ja
+    ? ""
+    : `
+- 利用者の表示言語は **${outputLang}**。title / from / to が日本語・中国語などの文字だけで
+  書かれていて ${outputLang} の利用者に読めないときは、**原文のあとに半角スペースと括弧で
+  ${outputLang} の表記を添える**（例: 「新大阪 (Shin-Osaka)」「のぞみ 21号 (Nozomi 21)」
+  「旅館 山代 (Ryokan Yamashiro)」）。**原文は消さない・置き換えない。** 読みが分からなければ添えない。
+- variable の value のうち、説明の文（座席の位置・食事・注意事項など）は **${outputLang}** で書く。
+  番号・コード・金額・日時・URL・固有名詞は原文のまま。`;
+
 const bookingServiceSection = (outputLang: string) => `
 ## 列車の予約サービス
 - 列車の書類に**予約に使ったサービス名**が書かれていたら、その列車の variable に入れる

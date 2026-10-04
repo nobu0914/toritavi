@@ -16,6 +16,7 @@ import { CONCIERGE_ENABLED } from "@/lib/concierge-flags";
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateRequest } from "@/lib/supabase-server";
 import { apiMessage, resolveLang } from "@/lib/api-messages";
+import { buildLanguageBlock } from "@/lib/concierge-language";
 import { CONCIERGE_GUARD, audienceOf } from "@/lib/ai-guard";
 import { resolvePlan } from "@/lib/plan-resolve";
 import { recordConciergeUsage } from "@/lib/ai-usage-record";
@@ -408,6 +409,8 @@ export async function POST(request: NextRequest) {
       max_tokens: MAX_TOKENS,
       system:
         SYSTEM_PROMPT_HEAD +
+        // 🔴 利用者の言語で答える（日本語なら何も足さない・2026-10-04）。
+        buildLanguageBlock(lang) +
         // 🔴 **いまが何日かを渡す**（2026-09-23）。これが無いと
         //    「今日の予定は？」に **本日の日付が不明** と返る（実機で踏んだ）。
         buildNowBlock() +
