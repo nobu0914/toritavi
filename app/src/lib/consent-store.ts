@@ -178,7 +178,8 @@ export const TERMS_VERSIONS = { ja: "2026-08-30", en: "2026-09-07" } as const;
 //      `en/junros/privacy/index.html`。どちらも push 済み＝公開中）
 //    🔴 **日付が一致しているのは偶然**（別文書を同じ日に直した）。
 //    片方が動いたときに、もう片方へ写さないこと。
-export const PRIVACY_VERSIONS = { ja: "2026-09-08", en: "2026-09-08" } as const;
+// 🔴 2026-10-05: 英語版を更新・公開（company-site の 2751654 ほか・利用者の決定）。アプリの kPrivacyVersions と対。
+export const PRIVACY_VERSIONS = { ja: "2026-09-08", en: "2026-10-05" } as const;
 
 export type LegalLocale = keyof typeof TERMS_VERSIONS;
 

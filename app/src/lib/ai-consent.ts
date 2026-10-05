@@ -38,7 +38,10 @@
 //    文言にしたため。**公開中の 1.3.1 の利用者は 2026-09-08 で許諾している** ——
 //    いまは観測だけ（AI_CONSENT_ENFORCE = false）なので「版が古い」とログに出るだけで
 //    止まらない。🔴 **拒否に切り替える前に**、9/08 の人が次の版で許諾し直したかを見ること。
-export const AI_CONSENT_VERSION = "2026-09-30";
+// 🔴 2026-10-05 に上げた（アプリの kAiConsentVersion と対・利用者の決定）。許諾画面に
+//    「会話はサーバに保存し 30 日で削除」「自分で打った文はそのまま送る」を足したため。
+//    1.3.2・1.4.0 の利用者は 2026-09-30 で許諾している —— 観測だけなので止まらない。
+export const AI_CONSENT_VERSION = "2026-10-05";
 
 export type UserMetadata = Record<string, unknown> | null | undefined;
 
