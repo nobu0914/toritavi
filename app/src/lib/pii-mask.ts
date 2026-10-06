@@ -58,8 +58,14 @@ export function maskPhoneNumber(raw: string | null | undefined): string | null {
 const EMAIL_RE = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi;
 // 16 桁のクレカ番号（スペース / ハイフンあり）
 const CC_RE = /\b(?:\d[ -]*?){13,16}\b/g;
-// パスポート風 9-10 桁 英数字
-const PASSPORT_RE = /\b[A-Z]{1,2}\d{7,9}\b/g;
+// パスポート風 9-10 桁 英数字（＋シンガポールの K1234567A 形）
+const PASSPORT_RE = /\b(?:[A-Z]{1,2}\d{7,9}|[A-Z]\d{7}[A-Z])\b/g;
+// 🔴 2026-10-06: 「passport / 旅券」の直後の番号は、形を問わず落とす。
+//    米国・英国・台湾の旅券は数字 9 桁、カナダは英字 2＋数字 6 桁で、
+//    上の形では拾えず AI へ渡っていた（海外配信・セキュリティ検査で発見）。
+//    数字 9 桁を無条件に落とすと予約番号まで消えるので、見出し語の直後に限る。
+//    数字を 1 つ以上含むものだけ（"Passport required" の語を消さない）。
+const PASSPORT_CTX_RE = /(passport|旅券|パスポート)((?:\s*(?:no\.?|number|#|番号))?\s*[:：#]?\s*)((?=[A-Z]{0,9}\d)[A-Z0-9]{6,10})\b/gi;
 
 /**
  * 自由テキスト内の DROP 系 PII を完全除去（「[削除済み]」に置換）。
@@ -70,6 +76,7 @@ export function scrubSensitive(text: string | null | undefined): string | null {
   return String(text)
     .replace(EMAIL_RE, "[メール省略]")
     .replace(CC_RE, "[番号省略]")
+    .replace(PASSPORT_CTX_RE, "$1$2[番号省略]")
     .replace(PASSPORT_RE, "[番号省略]");
 }
 

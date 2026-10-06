@@ -158,3 +158,53 @@ test("🔴 メールを聞かれて「アプリに保存していない」と言
   const src = readFileSync(new URL("../../app/api/concierge/route.ts", import.meta.url), "utf8");
   assert.match(src, /「アプリに保存していない」とは言わない/);
 });
+
+// ---- 🔴 海外の書き方（2026-10-06・67 か国に配信を広げたときのセキュリティ検査で発見） ----
+//
+// 以前は日本の形しか見ておらず、北米・英国の電話、海外の会員プログラム、
+// 数字だけの旅券番号が、伏せられずに AI へ渡っていた。許諾画面は
+// 「電話番号・会員番号は記号に置き換えて送る」と言っているので、ここで固定する。
+
+test("🔴 北米・英国の電話番号は、自由文の中でも記号になる", () => {
+  const phones = ["(415) 555-0199", "415-555-0199", "415.555.0199", "020 7946 0958", "+1 415 555 0199"];
+  const ctx = build(journey([{ memo: `Front desk ${phones.join(" / ")}` }]));
+  for (const p of phones) assert.ok(!ctx.promptBlock.includes(p), `本物が載っている: ${p}`);
+  assert.match(ctx.promptBlock, /\[TEL_1\]/);
+});
+
+test("🔴 海外の会員プログラムの番号は記号になる", () => {
+  const ctx = build(
+    journey([
+      {
+        information: [
+          { id: "i1", label: "AAdvantage #", value: "12AB345" },
+          { id: "i2", label: "Marriott Bonvoy", value: "998877665" },
+          { id: "i3", label: "Frequent Flyer No.", value: "KF55667788" },
+        ],
+      },
+    ]),
+  );
+  for (const v of ["12AB345", "998877665", "KF55667788"]) {
+    assert.ok(!ctx.promptBlock.includes(v), `本物が載っている: ${v}`);
+  }
+  assert.match(ctx.promptBlock, /\[MEMBER_3\]/);
+});
+
+test("🔴 旅券番号は、欄でも自由文でも送らない（数字だけの形も）", () => {
+  const ctx = build(
+    journey([
+      {
+        information: [{ id: "i1", label: "Passport number", value: "123456789" }],
+        memo: "Passport No: 987654321 / passport AB123456 / K1234567A",
+      },
+    ]),
+  );
+  for (const v of ["123456789", "987654321", "AB123456", "K1234567A"]) {
+    assert.ok(!ctx.promptBlock.includes(v), `本物が載っている: ${v}`);
+  }
+});
+
+test("旅券の見出しの後の普通の語は消さない・日付は電話にしない", () => {
+  const ctx = build(journey([{ memo: "Passport required at check-in on 2026-11-14" }]));
+  assert.match(ctx.promptBlock, /Passport required at check-in on 2026-11-14/);
+});

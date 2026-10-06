@@ -123,12 +123,19 @@ function escapeRe(s: string): string {
 // 🔴 **「予約サービス」は番号ではない**（スマートEX などの名前。IC カードの
 //    助言に要る）。「予約」だけで拾わず、「番号・ID・コード」まで見る。
 const CONF_LABEL = /(予約|確認|受付|問い?合わ?せ|申込)(番号|ID|コード|No)|confirmation|booking\s*(no|number|ref|code|id)|reservation\s*(no|number|code|id)|\bpnr\b|record\s*locator/i;
-const MEMBER_LABEL = /mile|マイル|skymiles|会員番号|member/i;
+// 🔴 2026-10-06: 海外配信（67 か国）に合わせて、海外の会員プログラム名を足した。
+//    以前は mile / member しか見ておらず、「AAdvantage #」「Bonvoy」などの
+//    会員番号が**そのまま AI へ渡っていた**（セキュリティ検査で発見）。
+//    取り違えても害は無い（記号は答えの中で本物に戻る）ので、広めに拾う。
+const MEMBER_LABEL = /mile|マイル|skymiles|会員番号|member|frequent\s*flyer|loyalty|rewards?\b|bonvoy|honors|aadvantage|krisflyer|aeroplan|asia\s*miles|executive\s*club|flying\s*blue|mileageplus|velocity|world\s*of\s*hyatt|ihg|\bff\s*(no|number|#)/i;
+// 旅券番号は答えに要らないので、記号にもせず落とす（メールと同じ扱い）。
+const PASSPORT_LABEL = /passport|旅券|パスポート/i;
 const TEL_LABEL = /tel|電話|phone|携帯/i;
 const EMAIL_LABEL = /email|メール|e-mail/i;
 
-function kindOfLabel(label: string): PiiKind | "EMAIL" | null {
+function kindOfLabel(label: string): PiiKind | "EMAIL" | "PASSPORT" | null {
   if (EMAIL_LABEL.test(label)) return "EMAIL";
+  if (PASSPORT_LABEL.test(label)) return "PASSPORT";
   if (MEMBER_LABEL.test(label)) return "MEMBER";
   if (TEL_LABEL.test(label)) return "TEL";
   if (CONF_LABEL.test(label)) return "CONF";
@@ -148,8 +155,13 @@ function kindOfLabel(label: string): PiiKind | "EMAIL" | null {
  * **形で拾う。** 取り違えても害は無い —— 記号は答えの中で本物に戻るので、
  * 電話番号でないものを拾っても利用者の画面は変わらない。
  * ただし**日付（2026-11-14）は拾わない**ように、先頭を 0 か + に限る。
+ *
+ * 🔴 2026-10-06: 海外の書き方を足した（海外配信・セキュリティ検査で発見）。
+ *    北米の `(415) 555-0199` / `415-555-0199` / `415.555.0199` と、
+ *    英国・豪州の空白区切り `020 7946 0958` は、以前は拾えず AI へ渡っていた。
+ *    北米の形は 3-3-4 桁なので、日付（4-2-2）とは重ならない。
  */
-const PHONE_IN_TEXT = /(?<![0-9A-Za-z+])(?:\+\d{1,3}[- ]?\d{1,4}[- ]\d{1,4}[- ]\d{3,4}|0\d{1,4}-\d{1,4}-\d{3,4}|0\d{9,10})(?![0-9A-Za-z])/g;
+const PHONE_IN_TEXT = /(?<![0-9A-Za-z+])(?:\+\d{1,3}[- ]?\d{1,4}[- ]\d{1,4}[- ]\d{3,4}|0\d{1,4}-\d{1,4}-\d{3,4}|0\d{9,10}|\(\d{3}\)[ .-]?\d{3}[ .-]\d{4}|\d{3}[.-]\d{3}[.-]\d{4}|0\d{1,4} \d{3,4} \d{3,4})(?![0-9A-Za-z])/g;
 
 function registerPhonesIn(text: string | null | undefined, vault: PiiVault): void {
   if (!text) return;
@@ -171,7 +183,7 @@ export function protectJourneys(journeys: Journey[], vault: PiiVault): SafeJourn
       vault.token("CONF", s.confNumber);
       for (const info of s.information ?? []) {
         const k = kindOfLabel(info.label);
-        if (k && k !== "EMAIL") vault.token(k, info.value);
+        if (k && k !== "EMAIL" && k !== "PASSPORT") vault.token(k, info.value);
       }
     }
   }
@@ -214,6 +226,7 @@ function protectStep(
       const k = kindOfLabel(info.label);
       // ① 答えに要らない機微は送らない（従来どおり）。
       if (k === "EMAIL") return { ...info, value: "[メール省略]" };
+      if (k === "PASSPORT") return { ...info, value: "[番号省略]" };
       if (k) return { ...info, value: vault.token(k, info.value) ?? "" };
       return { ...info, value: text(info.value) ?? "" };
     }),
