@@ -1,0 +1,22 @@
+# JUNROS — メール転送の受け口（Cloudflare Email Worker）
+#
+# 🔴 無料プランだけで動かす。従量課金になるもの（R2・KV・D1・Queues・
+#    Durable Objects・Workers Paid）は使わない（設計 §3 の利用者の決定）。
+#    無料プランは上限を超えると止まるだけで、請求は来ない。
+#
+# 🔴 routes は無い。HTTP では呼ばれない（workers_dev も閉じる）。
+#    呼ぶのは Email Routing の「Send to Worker」だけ。
+name = "junros-inbound-mail"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+workers_dev = false
+preview_urls = false
+
+[vars]
+# 受け取ったメールを渡す先（本番の API）。
+INBOUND_MAIL_URL = "https://junros.coyoteandpowell.com/api/inbound-mail"
+# 受信ドメイン。サーバの MAIL_IMPORT_DOMAIN（既定 junros.com）と揃える。
+MAIL_IMPORT_DOMAIN = "junros.com"
+
+# INBOUND_MAIL_SECRET は secret（ここに書かない）:
+#   npx wrangler@4 secret put INBOUND_MAIL_SECRET
