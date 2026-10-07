@@ -84,6 +84,14 @@ function fakeAdmin(o: FakeOpts = {}) {
           if (mode === "insert") {
             assert.equal(table, "toritavi_inbox_items", "想定外の表に書いた");
             if (o.insertError) return { data: null, error: o.insertError };
+            // 本物の一意索引 (user_id, message_key) と同じ振る舞い。
+            const v = inserted!;
+            if (
+              v.message_key != null &&
+              rows.some((r) => r.user_id === v.user_id && r.message_key === v.message_key)
+            ) {
+              return { data: null, error: { code: "23505", message: "duplicate key" } };
+            }
             rows.push({ ...inserted!, received_at: new Date().toISOString() });
             return { data: null, error: null };
           }
@@ -359,6 +367,45 @@ describe("/api/inbound-mail", () => {
     assert.equal(f.objects.size, 0);
     assert.equal(f.removed.length, 2);
     assert.equal(f.rows.length, 0);
+  });
+
+  test("🔴 同じメールの再送は 1 行だけ（2 回目は何も置かず 200）", async () => {
+    const f = fakeAdmin({ aliases: { [TOKEN]: UID } });
+    g.__toritaviTestAdmin = f.admin;
+    const raw = mail();
+    const r1 = (await POST(signedRequest(raw))) as unknown as { status: number; json(): Promise<unknown> };
+    const r2 = (await POST(signedRequest(raw))) as unknown as { status: number; json(): Promise<unknown> };
+    assert.equal(r1.status, 200);
+    assert.equal(r2.status, 200);
+    assert.deepEqual(await r2.json(), { accepted: true }, "受け取り済みとして 200");
+    assert.equal(f.rows.length, 1, "🔴 再送で 2 行になった");
+    assert.equal(f.objects.size, 1, "2 回目が添付を置いている");
+    assert.equal(f.removed.length, 0, "先に見ずに、置いてから消している（往復が無駄）");
+    assert.match(String(f.rows[0].message_key), /^[0-9a-f]{64}$/);
+    assertLogsClean();
+  });
+
+  test("🔴 Message-ID が同じなら、経路で中身が変わっても 1 行", async () => {
+    const f = fakeAdmin({ aliases: { [TOKEN]: UID } });
+    g.__toritaviTestAdmin = f.admin;
+    const a = multipartMail({ from: FROM, subject: "x", text: "1", messageId: "same@example.com" });
+    const b = multipartMail({ from: FROM, subject: "x", text: "1 ", messageId: "same@example.com" });
+    await POST(signedRequest(a));
+    await POST(signedRequest(b));
+    assert.equal(f.rows.length, 1);
+  });
+
+  test("🔴 並行して先に入っていた（insert が 23505）なら、置いた添付を消して 200", async () => {
+    const f = fakeAdmin({
+      aliases: { [TOKEN]: UID },
+      insertError: { code: "23505", message: "duplicate key" },
+    });
+    g.__toritaviTestAdmin = f.admin;
+    const r = (await POST(signedRequest(mail()))) as unknown as { status: number; json(): Promise<unknown> };
+    assert.equal(r.status, 200);
+    assert.deepEqual(await r.json(), { accepted: true });
+    assert.equal(f.objects.size, 0, "孤児が残っている");
+    assert.equal(f.removed.length, 1);
   });
 
   test("壊れた MIME でも落ちない（200）", async () => {

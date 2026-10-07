@@ -8,6 +8,7 @@
 // 検体はすべて合成（support/mime-fixtures.ts）。実物の予約メールは置かない。
 // ============================================================================
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { describe, test } from "node:test";
 
 import {
@@ -17,6 +18,7 @@ import {
   extractAliasToken,
   extractGmailForwardCode,
   htmlToText,
+  inboundMessageKey,
   parseInboundMail,
   signInbound,
   truncateCodePoints,
@@ -448,5 +450,52 @@ describe("Gmail の自動転送の確認メール", () => {
     );
     assert.equal(m.status, "pending");
     assert.equal(m.bodyText, "hello");
+  });
+});
+
+// ---------------------------------------------------------------------------
+describe("冪等の鍵（message_key）", () => {
+  const sha = (x: string | Uint8Array) => createHash("sha256").update(x).digest("hex");
+
+  test("🔴 Message-ID の <> と空白を除いた値の SHA-256（表の check: 64 桁の小文字 hex）", () => {
+    const raw = new Uint8Array([1, 2, 3]);
+    const k = inboundMessageKey(" <abc@mail.example> ", raw);
+    assert.equal(k, sha("abc@mail.example"));
+    assert.match(k, /^[0-9a-f]{64}$/);
+    assert.equal(inboundMessageKey("abc@mail.example", raw), k, "<> の有無で変わらない");
+  });
+
+  test("Message-ID が無ければ生のメールの SHA-256", () => {
+    const raw = new TextEncoder().encode("raw mail bytes");
+    assert.equal(inboundMessageKey(undefined, raw), sha(raw));
+    assert.equal(inboundMessageKey("  <>  ", raw), sha(raw));
+  });
+
+  test("🔴 同じ Message-ID なら本文が違っても同じ鍵（再送で経路のヘッダが変わっても 1 行）", async () => {
+    const a = await parseInboundMail(
+      multipartMail({ from: "a@example.com", subject: "x", text: "1", messageId: "id-1@example.com" }),
+    );
+    const b = await parseInboundMail(
+      multipartMail({ from: "a@example.com", subject: "x", text: "2", messageId: "id-1@example.com" }),
+    );
+    const c = await parseInboundMail(
+      multipartMail({ from: "a@example.com", subject: "x", text: "1", messageId: "id-2@example.com" }),
+    );
+    assert.equal(a.messageKey, b.messageKey);
+    assert.notEqual(a.messageKey, c.messageKey);
+    assert.equal(a.messageKey, sha("id-1@example.com"));
+  });
+
+  test("転送確認メールにも鍵が付く", async () => {
+    const m = await parseInboundMail(
+      multipartMail({
+        from: "forwarding-noreply@google.com",
+        subject: "(#123456789) Gmail Forwarding Confirmation",
+        text: "Confirmation code: 123456789",
+        messageId: "fwd@google.com",
+      }),
+    );
+    assert.equal(m.status, "forward_confirm");
+    assert.equal(m.messageKey, sha("fwd@google.com"));
   });
 });

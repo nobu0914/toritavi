@@ -193,7 +193,24 @@ export async function POST(request: NextRequest) {
     return ok(false);
   }
 
-  // ⑩ 添付を置く → 行を入れる。行が入らなければ置いたものを消す。
+  // ⑩ 同じメールの再送なら何もしない（表の一意索引 (user_id, message_key) と二重）。
+  //    先に見るのは、添付を置いてから一意違反で消す往復を省くため。
+  //    同時に 2 通が来た場合はここを両方すり抜けるので、insert の 23505 でも受ける。
+  const dup = await admin
+    .from(INBOX_TABLE)
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .eq("message_key", mail.messageKey);
+  if (dup.error || dup.count == null) {
+    console.error(`${LOG} duplicate check failed`, dup.error?.code ?? "");
+    return retryLater("dedupe");
+  }
+  if (dup.count > 0) {
+    console.log(`${LOG} duplicate (already accepted)`);
+    return ok(true);
+  }
+
+  // ⑪ 添付を置く → 行を入れる。行が入らなければ置いたものを消す。
   const itemId = randomUUID();
   const bucket = admin.storage.from(INBOX_BUCKET);
   const uploaded: string[] = [];
@@ -234,9 +251,15 @@ export async function POST(request: NextRequest) {
     attachments: meta,
     status: mail.status,
     confirm_code: mail.confirmCode,
+    message_key: mail.messageKey,
   });
   if (insErr) {
     await cleanup();
+    // 23505（一意違反）＝同じメールを並行して既に受け取った。**受け取り済み**として 200。
+    if (insErr.code === "23505") {
+      console.log(`${LOG} duplicate (already accepted, concurrent)`);
+      return ok(true);
+    }
     // 23xxx（制約違反）は再送しても直らない —— こちらの整え方の誤り。
     // 再送させると送信側が数日叩き続けた末にバウンスするだけなので捨てる。
     if (typeof insErr.code === "string" && insErr.code.startsWith("23")) {

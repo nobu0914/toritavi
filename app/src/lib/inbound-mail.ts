@@ -23,7 +23,7 @@
  * HTML をテキストにするときも、`href` も画像も取りに行かない（追跡・悪意ある
  * リンク）。ここは**文字列の加工だけ**で、ネットワークに触れない。
  */
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import PostalMime from "postal-mime";
 
 import { detectKind, type DetectedKind } from "./file-validate.ts";
@@ -414,7 +414,32 @@ export type ParsedInbound = {
   skipped: Partial<Record<SkipReason, number>>;
   /** 本文をどこから作ったか（ログ用）。 */
   bodySource: "plain" | "html" | "none";
+  /**
+   * 再送で同じメールが 2 行にならない鍵（表の `message_key`・利用者ごとに一意）。
+   * Message-ID（前後の `<>` と空白を除く）の SHA-256。無ければ生のメールの SHA-256。
+   * **ログに出さない**（Message-ID は送信元のドメインを含む）。
+   */
+  messageKey: string;
 };
+
+/**
+ * 冪等の鍵を作る。
+ *
+ * 🔴 **Worker の再送で 2 行にしない。** サーバが行を入れた後に 5xx を返すと
+ *    （応答の途中で関数が切れた等）、Worker が例外を投げ、送信側が同じ
+ *    メールをもう一度送る。
+ *
+ * Message-ID を先に使うのは、再送の途中で経路のヘッダ（Received など）が
+ * 変わっても同じ値になるため。無いメールだけ生のバイト列で代える
+ * （再送はバイト列ごと同じなので、それで足りる）。
+ */
+export function inboundMessageKey(messageId: string | null | undefined, raw: Uint8Array): string {
+  const id = (messageId ?? "").trim().replace(/^<+/, "").replace(/>+$/, "").trim();
+  const h = createHash("sha256");
+  if (id) h.update(id, "utf8");
+  else h.update(raw);
+  return h.digest("hex");
+}
 
 /**
  * 生の MIME に `text/plain` の部分が実際にあるか。
@@ -458,6 +483,7 @@ export async function parseInboundMail(raw: Uint8Array): Promise<ParsedInbound> 
     attachmentEncoding: "arraybuffer",
   });
 
+  const messageKey = inboundMessageKey(email.messageId, raw);
   const subject = cleanLine(email.subject, MAX_SUBJECT_CHARS);
   const fromRaw = firstMailbox(email.from);
   const fromClean = cleanLine(fromRaw, MAX_FROM_CHARS + 1);
@@ -494,6 +520,7 @@ export async function parseInboundMail(raw: Uint8Array): Promise<ParsedInbound> 
         attachments: [],
         skipped: {},
         bodySource,
+        messageKey,
       };
     }
     // コードが取れなければ普通のメールとして置く（本人が本文を読める）。
@@ -549,6 +576,7 @@ export async function parseInboundMail(raw: Uint8Array): Promise<ParsedInbound> 
     attachments,
     skipped,
     bodySource,
+    messageKey,
   };
 }
 

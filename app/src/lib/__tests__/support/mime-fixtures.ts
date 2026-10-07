@@ -117,6 +117,8 @@ export function multipartMail(opts: {
   text?: string;
   html?: string;
   parts?: Part[];
+  /** 付けると `Message-ID: <…>` ヘッダを足す。 */
+  messageId?: string;
 }): Uint8Array {
   const boundary = "----junros-test-boundary";
   const alt = "----junros-test-alt";
@@ -124,6 +126,7 @@ export function multipartMail(opts: {
     `From: ${opts.from}\r\n`,
     "To: trips-abcdefghijkmnpqr@junros.com\r\n",
     `Subject: ${opts.subject}\r\n`,
+    ...(opts.messageId ? [`Message-ID: <${opts.messageId}>\r\n`] : []),
     "MIME-Version: 1.0\r\n",
     `Content-Type: multipart/mixed; boundary="${boundary}"\r\n\r\n`,
   ];
