@@ -33,5 +33,8 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules"]
+  // workers/ は Cloudflare の Email Worker（別に wrangler で出す）。Next の
+  // 型検査とビルドに入れない。サーバのテストが lib.ts を import するので、
+  // その 1 ファイルだけは import 経由で検査される（Web 標準の API だけで書く）。
+  "exclude": ["node_modules", "workers"]
 }

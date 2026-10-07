@@ -31,7 +31,8 @@ export type UserOwnedBucket = {
   /**
    * `{userId}/` から下の階層数。
    * - 1: `{userId}/{file}`（avatars, feedback）
-   * - 2: `{userId}/{stepId}/{file}`（step-attachments）
+   * - 2: `{userId}/{stepId}/{file}`（step-attachments）／
+   *      `{userId}/{itemId}/{file}`（toritavi-inbox）
    */
   depth: 1 | 2;
 };
@@ -44,6 +45,11 @@ export const USER_OWNED_BUCKETS: readonly UserOwnedBucket[] = [
   { id: "step-attachments", depth: 2 },
   // 改善フィードバックの添付。本人に削除手段が無いぶん、退会が唯一の出口。
   { id: "toritavi-feedback", depth: 1 },
+  // メール転送で受け取った添付（予約票の PDF・画像）。2026-10-08 追加
+  // （`toritavi_app/supabase/mail_import.sql`）。パスは
+  // `{userId}/{itemId}/{n}.{ext}`。行は `auth.users` の cascade で消えるが、
+  // **Storage は消えない**ので台帳に載せる。30 日の掃除は cron/purge-inbox。
+  { id: "toritavi-inbox", depth: 2 },
 ];
 
 /**

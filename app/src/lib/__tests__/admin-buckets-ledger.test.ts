@@ -57,8 +57,10 @@ test("バケット名を直書きしていない", () => {
   }
 });
 
-test("台帳は 3 バケット（減っていたら退会側も見直す）", () => {
+test("台帳は 4 バケット（減っていたら退会側も見直す）", () => {
   // 数を固定するのは、**減ったことに気づくため**。増える分は上の 2 つが拾う。
-  assert.equal(USER_OWNED_BUCKETS.length, 3);
+  // 2026-10-08: メール転送の添付 `toritavi-inbox` で 3 → 4。
+  assert.equal(USER_OWNED_BUCKETS.length, 4);
   assert.ok(USER_OWNED_BUCKETS.some((b) => b.id === "toritavi-feedback"));
+  assert.ok(USER_OWNED_BUCKETS.some((b) => b.id === "toritavi-inbox" && b.depth === 2));
 });
