@@ -26,6 +26,24 @@ export type SanitizedStep = {
   variable: Array<{ label: string; value: string }>;
 };
 
+/**
+ * 飛行機の便名の形を揃える（"NH118" → "NH 118"）。2026-10-08・実データ検査。
+ *
+ * 指示文でも「XX 123」の形を求めているが、読むたびに "DL2844" と "DL 2844" が
+ * 揺れていた。同じ便が別の名前で並ぶと、利用者には別の予定に見える。
+ *
+ * 🔴 **空白を足すだけ。** 文字は 1 つも変えない・足さない（"ZG029" の 0 は残す）。
+ *    航空会社コード（英数字 2 文字・少なくとも 1 文字は英字）＋数字だけで
+ *    できている title にしか触らない。航空会社名・コードシェア表記
+ *    （"EK 1234 / FZ0567"）・列車名は形が違うので素通りする。
+ */
+const FLIGHT_NO = /^([A-Z]{2}|[A-Z][0-9]|[0-9][A-Z])\s*([0-9]{1,4}[A-Z]?)$/;
+export function normalizeFlightTitle(category: string, title: string): string {
+  if (category !== "飛行機") return title;
+  const m = title.trim().match(FLIGHT_NO);
+  return m ? `${m[1]} ${m[2]}` : title;
+}
+
 export type SanitizeResult = {
   steps: SanitizedStep[];
   /** 落とした項目の数。**中身は持たない。** */
@@ -112,6 +130,10 @@ export function sanitizeOcrResult(raw: unknown): SanitizeResult {
       const safe = safeValue(value);
       if (safe.dropped) dropped++;
       variable.push({ label: label.slice(0, MAX_LABEL_CHARS), value: safe.value });
+    }
+
+    if (typeof fixed.title === "string") {
+      fixed.title = normalizeFlightTitle(category, fixed.title);
     }
 
     out.push({ category, fixed, variable });
