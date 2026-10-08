@@ -1,7 +1,7 @@
 // AI の出力を信用せずに受ける。**文書に書かれた文字列がそのまま出てくる前提。**
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { sanitizeOcrResult, MAX_STEPS, MAX_VALUE_CHARS } from "../ocr-output.ts";
+import { sanitizeOcrResult, parseWeekday, MAX_STEPS, MAX_VALUE_CHARS } from "../ocr-output.ts";
 
 describe("形が違うものは捨てる", () => {
   test("steps が無ければ空（落ちない）", () => {
@@ -145,8 +145,77 @@ describe("飛行機の便名の形を揃える（2026-10-08）", () => {
     assert.equal(title("飛行機", "12345"), "12345");
   });
 
+  test("🔴 予約番号を便名にしたものは航空会社名に替える", () => {
+    const one = (fixed: Record<string, string>) =>
+      sanitizeOcrResult({ steps: [{ category: "飛行機", fixed, variable: [] }] }).steps[0].fixed.title;
+    assert.equal(one({ title: "NH AB12CD", confNumber: "NH-AB12CD", airline: "ANA" }), "ANA");
+    // 航空会社名が無ければ触らない（値を作らない）
+    assert.equal(one({ title: "NH AB12CD", confNumber: "NH-AB12CD" }), "NH AB12CD");
+    // 普通の便名には触らない
+    assert.equal(one({ title: "NH 10", confNumber: "AB12CD", airline: "ANA" }), "NH 10");
+  });
+
   test("飛行機以外には触らない（列車番号・バスの便名）", () => {
     assert.equal(title("列車", "AB12"), "AB12");
     assert.equal(title("バス", "KB101"), "KB101");
+  });
+});
+
+describe("曜日の照合（2026-10-08・日・月の取り違え）", () => {
+  const run = (fixed: Record<string, string>, inferred: string[] = []) =>
+    sanitizeOcrResult({ steps: [{ category: "車", fixed, variable: [], inferred }] }).steps[0];
+
+  test("曜日の書き方を読む（知らない書き方は null）", () => {
+    assert.equal(parseWeekday("金"), 5);
+    assert.equal(parseWeekday("(土)"), 6);
+    assert.equal(parseWeekday("日曜日"), 0);
+    assert.equal(parseWeekday("Fri"), 5);
+    assert.equal(parseWeekday("Thursday"), 4);
+    assert.equal(parseWeekday("Thurs."), 4);
+    assert.equal(parseWeekday("星期五"), 5);
+    assert.equal(parseWeekday("周日"), 0);
+    assert.equal(parseWeekday("금요일"), 5);
+    assert.equal(parseWeekday("Friyay"), null);
+    assert.equal(parseWeekday("vendredi"), null);
+    assert.equal(parseWeekday(""), null);
+  });
+
+  test("曜日が合えばそのまま・印も付けない", () => {
+    // 2026-04-03 は金曜
+    const s = run({ date: "2026-04-03", dateWeekday: "金" });
+    assert.equal(s.fixed.date, "2026-04-03");
+    assert.deepEqual(s.inferred, []);
+    assert.equal(s.needsReview, false);
+  });
+
+  test("🔴 日と月を入れ替えると合うなら入れ替え、推定の印を付ける", () => {
+    // "金, 03 4, 2026" を 2026-03-04（水曜）と読んだ → 2026-04-03（金曜）
+    // 返却日も同じ: 2026-06-04（木曜）と読んだ "Mon" → 2026-04-06（月曜）
+    const s = run({ date: "2026-03-04", dateWeekday: "金", endDate: "2026-06-04", endDateWeekday: "Mon" });
+    assert.equal(s.fixed.date, "2026-04-03");
+    assert.equal(s.fixed.endDate, "2026-04-06");
+    assert.ok(s.inferred.includes("date"));
+    assert.ok(s.inferred.includes("endDate"));
+    assert.equal(s.needsReview, true);
+  });
+
+  test("どちらでも合わなければ値は変えず、印だけ付ける", () => {
+    // 2026-04-03 は金曜・2026-03-04 は水曜。「月」はどちらとも合わない
+    const s = run({ date: "2026-04-03", dateWeekday: "月" });
+    assert.equal(s.fixed.date, "2026-04-03");
+    assert.ok(s.inferred.includes("date"));
+    assert.equal(s.needsReview, true);
+  });
+
+  test("年を補った日付は入れ替えない（曜日のずれは年のせいかもしれない）", () => {
+    const s = run({ date: "2026-03-04", dateWeekday: "金" }, ["year"]);
+    assert.equal(s.fixed.date, "2026-03-04");
+    assert.ok(s.inferred.includes("date"));
+  });
+
+  test("曜日の欄はアプリへ送らない", () => {
+    const s = run({ date: "2026-04-03", dateWeekday: "金", endDateWeekday: "" });
+    assert.equal("dateWeekday" in s.fixed, false);
+    assert.equal("endDateWeekday" in s.fixed, false);
   });
 });

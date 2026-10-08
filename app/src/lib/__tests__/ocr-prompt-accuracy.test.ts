@@ -47,6 +47,9 @@ describe("#4 日・月の順序は曜日で決める", () => {
       assert.ok(p.includes("同じ書類の日付は\n  全部同じ順序で書かれている"), name);
       assert.ok(p.includes("返す前に必ず曜日を照合する"), name);
       assert.ok(p.includes("書かれた曜日と一致する方"), name);
+      // 整形（ocr-output.ts の reconcileWeekdays）が照合に使う欄
+      assert.ok(p.includes('"dateWeekday"'), name);
+      assert.ok(p.includes('"endDateWeekday"'), name);
     }
   });
 
@@ -88,6 +91,14 @@ describe("#7 予定の無いページから予定を作らない", () => {
       assert.ok(p.includes("日付も時刻も無い step は返さない"), name);
     }
   });
+
+  test("🔴 期限・締切の案内は対象外（日付があれば今までどおり予定にする）", () => {
+    // 「お知らせ」を対象に含めていた版で、免許更新の期限・荷物の受取期限が
+    // 予定ごと消えた（全件の回帰で検出）。
+    for (const { name, p } of variants()) {
+      assert.ok(p.includes("日付が書かれた書類（期限・締切・受取期限の案内を含む）はこの規則の対象外"), name);
+    }
+  });
 });
 
 describe("便名の形", () => {
@@ -96,6 +107,13 @@ describe("便名の形", () => {
       assert.ok(p.includes("航空会社の2文字コード + 半角スペース + 便名の数字"), name);
       assert.ok(p.includes("先頭の 0 を消さない"), name);
       assert.ok(p.includes("運航便名は variable に入れる"), name);
+    }
+  });
+
+  test("便名が無ければ航空会社名（予約番号を便名の形にしない）", () => {
+    // 便名の形を求めた版で、予約番号が "NH UC3A91" という便名にされた（全件の回帰で検出）。
+    for (const { name, p } of variants()) {
+      assert.ok(p.includes("便名が書類に無ければ航空会社名を title にする"), name);
     }
   });
 });

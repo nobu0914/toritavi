@@ -61,6 +61,93 @@ export function normalizeFlightTitle(category: string, title: string): string {
   return m ? `${m[1]} ${m[2]}` : title;
 }
 
+/* ====== 曜日の照合（2026-10-08・実データ検査 #4） ====== */
+
+/**
+ * 書かれた曜日（"金" / "Fri" / "(土)" / "星期五" / "금요일"）を 0=日〜6=土 に直す。
+ * **知らない書き方は null**（照合しない）。推測で曜日を決めない。
+ */
+export function parseWeekday(raw: string | undefined): number | null {
+  if (!raw) return null;
+  let t = raw.trim().toLowerCase().replace(/[\s.,()（）\[\]【】]/g, "");
+  t = t.replace(/曜日$|曜$|요일$/, "");
+  const ja = "日月火水木金土";
+  if (t.length === 1 && ja.includes(t)) return ja.indexOf(t);
+  const ko = "일월화수목금토";
+  if (t.length === 1 && ko.includes(t)) return ko.indexOf(t);
+  const zh = t.match(/^(?:星期|礼拜|禮拜|周|週)([日天一二三四五六])$/);
+  if (zh) return zh[1] === "天" ? 0 : "日一二三四五六".indexOf(zh[1]);
+  if (/^[a-z]{3,9}$/.test(t)) {
+    const en = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+    const i = en.indexOf(t.slice(0, 3));
+    const full = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+    if (i >= 0 && full[i].startsWith(t)) return i;
+  }
+  return null;
+}
+
+function weekdayOf(ymd: string): number | null {
+  const m = ymd.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return null;
+  const y = +m[1], mo = +m[2], d = +m[3];
+  const dt = new Date(Date.UTC(y, mo - 1, d));
+  if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== mo - 1 || dt.getUTCDate() !== d) return null;
+  return dt.getUTCDay();
+}
+
+/**
+ * 日付と、書類に**併記された曜日**を突き合わせる。
+ *
+ * 日・月の順の予約確認（"金, 02 1, 2026"）で、指示文に曜日の照合を書いても
+ * 5 回中 2 回は曜日の合わない側（2026-02-01・日曜）を返した。モデルに計算を
+ * 任せず、ここで機械的に確かめる。
+ *
+ * - 曜日が合う → そのまま
+ * - 合わず、**日と月を入れ替えると合う** → 入れ替えて inferred に入れる
+ *   （値を作るのではなく、書かれた 2 つの数の読み順を直すだけ）
+ * - どちらでも合わない／年を補った日付 → **値は変えず** inferred に入れる
+ *   （読み違いかもしれないので、利用者に確かめてもらう）
+ *
+ * 曜日の欄（dateWeekday / endDateWeekday）は照合にだけ使い、アプリへは送らない。
+ */
+const WEEKDAY_FIELDS: Array<[string, string]> = [
+  ["date", "dateWeekday"],
+  ["endDate", "endDateWeekday"],
+];
+function reconcileWeekdays(fixed: Record<string, string>, inferred: string[]): boolean {
+  let flagged = false;
+  const yearGuessed = inferred.includes("year");
+  for (const [key, wkKey] of WEEKDAY_FIELDS) {
+    const printed = parseWeekday(fixed[wkKey]);
+    delete fixed[wkKey];
+    const ymd = fixed[key];
+    if (printed === null || !ymd) continue;
+    const actual = weekdayOf(ymd);
+    if (actual === null || actual === printed) continue;
+    const [y, mo, d] = ymd.split("-");
+    const swapped = `${y}-${d}-${mo}`;
+    if (!yearGuessed && mo !== d && weekdayOf(swapped) === printed) fixed[key] = swapped;
+    if (!inferred.includes(key)) inferred.push(key);
+    flagged = true;
+  }
+  return flagged;
+}
+
+/**
+ * 飛行機の title が**予約番号そのもの**なら、航空会社名に替える（2026-10-08）。
+ *
+ * 便名の無い書類（"REF: NH-AB12CD" だけ）で、指示文で禁じても 3 回中 2 回は
+ * 予約番号を便名の形（"NH AB12CD"）にして返した。便名として検索すると
+ * 別の便に行き着く。航空会社名は書類から読んだ値なので、値を作ってはいない。
+ * 航空会社名が無ければ触らない。
+ */
+function notBookingRef(category: string, fixed: Record<string, string>): string {
+  const title = fixed.title ?? "";
+  if (category !== "飛行機" || !fixed.confNumber || !fixed.airline) return title;
+  const norm = (x: string) => x.replace(/[\s\-_/.]/g, "").toUpperCase();
+  return norm(title) !== "" && norm(title) === norm(fixed.confNumber) ? fixed.airline : title;
+}
+
 export type SanitizeResult = {
   steps: SanitizedStep[];
   /** 落とした項目の数。**中身は持たない。** */
@@ -151,6 +238,7 @@ export function sanitizeOcrResult(raw: unknown): SanitizeResult {
 
     if (typeof fixed.title === "string") {
       fixed.title = normalizeFlightTitle(category, fixed.title);
+      fixed.title = notBookingRef(category, fixed);
     }
 
     const inferred: string[] = [];
@@ -162,7 +250,8 @@ export function sanitizeOcrResult(raw: unknown): SanitizeResult {
       }
       if (!inferred.includes(k)) inferred.push(k);
     }
-    const needsReview = step.needsReview === true;
+    const weekdayFlagged = reconcileWeekdays(fixed, inferred);
+    const needsReview = step.needsReview === true || weekdayFlagged;
 
     out.push({ category, fixed, variable, inferred, needsReview });
   }
