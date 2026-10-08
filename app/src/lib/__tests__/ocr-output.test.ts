@@ -208,14 +208,32 @@ describe("曜日の照合（2026-10-08・日・月の取り違え）", () => {
     assert.equal(s.needsReview, false);
   });
 
-  test("🔴 日と月を入れ替えると合うなら入れ替え、推定の印を付ける", () => {
-    // "金, 03 4, 2026" を 2026-03-04（水曜）と読んだ → 2026-04-03（金曜）
-    // 返却日も同じ: 2026-06-04（木曜）と読んだ "Mon" → 2026-04-06（月曜）
-    const s = run({ date: "2026-03-04", dateWeekday: "金", endDate: "2026-06-04", endDateWeekday: "Mon" });
-    assert.equal(s.fixed.date, "2026-04-03");
+  test("🔴 日と月を入れ替えると合い、同じ書類の別の日付で曜日が合っていれば入れ替える", () => {
+    // 借り出し "水, 01 4, 2026"（2026-04-01 は水曜・合っている）
+    // 返却 "Mon, 06 4, 2026" を 2026-06-04（木曜）と読んだ → 2026-04-06（月曜）
+    const s = run({ date: "2026-04-01", dateWeekday: "水", endDate: "2026-06-04", endDateWeekday: "Mon" });
+    assert.equal(s.fixed.date, "2026-04-01");
     assert.equal(s.fixed.endDate, "2026-04-06");
-    assert.ok(s.inferred.includes("date"));
     assert.ok(s.inferred.includes("endDate"));
+    assert.equal(s.inferred.includes("date"), false);
+    assert.equal(s.needsReview, true);
+  });
+
+  test("根拠は別の予定（同じ書類の別の step）の曜日でもよい", () => {
+    const r = sanitizeOcrResult({
+      steps: [
+        { category: "車", fixed: { date: "2026-04-01", dateWeekday: "水" }, variable: [] },
+        { category: "車", fixed: { date: "2026-03-04", dateWeekday: "金" }, variable: [] },
+      ],
+    });
+    assert.equal(r.steps[1].fixed.date, "2026-04-03");
+  });
+
+  test("🔴 書類の中で曜日が 1 つも合っていなければ入れ替えない（曜日の印字が誤っている書類）", () => {
+    // "2026/6/10（火）"（6/10 は水曜）。入れ替えると火曜（10/6）になるが、動かさない。
+    const s = run({ date: "2026-06-10", dateWeekday: "火" });
+    assert.equal(s.fixed.date, "2026-06-10");
+    assert.ok(s.inferred.includes("date"), "食い違いは要確認にする");
     assert.equal(s.needsReview, true);
   });
 
@@ -228,7 +246,7 @@ describe("曜日の照合（2026-10-08・日・月の取り違え）", () => {
   });
 
   test("年を補った日付は入れ替えない（曜日のずれは年のせいかもしれない）", () => {
-    const s = run({ date: "2026-03-04", dateWeekday: "金" }, ["year"]);
+    const s = run({ date: "2026-03-04", dateWeekday: "金", endDate: "2026-04-01", endDateWeekday: "水" }, ["year"]);
     assert.equal(s.fixed.date, "2026-03-04");
     assert.ok(s.inferred.includes("date"));
   });

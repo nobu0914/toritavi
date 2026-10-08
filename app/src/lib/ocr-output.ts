@@ -99,14 +99,21 @@ function weekdayOf(ymd: string): number | null {
  * 日付と、書類に**併記された曜日**を突き合わせる。
  *
  * 日・月の順の予約確認（"金, 02 1, 2026"）で、指示文に曜日の照合を書いても
- * 5 回中 2 回は曜日の合わない側（2026-02-01・日曜）を返した。モデルに計算を
- * 任せず、ここで機械的に確かめる。
+ * 曜日の合わない側（2026-02-01・日曜）を返し続けた。モデルに計算を任せず、
+ * ここで機械的に確かめる。
  *
  * - 曜日が合う → そのまま
- * - 合わず、**日と月を入れ替えると合う** → 入れ替えて inferred に入れる
+ * - 合わず、**日と月を入れ替えると合う**、かつ**同じ書類の別の日付で曜日が
+ *   合っている** → 入れ替えて inferred に入れる
  *   （値を作るのではなく、書かれた 2 つの数の読み順を直すだけ）
- * - どちらでも合わない／年を補った日付 → **値は変えず** inferred に入れる
- *   （読み違いかもしれないので、利用者に確かめてもらう）
+ * - それ以外（どちらでも合わない／年を補った日付／書類の中で曜日が 1 つも
+ *   合っていない）→ **値は変えず** inferred に入れる（利用者に確かめてもらう）
+ *
+ * 🔴 「別の日付で曜日が合っている」を条件にするのは、**曜日の印字そのものが
+ *    誤っている書類**があるため。"2026/6/10（火）"（6/10 は水曜）を、入れ替えれば
+ *    火曜になるという理由で 10 月 6 日に動かした（全件の回帰で検出）。年が先に
+ *    書かれた日付は読み順が曖昧ではないので、動かしてはいけなかった。曜日が
+ *    1 つしか無い書類では、曜日と日付のどちらが誤りか決められない。
  *
  * 曜日の欄（dateWeekday / endDateWeekday）は照合にだけ使い、アプリへは送らない。
  */
@@ -114,7 +121,28 @@ const WEEKDAY_FIELDS: Array<[string, string]> = [
   ["date", "dateWeekday"],
   ["endDate", "endDateWeekday"],
 ];
-function reconcileWeekdays(fixed: Record<string, string>, inferred: string[]): boolean {
+/** 書類の中で、曜日が日付と合っている箇所の数（入れ替えてよいかの根拠）。 */
+function countWeekdayMatches(rawSteps: unknown[]): number {
+  let n = 0;
+  for (const s of rawSteps) {
+    const f = (s as { fixed?: unknown } | null)?.fixed;
+    if (!f || typeof f !== "object") continue;
+    const fx = f as Record<string, unknown>;
+    for (const [key, wkKey] of WEEKDAY_FIELDS) {
+      const ymd = fx[key], wk = fx[wkKey];
+      if (typeof ymd !== "string" || typeof wk !== "string") continue;
+      const printed = parseWeekday(wk);
+      if (printed !== null && weekdayOf(ymd) === printed) n++;
+    }
+  }
+  return n;
+}
+
+function reconcileWeekdays(
+  fixed: Record<string, string>,
+  inferred: string[],
+  docHasMatchingWeekday: boolean,
+): boolean {
   let flagged = false;
   const yearGuessed = inferred.includes("year");
   for (const [key, wkKey] of WEEKDAY_FIELDS) {
@@ -126,7 +154,9 @@ function reconcileWeekdays(fixed: Record<string, string>, inferred: string[]): b
     if (actual === null || actual === printed) continue;
     const [y, mo, d] = ymd.split("-");
     const swapped = `${y}-${d}-${mo}`;
-    if (!yearGuessed && mo !== d && weekdayOf(swapped) === printed) fixed[key] = swapped;
+    if (docHasMatchingWeekday && !yearGuessed && mo !== d && weekdayOf(swapped) === printed) {
+      fixed[key] = swapped;
+    }
     if (!inferred.includes(key)) inferred.push(key);
     flagged = true;
   }
@@ -209,6 +239,7 @@ export function sanitizeOcrResult(raw: unknown): SanitizeResult {
 
   if (rawSteps.length > MAX_STEPS) dropped += rawSteps.length - MAX_STEPS;
 
+  const weekdayMatches = countWeekdayMatches(rawSteps.slice(0, MAX_STEPS));
   for (const s of rawSteps.slice(0, MAX_STEPS)) {
     if (!s || typeof s !== "object") {
       dropped++;
@@ -273,7 +304,7 @@ export function sanitizeOcrResult(raw: unknown): SanitizeResult {
       }
       if (!inferred.includes(k)) inferred.push(k);
     }
-    const weekdayFlagged = reconcileWeekdays(fixed, inferred);
+    const weekdayFlagged = reconcileWeekdays(fixed, inferred, weekdayMatches > 0);
     const needsReview = step.needsReview === true || weekdayFlagged;
 
     out.push({ category, fixed, variable, inferred, needsReview });
