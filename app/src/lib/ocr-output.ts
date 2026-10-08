@@ -19,12 +19,29 @@ export const MAX_LABEL_CHARS = 100;
 export const MAX_VARIABLE_ITEMS = 40;
 export const MAX_CATEGORY_CHARS = 32;
 export const MAX_URL_CHARS = 2048;
+export const MAX_INFERRED_ITEMS = 20;
 
 export type SanitizedStep = {
   category: string;
   fixed: Record<string, string>;
   variable: Array<{ label: string; value: string }>;
+  /**
+   * AI が推定した項目のキー（"date" / "endDate" / "year" など）。
+   *
+   * 🔴 **2026-08-22〜10-08 はここで捨てていた**（課金攻撃対策で整形を入れたとき、
+   *    型に無かった）。アプリは `inferred` を見て「要確認」と推定チップを出し、
+   *    `"year"` を見て年ズレ補正をする（`ocr_service.dart` の `stepFromOcrJson`）。
+   *    捨てると、**推測で埋めた日付が「読み取れた日付」として確認の機会なく
+   *    保存される**。落ちも警告も出なかった（`CLAUDE.md` §6-1）。
+   *
+   *    キーの形（英字で始まる英数字・32 文字まで）だけを通す。値は持たない。
+   */
+  inferred: string[];
+  /** AI が付けた要確認の印。真偽値以外は false。 */
+  needsReview: boolean;
 };
+
+const INFERRED_KEY = /^[A-Za-z][A-Za-z0-9_]{0,31}$/;
 
 /**
  * 飛行機の便名の形を揃える（"NH118" → "NH 118"）。2026-10-08・実データ検査。
@@ -136,7 +153,18 @@ export function sanitizeOcrResult(raw: unknown): SanitizeResult {
       fixed.title = normalizeFlightTitle(category, fixed.title);
     }
 
-    out.push({ category, fixed, variable });
+    const inferred: string[] = [];
+    const rawInf = Array.isArray(step.inferred) ? step.inferred : [];
+    for (const k of rawInf) {
+      if (typeof k !== "string" || !INFERRED_KEY.test(k) || inferred.length >= MAX_INFERRED_ITEMS) {
+        dropped++;
+        continue;
+      }
+      if (!inferred.includes(k)) inferred.push(k);
+    }
+    const needsReview = step.needsReview === true;
+
+    out.push({ category, fixed, variable, inferred, needsReview });
   }
 
   return { steps: out, dropped };

@@ -63,7 +63,63 @@ describe("知らないキーは持ち込ませない", () => {
     const r = sanitizeOcrResult({
       steps: [{ category: "宿泊", fixed: {}, variable: [], __proto__hack: "x", script: "y" }],
     });
-    assert.deepEqual(Object.keys(r.steps[0]).sort(), ["category", "fixed", "variable"]);
+    assert.deepEqual(Object.keys(r.steps[0]).sort(), [
+      "category",
+      "fixed",
+      "inferred",
+      "needsReview",
+      "variable",
+    ]);
+  });
+});
+
+describe("🔴 推定の印を捨てない（2026-10-08）", () => {
+  // 2026-08-22〜10-08 は inferred / needsReview をここで捨てていた。
+  // アプリは inferred を見て要確認を出し、"year" を見て年ズレ補正をする。
+  test("inferred と needsReview がアプリまで届く", () => {
+    const r = sanitizeOcrResult({
+      steps: [
+        {
+          category: "飛行機",
+          fixed: { title: "NH 10", date: "2026-12-26" },
+          variable: [],
+          inferred: ["endDate", "year"],
+          needsReview: true,
+        },
+      ],
+    });
+    assert.deepEqual(r.steps[0].inferred, ["endDate", "year"]);
+    assert.equal(r.steps[0].needsReview, true);
+  });
+
+  test("無ければ空配列・false（落ちない）", () => {
+    const r = sanitizeOcrResult({ steps: [{ category: "宿泊", fixed: {}, variable: [] }] });
+    assert.deepEqual(r.steps[0].inferred, []);
+    assert.equal(r.steps[0].needsReview, false);
+  });
+
+  test("キーの形でないもの・文字列でないもの・真偽値でないものは通さない", () => {
+    const r = sanitizeOcrResult({
+      steps: [
+        {
+          category: "宿泊",
+          fixed: {},
+          variable: [],
+          inferred: ["date", "javascript:alert(1)", 1, null, "あ", "x".repeat(100), "date"],
+          needsReview: "true",
+        },
+      ],
+    });
+    assert.deepEqual(r.steps[0].inferred, ["date"]);
+    assert.equal(r.steps[0].needsReview, false);
+    assert.ok(r.dropped >= 5, "捨てたことを黙らない");
+  });
+
+  test("件数を膨らませられない", () => {
+    const r = sanitizeOcrResult({
+      steps: [{ category: "宿泊", fixed: {}, variable: [], inferred: Array.from({ length: 500 }, (_, i) => `k${i}`) }],
+    });
+    assert.ok(r.steps[0].inferred.length <= 20);
   });
 });
 
