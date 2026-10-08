@@ -154,14 +154,37 @@ export type SanitizeResult = {
   dropped: number;
 };
 
-/** http / https 以外のスキームを持つ値を空にする。相対文字列はそのまま。 */
+/**
+ * 開かれると危ないスキーム。空白を含んでいても捨てる（"javascript:alert(1) //x"）。
+ */
+const DANGEROUS_SCHEMES = new Set([
+  "javascript",
+  "vbscript",
+  "data",
+  "file",
+  "blob",
+  "filesystem",
+  "about",
+  "intent",
+  "content",
+]);
+
+/**
+ * http / https 以外のスキームを持つ値を空にする。相対文字列はそのまま。
+ *
+ * 🔴 **空白を含む普通の文は URL ではない**（2026-10-08）。以前は先頭が
+ *    「英字…:」なら何でも捨てていたので、南海の特急「rapi:t β47号」が
+ *    スキーム "rapi" と見なされ、**列車名が空になって「無題」で届いた**。
+ *    URL は空白を含まないので、空白を含み、かつ危ないスキームでない値は残す。
+ */
 function safeValue(v: string): { value: string; dropped: boolean } {
   const s = v.slice(0, MAX_VALUE_CHARS);
   // スキームらしきものが付いていて http/https でないなら捨てる。
   const m = s.match(/^\s*([a-zA-Z][a-zA-Z0-9+.-]*):/);
   if (m) {
     const scheme = m[1].toLowerCase();
-    if (scheme !== "http" && scheme !== "https") return { value: "", dropped: true };
+    const looksLikeUrl = !/\s/.test(s.trim()) || DANGEROUS_SCHEMES.has(scheme);
+    if (scheme !== "http" && scheme !== "https" && looksLikeUrl) return { value: "", dropped: true };
     if (s.length > MAX_URL_CHARS) return { value: "", dropped: true };
   }
   return { value: s, dropped: s.length !== v.length };

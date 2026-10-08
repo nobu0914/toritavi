@@ -42,6 +42,26 @@ describe("🔴 危険な URL", () => {
     }
   });
 
+  test("🔴 空白を含んでいても危ないスキームは空にする", () => {
+    for (const bad of ["javascript:alert(1) //x", "data:text/html, <script>x</script>", " JavaScript:void(0) a"]) {
+      const r = sanitizeOcrResult({ steps: [{ category: "宿泊", fixed: { url: bad }, variable: [] }] });
+      assert.equal(r.steps[0].fixed.url, "", `${bad} が残っている`);
+    }
+  });
+
+  test("空白の無い未知のスキームは今までどおり空にする", () => {
+    const r = sanitizeOcrResult({ steps: [{ category: "宿泊", fixed: { url: "foo:bar" }, variable: [] }] });
+    assert.equal(r.steps[0].fixed.url, "");
+  });
+
+  test("「英字:」で始まる普通の名前は残す（rapi:t β47号 が無題になった）", () => {
+    const r = sanitizeOcrResult({
+      steps: [{ category: "列車", fixed: { title: "rapi:t β47号" }, variable: [{ label: "備考", value: "Gate: 47A" }] }],
+    });
+    assert.equal(r.steps[0].fixed.title, "rapi:t β47号");
+    assert.equal(r.steps[0].variable[0].value, "Gate: 47A");
+  });
+
   test("http / https は残す", () => {
     const r = sanitizeOcrResult({
       steps: [{ category: "宿泊", fixed: { url: "https://example.com/x" }, variable: [] }],
