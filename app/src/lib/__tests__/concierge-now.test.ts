@@ -62,13 +62,15 @@ test("深夜は 24:xx ではなく 00:xx", () => {
 });
 
 test("🔴 route が実際に差し込んでいる（定義してあるだけでは通さない）", () => {
+  // 2026-10-17 から、日本時間固定の `buildNowBlock()` ではなく、利用者のいる場所の
+  // 時刻を組む `buildTravelerNowBlock` を通す（`concierge-clock.test.ts`）。
   const src = code(ROUTE);
   assert.ok(
-    /import\s*\{\s*buildNowBlock\s*\}\s*from\s*["']@\/lib\/concierge-now["']/.test(src),
-    "🔴 route が buildNowBlock を取り込んでいない",
+    /buildTravelerNowBlock[\s\S]*from\s*["']@\/lib\/concierge-clock["']/.test(src),
+    "🔴 route が buildTravelerNowBlock を取り込んでいない",
   );
   assert.ok(
-    src.includes("buildNowBlock()"),
+    /nowBlock = buildTravelerNowBlock\(/.test(src),
     "🔴 取り込んでいるだけで呼んでいない —— プロンプトに日付は入らない",
   );
 });
@@ -82,7 +84,7 @@ test("🔴 いまの日時は「旅程データの扱い」より上に置く", 
   assert.ok(system.length > 0, "system の組み立てが見つからない（検査が空振りしている）");
 
   const iHead = system.indexOf("SYSTEM_PROMPT_HEAD");
-  const iNow = system.indexOf("buildNowBlock()");
+  const iNow = system.indexOf("nowBlock +");
   const iNotice = system.indexOf("SYSTEM_PROMPT_DATA_NOTICE");
   const iCtx = system.indexOf("context.promptBlock");
 

@@ -33,7 +33,11 @@ import {
   sanitizePlaceSuggestion,
   wantsPlaceSuggest,
 } from "@/lib/concierge-place-suggest";
-import { buildNowBlock } from "@/lib/concierge-now";
+import {
+  buildTravelerNowBlock,
+  buildUpcomingBlock,
+  resolveTravelerZone,
+} from "@/lib/concierge-clock";
 import type { Journey, Step } from "@/lib/types";
 import { ALLOWED_ORIGINS } from "@/lib/allowed-origins";
 
@@ -115,7 +119,7 @@ const SYSTEM_PROMPT_HEAD = `あなたは JUNROS の旅のアシスタント「�
 `;
 
 // 🔴 **この節から下は「利用者が入力した値」として読ませる。**
-//    だから **`buildNowBlock()` は必ずこの節より上**に差し込む ——
+//    だから **いまの日時（`nowBlock`）は必ずこの節より上**に差し込む ——
 //    いまの日時は**システムが与える事実**であって、旅程データではない。
 //    下に置くと「利用者が書いた日付」として扱われ、
 //    「メモに指示のような記述があります」の対象になりうる。
@@ -194,6 +198,12 @@ export async function POST(request: NextRequest) {
     contextJourneyIds?: string[];
     /** アプリが対応している追加機能（例: "place_suggest"）。古い版は送らない。 */
     features?: unknown;
+    /**
+     * 端末のタイムゾーン（IANA・例 "America/New_York"）。2026-10-17 から。
+     * 古い版は送らない —— そのときは旅程から推定する（`concierge-clock.ts`）。
+     * 🔴 **利用者が送れる値なので、そのまま使わない。** IANA として解けるものだけ。
+     */
+    timeZone?: unknown;
   };
   let body: Body;
   try {
@@ -359,6 +369,26 @@ export async function POST(request: NextRequest) {
     contextJourneyIds: body.contextJourneyIds,
   });
 
+  // 🔴 **利用者のいる場所の「いま」と、次の予定までの時間をサーバで決める**
+  //    （2026-10-17・ニューヨークの旅程で「現在 21:16 なので、あと 2 時間 14 分」と
+  //    誤った）。日本時間だけを渡し、時刻の差を AI に計算させていたのが原因。
+  //    🔴 **ここで落ちても相談は止めない。** 失敗したら従来どおり日本時間だけを渡す。
+  const nowAt = new Date();
+  let nowBlock: string;
+  let upcomingBlock = "";
+  try {
+    const traveler = resolveTravelerZone({
+      deviceTimeZone: body.timeZone,
+      journeys,
+      now: nowAt,
+    });
+    nowBlock = buildTravelerNowBlock(nowAt, traveler);
+    upcomingBlock = buildUpcomingBlock(context.safe, nowAt);
+  } catch (err) {
+    console.error("[concierge] clock failed:", err instanceof Error ? err.message : String(err));
+    nowBlock = buildTravelerNowBlock(nowAt, { zone: "Asia/Tokyo", label: "JST", source: "default" });
+  }
+
   /* ---- 6) Save user message ---- */
   // 🔴 **戻り値を捨てない**（2026-09-22）。保存に失敗しても AI は呼ばれ、
   //    200 が返っていた —— 利用者の画面には答えが出るのに、
@@ -413,10 +443,13 @@ export async function POST(request: NextRequest) {
         buildLanguageBlock(lang) +
         // 🔴 **いまが何日かを渡す**（2026-09-23）。これが無いと
         //    「今日の予定は？」に **本日の日付が不明** と返る（実機で踏んだ）。
-        buildNowBlock() +
+        //    2026-10-17 から、利用者のいる場所の時刻で渡す（日本時間も添える）。
+        nowBlock +
         // 🔴 場所の提案は、合図を送った版にだけ足す（公開中の版は変わらない）。
         (placeSuggest ? PLACE_SUGGEST_PROMPT : "") +
         SYSTEM_PROMPT_DATA_NOTICE +
+        // 🔴 次の予定までの時間は**旅程の題名を含む**ので、データの扱いの注意より下に置く。
+        upcomingBlock +
         "\n" + context.promptBlock,
       tools: placeSuggest ? [ADD_STEP_TOOL, SUGGEST_PLACES_TOOL] : [ADD_STEP_TOOL],
       messages,
