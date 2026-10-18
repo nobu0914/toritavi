@@ -43,20 +43,45 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "invalid epcYen" }, { status: 400 });
   }
 
+  const h = await headers();
+  const auditMeta = {
+    targetType: "affiliate_program",
+    targetId: program,
+    ip: h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
+    userAgent: h.get("user-agent"),
+  };
+
+  // 🔴 **書く前に記録する。記録できなければ書かずに 503**
+  //    （2026-10-19・夜間検査 5-11）。
+  //    以前は書いたあとに記録し、**戻り値を捨てていた** —— 記録に失敗しても
+  //    200 `{ ok: true }` が返り、画面は「保存しました」と出す。
+  //    誰が単価を変えたか分からないまま推定売上の数字が動く。
+  //    書いてから記録する形だと、記録に落ちた瞬間に「変わったが痕跡が無い」が
+  //    成立するので、利用者ファイルの閲覧（`files/route.ts` の GET）と同じく
+  //    **先に記録する。**
+  const recorded = await recordAuditLog(ctx, {
+    action: "admin.affiliate.rate_changed",
+    summary: `epc_yen=${epcYen}`,
+    ...auditMeta,
+  });
+  if (!recorded) {
+    console.error("[api admin/analytics/rates] audit failed — refusing");
+    return NextResponse.json({ error: "audit unavailable" }, { status: 503 });
+  }
+
   try {
     await updateAffiliateRate(program, epcYen, ctx.userId);
-    const h = await headers();
-    await recordAuditLog(ctx, {
-      action: "admin.affiliate.rate_changed",
-      targetType: "affiliate_program",
-      targetId: program,
-      summary: `epc_yen=${epcYen}`,
-      ip: h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
-      userAgent: h.get("user-agent"),
-    });
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error("[api admin/analytics/rates] failed", e);
+    // 🔴 **記録だけが嘘をつかないようにする。** 上で「変えた」と残してあるので、
+    //    書けなかったことも残す（broadcast の FAILED と同じ考え方）。
+    const followed = await recordAuditLog(ctx, {
+      action: "admin.affiliate.rate_change_failed",
+      summary: `epc_yen=${epcYen}`,
+      ...auditMeta,
+    });
+    if (!followed) console.error("[api admin/analytics/rates] failure audit also failed");
     return NextResponse.json({ error: "internal error" }, { status: 500 });
   }
 }
