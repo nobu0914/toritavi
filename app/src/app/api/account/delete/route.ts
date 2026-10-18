@@ -36,6 +36,8 @@ import {
  * 3. **記録できたら** `auth.users` を消して `ok` を返す
  * 4. **記録にすら失敗したら消さない**（500）。痕跡なく残るのが最悪の結果で、
  *    ここだけはフェイルクローズにする
+ * 5. `auth.users` の削除そのものが落ちたら、それも `auth:users` として記録する
+ *    （応答は従来どおり 500。2026-10-19・夜間検査 5-14）
  *
  * ## 配備の順序
  *
@@ -204,6 +206,23 @@ export async function POST(request: NextRequest) {
   const { error } = await admin.auth.admin.deleteUser(userId);
   if (error) {
     console.error("[account/delete] deleteUser failed", error);
+    // 🔴 **ここも消し残しとして記録する**（2026-10-19・夜間検査 5-14）。
+    //    この時点で台帳の表と Storage は**もう消えている**のに、アカウントは
+    //    残り、応答は 500。以前はここだけ何も記録せず、運用が見る
+    //    「消し残し」（`fetchOpenDeletionFailures`）にも出なかった ——
+    //    **半分だけ消えた利用者が、誰にも見えないまま残る。**
+    //
+    //    🔴 **利用者への応答は変えない**（文面も状態も同じ 500）。
+    //    記録に失敗しても応答は同じ。アカウントが残っているので、
+    //    利用者は再試行でき、再試行のたびにここへ来る。
+    const { error: logErr } = await admin.from(DELETION_FAILURE_TABLE).insert({
+      user_id: userId,
+      resource: "auth:users",
+      error: (error.message ?? "deleteUser failed").slice(0, 1000),
+    });
+    if (logErr) {
+      console.error("[account/delete] could not record deleteUser failure", logErr);
+    }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
