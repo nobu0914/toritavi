@@ -13,6 +13,10 @@ import { describe, test } from "node:test";
 
 import {
   INBOUND_MAX_BYTES,
+  MAX_INBOX_BYTES_PER_USER,
+  MAX_INBOX_BYTES_TOTAL,
+  inboxBudgetVerdict,
+  sumAttachmentBytes,
   MAX_INBOX_ATTACHMENTS,
   SIGNATURE_MAX_SKEW_SEC,
   extractAliasToken,
@@ -497,5 +501,38 @@ describe("冪等の鍵（message_key）", () => {
     );
     assert.equal(m.status, "forward_confirm");
     assert.equal(m.messageKey, sha("fwd@google.com"));
+  });
+});
+
+// 🔴 夜間検査 5-2（2026-10-18）: 受信箱の量の上限。
+describe("受信箱の量の上限", () => {
+  test("行の attachments の bytes を合計する", () => {
+    assert.equal(
+      sumAttachmentBytes([
+        { attachments: [{ bytes: 100 }, { bytes: 50 }] },
+        { attachments: [] },
+        { attachments: null },
+        {},
+      ]),
+      150,
+    );
+  });
+
+  test("🔴 形が崩れた要素は 1 通の上限として数える（0 にして上限を緩めない）", () => {
+    assert.equal(sumAttachmentBytes([{ attachments: [{}, { bytes: "9" }, null, { bytes: -1 }] }]),
+      INBOUND_MAX_BYTES * 4);
+  });
+
+  test("1 人分を先に、全体を次に見る。ちょうど上限までは入る", () => {
+    assert.equal(inboxBudgetVerdict(MAX_INBOX_BYTES_PER_USER - 10, 0, 10), "ok");
+    assert.equal(inboxBudgetVerdict(MAX_INBOX_BYTES_PER_USER - 10, 0, 11), "user");
+    assert.equal(inboxBudgetVerdict(0, MAX_INBOX_BYTES_TOTAL - 10, 10), "ok");
+    assert.equal(inboxBudgetVerdict(0, MAX_INBOX_BYTES_TOTAL - 10, 11), "total");
+  });
+
+  test("🔴 上限は共用の 1 GB を使い切らない大きさ", () => {
+    // Storage の枠は組織で 1 GB・Mapint と共用。全体の上限がそれを超えたら意味が無い。
+    assert.ok(MAX_INBOX_BYTES_TOTAL < 1024 * 1024 * 1024);
+    assert.ok(MAX_INBOX_BYTES_PER_USER < MAX_INBOX_BYTES_TOTAL);
   });
 });

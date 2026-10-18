@@ -40,13 +40,16 @@ import {
   ALIAS_TABLE,
   INBOUND_MAX_BYTES,
   INBOX_BUCKET,
+  INBOX_BUDGET_SCAN_LIMIT,
   INBOX_TABLE,
   MAX_OPEN_PER_USER,
   MAX_PER_USER_PER_DAY,
   extractAliasToken,
+  inboxBudgetVerdict,
   inboxObjectPath,
   mailImportDomain,
   parseInboundMail,
+  sumAttachmentBytes,
   verifyInboundSignature,
   type ParsedInbound,
 } from "@/lib/inbound-mail";
@@ -208,6 +211,34 @@ export async function POST(request: NextRequest) {
   if (dup.count > 0) {
     console.log(`${LOG} duplicate (already accepted)`);
     return ok(true);
+  }
+
+  // ⑩-2 置き場所の量（夜間検査 5-2）。件数の上限（⑧）だけでは、処理済み・失敗の
+  //     添付が 30 日残る分を止められない。1 人分と全体の合計を、行の attachments
+  //     （置いたときのバイト数）で数える。ファイルを消すのは 30 日の掃除と退会だけ
+  //     なので、行の記録と置き場所は一致する。
+  const incoming = mail.attachments.reduce((n, a) => n + a.bytes.byteLength, 0);
+  if (incoming > 0) {
+    const [mine, all] = await Promise.all([
+      admin.from(INBOX_TABLE).select("attachments").eq("user_id", userId)
+        .limit(INBOX_BUDGET_SCAN_LIMIT),
+      admin.from(INBOX_TABLE).select("attachments").limit(INBOX_BUDGET_SCAN_LIMIT + 1),
+    ]);
+    if (mine.error || all.error || !mine.data || !all.data) {
+      // 数えられないなら入れない。**黙って上限なしで通さない**（⑧と同じ）。
+      console.error(`${LOG} budget count failed`, mine.error?.code ?? "", all.error?.code ?? "");
+      return retryLater("budget");
+    }
+    if (all.data.length > INBOX_BUDGET_SCAN_LIMIT) {
+      console.error(`${LOG} dropped: inbox too large to count (>${INBOX_BUDGET_SCAN_LIMIT} rows)`);
+      return ok(false);
+    }
+    const verdict = inboxBudgetVerdict(
+      sumAttachmentBytes(mine.data), sumAttachmentBytes(all.data), incoming);
+    if (verdict !== "ok") {
+      console.warn(`${LOG} dropped: storage budget (${verdict}, incoming=${incoming})`);
+      return ok(false);
+    }
   }
 
   // ⑪ 添付を置く → 行を入れる。行が入らなければ置いたものを消す。

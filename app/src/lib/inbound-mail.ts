@@ -50,6 +50,52 @@ export const MAX_PER_USER_PER_DAY = 20;
 /** 未処理（pending / forward_confirm）の上限。 */
 export const MAX_OPEN_PER_USER = 50;
 
+/**
+ * 1 人が受信箱に置いておける添付の合計（保持中＝最長 30 日・**状態を問わない**）。
+ *
+ * 🔴 **件数の上限だけでは量が止まらなかった**（夜間検査 5-2・2026-10-18）。
+ *    1 日 20 通 × 1 通 4 MB × 30 日で約 2.4 GB まで積めた。[MAX_OPEN_PER_USER] は
+ *    pending / forward_confirm しか数えず、処理済み・失敗の添付も 30 日の掃除
+ *    （cron/purge-inbox）まで残る。書くのは service_role なので、Storage 側の
+ *    上限のポリシーも効かない。Storage の枠は組織で 1 GB・Mapint と共用。
+ */
+export const MAX_INBOX_BYTES_PER_USER = 50 * 1024 * 1024;
+
+/** 受信箱全体の上限。共用の 1 GB を、ほかの置き場所（step-attachments など）と Mapint に残す。 */
+export const MAX_INBOX_BYTES_TOTAL = 300 * 1024 * 1024;
+
+/** 合計を数えるときに読む行の上限。超えたら数え切れないので入れない（フェイルクローズ）。 */
+export const INBOX_BUDGET_SCAN_LIMIT = 5000;
+
+/**
+ * 受信箱の行の `attachments`（`[{ bytes }]`）の合計。
+ * 🔴 **形が崩れた要素は 1 通の上限（[INBOUND_MAX_BYTES]）として数える。**
+ *    0 として数えると、読めない行の分だけ上限が緩む。
+ */
+export function sumAttachmentBytes(rows: ReadonlyArray<{ attachments?: unknown }>): number {
+  let total = 0;
+  for (const row of rows) {
+    const list = row.attachments;
+    if (!Array.isArray(list)) continue;
+    for (const a of list) {
+      const b = (a as { bytes?: unknown } | null)?.bytes;
+      total += typeof b === "number" && Number.isFinite(b) && b >= 0 ? b : INBOUND_MAX_BYTES;
+    }
+  }
+  return total;
+}
+
+/** 置いてよいか。超えるなら、どちらの上限か（ログ用）。 */
+export function inboxBudgetVerdict(
+  userBytes: number,
+  totalBytes: number,
+  incomingBytes: number,
+): "ok" | "user" | "total" {
+  if (userBytes + incomingBytes > MAX_INBOX_BYTES_PER_USER) return "user";
+  if (totalBytes + incomingBytes > MAX_INBOX_BYTES_TOTAL) return "total";
+  return "ok";
+}
+
 /** 署名の時刻のずれの許容（秒）。 */
 export const SIGNATURE_MAX_SKEW_SEC = 300;
 

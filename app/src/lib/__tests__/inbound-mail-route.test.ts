@@ -11,7 +11,14 @@ import { afterEach, beforeEach, describe, test } from "node:test";
 import type { NextRequest } from "next/server";
 
 import { POST } from "../../app/api/inbound-mail/route.ts";
-import { MAX_OPEN_PER_USER, MAX_PER_USER_PER_DAY, signInbound } from "../inbound-mail.ts";
+import {
+  INBOX_BUDGET_SCAN_LIMIT,
+  MAX_INBOX_BYTES_PER_USER,
+  MAX_INBOX_BYTES_TOTAL,
+  MAX_OPEN_PER_USER,
+  MAX_PER_USER_PER_DAY,
+  signInbound,
+} from "../inbound-mail.ts";
 import { fakePdf, multipartMail } from "./support/mime-fixtures.ts";
 import { makeRequest } from "./support/route-harness.ts";
 
@@ -43,6 +50,7 @@ function fakeAdmin(o: FakeOpts = {}) {
   function query(table: string) {
     const filters: Array<(r: Row) => boolean> = [];
     let head = false;
+    let lim: number | null = null;
     let mode: "select" | "insert" = "select";
     let inserted: Row | null = null;
     const b = {
@@ -60,6 +68,10 @@ function fakeAdmin(o: FakeOpts = {}) {
       },
       in(col: string, vs: unknown[]) {
         filters.push((r) => vs.includes(r[col]));
+        return b;
+      },
+      limit(n: number) {
+        lim = n;
         return b;
       },
       insert(v: Row) {
@@ -96,8 +108,9 @@ function fakeAdmin(o: FakeOpts = {}) {
             return { data: null, error: null };
           }
           assert.equal(table, "toritavi_inbox_items");
-          const hit = rows.filter((r) => filters.every((f) => f(r)));
-          return head ? { count: hit.length, data: null, error: null } : { data: hit, error: null };
+          const all = rows.filter((r) => filters.every((f) => f(r)));
+          const hit = lim == null ? all : all.slice(0, lim);
+          return head ? { count: all.length, data: null, error: null } : { data: hit, error: null };
         };
         return run().then(res, rej);
       },
@@ -309,6 +322,66 @@ describe("/api/inbound-mail", () => {
     g.__toritaviTestAdmin = f.admin;
     await POST(signedRequest(mail()));
     assert.equal(f.rows.length, MAX_OPEN_PER_USER);
+  });
+
+  // 🔴 夜間検査 5-2（2026-10-18）: 件数の上限だけでは量が止まらず、1 人で 30 日に
+  //    約 2.4 GB 積めた（処理済み・失敗の添付も 30 日残る）。Storage は Mapint と共用の 1 GB。
+  test("🔴 1 人の添付の合計が上限を超えるなら 200 で捨てる（処理済み・失敗も数える）", async () => {
+    const old = new Date(Date.now() - 3 * 86_400_000).toISOString();
+    const rows = [
+      { user_id: UID, status: "done", received_at: old,
+        attachments: [{ path: "a", bytes: MAX_INBOX_BYTES_PER_USER / 2 }] },
+      { user_id: UID, status: "failed", received_at: old,
+        attachments: [{ path: "b", bytes: MAX_INBOX_BYTES_PER_USER / 2 }] },
+    ];
+    const f = fakeAdmin({ aliases: { [TOKEN]: UID }, rows });
+    g.__toritaviTestAdmin = f.admin;
+    const r = (await POST(signedRequest(mail()))) as unknown as { status: number };
+    assert.equal(r.status, 200);
+    assert.equal(f.rows.length, 2, "上限を超えて入った");
+    assert.equal(f.objects.size, 0, "捨てるメールの添付を置いた");
+    assert.ok(logs.join("\n").includes("storage budget (user"), logs.join("\n"));
+  });
+
+  test("🔴 受信箱全体の合計が上限を超えるなら 200 で捨てる（ほかの人の分も数える）", async () => {
+    const old = new Date(Date.now() - 3 * 86_400_000).toISOString();
+    const other = "22222222-2222-4222-8222-222222222222";
+    const rows = [
+      { user_id: other, status: "done", received_at: old,
+        attachments: [{ path: "x", bytes: MAX_INBOX_BYTES_TOTAL }] },
+    ];
+    const f = fakeAdmin({ aliases: { [TOKEN]: UID }, rows });
+    g.__toritaviTestAdmin = f.admin;
+    await POST(signedRequest(mail()));
+    assert.equal(f.rows.length, 1);
+    assert.equal(f.objects.size, 0);
+    assert.ok(logs.join("\n").includes("storage budget (total"), logs.join("\n"));
+  });
+
+  test("上限の手前なら入る", async () => {
+    const old = new Date(Date.now() - 3 * 86_400_000).toISOString();
+    const rows = [
+      { user_id: UID, status: "done", received_at: old,
+        attachments: [{ path: "a", bytes: MAX_INBOX_BYTES_PER_USER - 200_000 }] },
+    ];
+    const f = fakeAdmin({ aliases: { [TOKEN]: UID }, rows });
+    g.__toritaviTestAdmin = f.admin;
+    await POST(signedRequest(mail()));
+    assert.equal(f.rows.length, 2, "上限の手前なのに入らなかった");
+    assert.equal(f.objects.size, 1);
+  });
+
+  test("🔴 行が多すぎて数え切れないなら 200 で捨てる（黙って上限なしで通さない）", async () => {
+    const old = new Date(Date.now() - 3 * 86_400_000).toISOString();
+    const other = "33333333-3333-4333-8333-333333333333";
+    const rows = Array.from({ length: INBOX_BUDGET_SCAN_LIMIT + 1 }, () => ({
+      user_id: other, status: "done", received_at: old, attachments: [],
+    }));
+    const f = fakeAdmin({ aliases: { [TOKEN]: UID }, rows });
+    g.__toritaviTestAdmin = f.admin;
+    await POST(signedRequest(mail()));
+    assert.equal(f.rows.length, INBOX_BUDGET_SCAN_LIMIT + 1);
+    assert.equal(f.objects.size, 0);
   });
 
   test("凍結中の利用者は 200 で捨てる／状態を読めなければ 503（再送させる）", async () => {
