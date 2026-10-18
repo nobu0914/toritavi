@@ -689,7 +689,23 @@ export async function getAiUsage(
   //    ゲストの画面に「0 / 5」と出て、実際は 3 件で止まる —— **画面が嘘をつく**。
   audience: Audience,
 ): Promise<AiFeatureUsage> {
-  const tier = cfg.tiers[audience];
+  return toFeatureUsage(await readAiUsageCounts(sb, userId, cfg), cfg, audience);
+}
+
+/** 当期の使用量（DB の生の値）。**プランに依存しない。** */
+export type AiUsageCounts = { requests: number; tokens: number };
+
+/**
+ * 当期の使用量を DB から読む。**プランを知らなくても読める**ので、
+ * プランの読み取りと並べて始められる（2026-10-19・夜間検査 7-35）。
+ *
+ * 🔴 期間キーが取れなければ投げる（`QuotaPeriodUnavailableError`）。
+ */
+export async function readAiUsageCounts(
+  sb: SupabaseClient,
+  userId: string,
+  cfg: AiGuardConfig,
+): Promise<AiUsageCounts> {
   const key = await quotaKey(sb, userId, cfg.quotaPeriod);
   const { data: usage } = await sb
     .from(cfg.tables.quota)
@@ -698,9 +714,22 @@ export async function getAiUsage(
     .eq(key.col, key.val)
     .maybeSingle();
   return {
-    usedRequests: usage?.requests_count ?? 0,
+    requests: usage?.requests_count ?? 0,
+    tokens: usage?.tokens_total ?? 0,
+  };
+}
+
+/** 読んだ使用量に、その相手（audience）の上限を添える。DB は触らない。 */
+export function toFeatureUsage(
+  counts: AiUsageCounts,
+  cfg: AiGuardConfig,
+  audience: Audience,
+): AiFeatureUsage {
+  const tier = cfg.tiers[audience];
+  return {
+    usedRequests: counts.requests,
     limitRequests: tier.quotaRequests,
-    usedTokens: usage?.tokens_total ?? 0,
+    usedTokens: counts.tokens,
     limitTokens: tier.quotaTokens,
     period: cfg.quotaPeriod,
     proLimitRequests: cfg.tiers.pro.quotaRequests,

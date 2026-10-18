@@ -51,6 +51,7 @@ import { REJECT_MESSAGE, validateFile } from "@/lib/file-validate";
 import { sanitizeOcrResult } from "@/lib/ocr-output";
 import { countInputTokens } from "@/lib/ocr-token-count";
 import { callBudget, countBudget } from "@/lib/request-deadline";
+import { startEarly } from "@/lib/start-early";
 import {
   actualCostCents,
   estimateCostCents,
@@ -126,19 +127,6 @@ function buildContent(
   }
   content.push({ type: "text", text: "この文書から予約情報を抽出してください。" });
   return content;
-}
-
-/**
- * 先に走らせておき、**あとで順に await する**ための包み。
- *
- * 🔴 **未処理の拒否にしない。** 並べて始めた読み取りのうち、前の判定で
- * 先に返った要求では、後ろの Promise を誰も await しない。その Promise が
- * 失敗すると Node は「未処理の拒否」として扱う。ここで空の catch を付けて
- * おき、**await した側には元の失敗がそのまま届く**（判定の挙動は変わらない）。
- */
-function startEarly<T>(p: Promise<T>): Promise<T> {
-  p.catch(() => {});
-  return p;
 }
 
 function decodeDataUrl(s: string): { mime: string; bytes: Uint8Array } | null {

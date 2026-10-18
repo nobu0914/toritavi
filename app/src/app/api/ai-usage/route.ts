@@ -16,7 +16,8 @@ import {
   CONCIERGE_GUARD,
   resolvePlan,
   audienceOf,
-  getAiUsage,
+  readAiUsageCounts,
+  toFeatureUsage,
   type AiFeatureUsage,
   nextResetIso,
 } from "@/lib/ai-guard";
@@ -28,6 +29,7 @@ import {
   type GuestDeviceState,
 } from "@/lib/guest-quota";
 import { queryGuestUsed } from "@/lib/devicecheck";
+import { startEarly } from "@/lib/start-early";
 
 export async function GET(request: NextRequest) {
   const origin = request.headers.get("origin");
@@ -48,13 +50,57 @@ export async function GET(request: NextRequest) {
     acceptLanguage: request.headers.get("accept-language"),
   });
 
+  // 🔴 **互いに依存しない往復を同時に始める**（2026-10-19・夜間検査 7-35）。
+  //
+  //    以前は 認証 → プラン → 期間の始まり（RPC）→ OCR の件数 → 期間の終わり（RPC）
+  //    を 1 本ずつ待っていた（コンシェルジュの件数だけが OCR と並んでいた）。
+  //    **プランで変わるのは上限の数字だけで、DB から読む値はプランに依存しない。**
+  //    期間の始まりと終わりも互いに独立している。
+  //
+  //    🔴 **判定は下で元の順に行う。** プランが読めなければ、ほかが済んでいても
+  //    503（`plan_unavailable`）。返るコードは直列のときと変わらない。
+  //    期間の始まり → OCR の件数 だけは鍵が要るので直列のまま（`readAiUsageCounts`）。
+  const planP = startEarly(resolvePlan(sb, userId));
+  const countsP = startEarly(
+    Promise.all([
+      readAiUsageCounts(sb, userId, OCR_GUARD),
+      readAiUsageCounts(sb, userId, CONCIERGE_GUARD),
+    ]),
+  );
+  // 枠が戻る日（下の `ocrResetAt`）。ゲストはリセットしないので訊かない。
+  const periodNextP = isAnonymous
+    ? null
+    : startEarly(
+        (async () => {
+          const { data, error } = await sb.rpc("ocr_period_next", {
+            p_user_id: userId,
+          });
+          return { data, error };
+        })(),
+      );
+  // ゲストの身元確認と端末の使用数（下で使う）。**会員には訊かない。**
+  const guestAttestedP = isAnonymous
+    ? startEarly(
+        (async () => {
+          const { data: g } = await sb
+            .from("toritavi_guest_grants")
+            .select("attested")
+            .eq("user_id", userId)
+            .maybeSingle();
+          return g?.attested === true;
+        })(),
+      )
+    : null;
+  const deviceToken = isAnonymous ? request.headers.get("x-guest-device-token") : null;
+  const deviceP = deviceToken ? startEarly(queryGuestUsed(deviceToken)) : null;
+
   // 🔴 **読めなかったら 200 で `free` を返さない**（2026-08-30 レーン 3）。
   //    アプリは「サーバに聞けた・無料だった」と解釈し、契約者に
   //    「まだ反映されていません」を出す —— **課金の嘘**になる。
   //    503 なら `subscriptionSync` は「聞けなかった」として扱える。
   let plan;
   try {
-    plan = await resolvePlan(sb, userId);
+    plan = await planP;
   } catch {
     return NextResponse.json(
       { error: "plan_unavailable", message: apiMessage("usage_unavailable", lang) },
@@ -64,16 +110,16 @@ export async function GET(request: NextRequest) {
   // 残数の上限は audience で引く（ゲストは 3 件）。
   const audience = audienceOf(plan, isAnonymous);
 
-  // 🔴 `getAiUsage` は期間キーを SQL に聞くので、**取れなければ投げる**
+  // 🔴 `readAiUsageCounts` は期間キーを SQL に聞くので、**取れなければ投げる**
   //    （`QuotaPeriodUnavailableError`）。包まないと生 500 になる。
   //    2026-08-30 に concierge で同じ見落としをしたばかり
   //    —— `CLAUDE.md` §6-1 の 3「同じ経路を通る呼び出しを数える」。
   let ocr, concierge;
   try {
-    [ocr, concierge] = await Promise.all([
-      getAiUsage(sb, userId, OCR_GUARD, audience),
-      getAiUsage(sb, userId, CONCIERGE_GUARD, audience),
-    ]);
+    const [ocrCounts, conciergeCounts] = await countsP;
+    // 上限の数字は**読み終えたプラン**（audience）で決める。
+    ocr = toFeatureUsage(ocrCounts, OCR_GUARD, audience);
+    concierge = toFeatureUsage(conciergeCounts, CONCIERGE_GUARD, audience);
   } catch {
     return NextResponse.json(
       { error: "plan_unavailable", message: apiMessage("usage_unavailable", lang) },
@@ -85,15 +131,7 @@ export async function GET(request: NextRequest) {
   //
   // 🔴 **読めなかったら false。** 「読めない」を「通っている」に変換すると、
   //    失敗したまま二度とやり直さない。会員には常に false（意味を持たない）。
-  let guestAttested = false;
-  if (isAnonymous) {
-    const { data: g } = await sb
-      .from("toritavi_guest_grants")
-      .select("attested")
-      .eq("user_id", userId)
-      .maybeSingle();
-    guestAttested = g?.attested === true;
-  }
+  const guestAttested = guestAttestedP ? await guestAttestedP : false;
 
   // 🔴 **ゲストの上限は、App Attest の結果で決まる。**
   //    `tiers.guest` の 3 をそのまま返すと、**未検証の端末に「0 / 3」と
@@ -106,8 +144,7 @@ export async function GET(request: NextRequest) {
   //    **判定は 1 か所（`decideGuest`）に寄せ、残数もそこから出す。**
   let guestDecision: GuestDecision | undefined;
   if (isAnonymous) {
-    const token = request.headers.get("x-guest-device-token");
-    const dev = token ? await queryGuestUsed(token) : null;
+    const dev = deviceP ? await deviceP : null;
     const state: GuestDeviceState =
       dev && dev.ok
         ? dev.known
@@ -131,10 +168,9 @@ export async function GET(request: NextRequest) {
   //    暦月の人に翌月 1 日を出すのは正しいので、そちらは従来値を使う。
   //    **分からないことを、それらしい日付に変換しない。**
   const ocrResetAt = await (async (): Promise<string | null> => {
-    if (isAnonymous) return null; // ゲストはリセットしない
-    const { data, error } = await sb.rpc("ocr_period_next", {
-      p_user_id: userId,
-    });
+    if (!periodNextP) return null; // ゲストはリセットしない（訊いてもいない）
+    // 往復は上で始めてある（`rpc("ocr_period_next"`）。ここは結果を待つだけ。
+    const { data, error } = await periodNextP;
     if (!error && typeof data === "string") {
       return new Date(`${data}T00:00:00+09:00`).toISOString();
     }
