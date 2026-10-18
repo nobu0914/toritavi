@@ -563,42 +563,55 @@ export async function POST(request: NextRequest) {
     toolUse,
   };
 
-  /* ---- 9) Save assistant message ---- */
-  // 🔴 ここは**失敗しても要求は通す。** AI は既に呼ばれて実費が出ており、
-  //    答えも返せる。**記録だけが欠ける。**
-  //    利用者メッセージ側（6）と扱いを変えているのは、あちらは
-  //    「AI を呼ぶ前」で、やり直しが効くから。
-  {
-    const { error } = await sb.from("toritavi_concierge_messages").insert({
-      thread_id: threadId,
-      user_id: userId,
-      role: "assistant",
-      content: assistant.content,
-      tool_use: assistant.toolUse ?? null,
-      tokens_in: assistant.tokensIn,
-      tokens_out: assistant.tokensOut,
-    });
-    if (error) {
-      console.error("[concierge] save assistant message failed:", error.message);
-    }
-  }
-
-  /* ---- 10) Increment usage ---- */
+  // 🔴 **9〜11 の 3 つは同時に走らせる**（2026-10-19・夜間検査 7-33）。
+  //    以前は 1 本ずつ待ってから返しており、利用者は答えが出たあとも
+  //    書き込み 3 往復ぶん待たされていた。3 つは互いの結果を使わない。
+  //
+  //    🔴 **どれも応答のあと（after）へは回さない。待ってから返す。**
+  //    10 の計上は全体とその人の月の原価に足し込み、次の予約
+  //    （`toritavi_concierge_begin`）がそれを見て止める ——
+  //    応答のあとに回すと、落ちたときに誰も気づかないまま上限が緩む。
+  //    9 は次の相談の履歴になるので、次の要求より先に書き終えておく。
   const cost = estimateCostCents(assistant.tokensIn, assistant.tokensOut);
-  // 記録は service_role 専用 RPC 経由（利用者が PostgREST から直接叩いて
-  // 共有予算を焼き切れないようにするため）。
-  await recordConciergeUsage({
-    userId,
-    tokensIn: assistant.tokensIn,
-    tokensOut: assistant.tokensOut,
-    costCents: cost,
-  });
+  await Promise.all([
+    /* ---- 9) Save assistant message ---- */
+    // 🔴 ここは**失敗しても要求は通す。** AI は既に呼ばれて実費が出ており、
+    //    答えも返せる。**記録だけが欠ける。**
+    //    利用者メッセージ側（6）と扱いを変えているのは、あちらは
+    //    「AI を呼ぶ前」で、やり直しが効くから。
+    (async () => {
+      const { error } = await sb.from("toritavi_concierge_messages").insert({
+        thread_id: threadId,
+        user_id: userId,
+        role: "assistant",
+        content: assistant.content,
+        tool_use: assistant.toolUse ?? null,
+        tokens_in: assistant.tokensIn,
+        tokens_out: assistant.tokensOut,
+      });
+      if (error) {
+        console.error("[concierge] save assistant message failed:", error.message);
+      }
+    })(),
 
-  /* ---- 11) Bump thread updated_at ---- */
-  await sb
-    .from("toritavi_concierge_threads")
-    .update({ updated_at: new Date().toISOString() })
-    .eq("id", threadId);
+    /* ---- 10) Increment usage ---- */
+    // 記録は service_role 専用 RPC 経由（利用者が PostgREST から直接叩いて
+    // 共有予算を焼き切れないようにするため）。
+    recordConciergeUsage({
+      userId,
+      tokensIn: assistant.tokensIn,
+      tokensOut: assistant.tokensOut,
+      costCents: cost,
+    }),
+
+    /* ---- 11) Bump thread updated_at ---- */
+    (async () => {
+      await sb
+        .from("toritavi_concierge_threads")
+        .update({ updated_at: new Date().toISOString() })
+        .eq("id", threadId);
+    })(),
+  ]);
 
   return NextResponse.json({
     threadId,
