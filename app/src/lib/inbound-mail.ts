@@ -27,6 +27,7 @@ import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import PostalMime from "postal-mime";
 
 import { detectKind, type DetectedKind } from "./file-validate.ts";
+import { ImageMetadataError, stripImageMetadata } from "./image-metadata.ts";
 import { MAX_FILE_BYTES, MAX_TEXT_CHARS } from "./ocr-limits.ts";
 
 // ---------------------------------------------------------------------------
@@ -402,7 +403,9 @@ export type SkipReason =
   | "too_large"
   | "tiny_image"
   | "decorative_image"
-  | "over_count";
+  | "over_count"
+  /** 構造を辿れず、撮影メタデータを落とせたか分からない画像（置かない）。 */
+  | "unstrippable";
 
 export type ParsedInbound = {
   status: "pending" | "forward_confirm";
@@ -559,8 +562,22 @@ export async function parseInboundMail(raw: Uint8Array): Promise<ParsedInbound> 
       skip("over_count");
       continue;
     }
+    // 🔴 **写真は撮影メタデータ（位置情報など）を落としてから置く**
+    //    （`image-metadata.ts`・2026-10-18 の週次検査 4-1）。転送された写真は
+    //    `toritavi-inbox` に最長 30 日残り、運営の画面からも取り出せる。
+    //    落とせたか分からないものは置かない（フェイルクローズ）。
+    let stored = bytes;
+    if (kind !== "application/pdf") {
+      try {
+        stored = stripImageMetadata(kind, bytes);
+      } catch (e) {
+        if (!(e instanceof ImageMetadataError)) throw e;
+        skip("unstrippable");
+        continue;
+      }
+    }
     attachments.push({
-      bytes,
+      bytes: stored,
       mime: kind,
       ext: EXT[kind],
       name: cleanLine(att.filename?.replace(/[\\/]/g, "_"), 200),

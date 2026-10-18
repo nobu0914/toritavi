@@ -160,13 +160,102 @@ export function multipartMail(opts: {
   return concatBytes(...chunks);
 }
 
-/** 指定の大きさの PNG らしきバイト列（先頭は本物の PNG の署名と IHDR）。 */
+/**
+ * 指定の大きさの PNG らしきバイト列。**チャンクの並びは本物と同じ**
+ * （署名・IHDR 100x100・IDAT・IEND）で、中身と CRC は 0。
+ *
+ * 🔴 並びを本物にしてあるのは、受信が画像を**チャンク単位で辿って**撮影
+ *    メタデータを落とすから（`image-metadata.ts`）。辿れない画像は置かない。
+ *    57 バイト未満は並びを作れないので、署名と IHDR の頭だけ（小さすぎる
+ *    画像として先に捨てられる検体）。
+ */
 export function fakePng(size: number): Uint8Array {
   const b = new Uint8Array(size);
   b.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52]);
   // 幅・高さ 100x100
   b.set([0, 0, 0, 100, 0, 0, 0, 100], 16);
+  const idat = size - 8 - 25 - 12 - 12;
+  if (idat < 0) return b;
+  const dv = new DataView(b.buffer);
+  dv.setUint32(33, idat);
+  b.set([0x49, 0x44, 0x41, 0x54], 37); // IDAT
+  const iend = 33 + 12 + idat;
+  dv.setUint32(iend, 0);
+  b.set([0x49, 0x45, 0x4e, 0x44], iend + 4); // IEND
   return b;
+}
+
+/**
+ * 撮影メタデータ入りの JPEG（合成）。EXIF に向き [orientation] と GPS、
+ * XMP・IPTC・コメント・EOI の後ろの 2 枚目（MPF の形）に [secret] を埋める。
+ * 画像の本体（[scan]）は 0xFF 00 の詰め物と RST を含む。
+ */
+export function fakeJpegWithGps(opts: {
+  secret: string;
+  orientation?: number;
+  scan?: Uint8Array;
+  padTo?: number;
+}): { bytes: Uint8Array; scan: Uint8Array } {
+  const enc = (s: string) => new TextEncoder().encode(s);
+  const seg = (marker: number, data: Uint8Array) => {
+    const out = new Uint8Array(4 + data.length);
+    out.set([0xff, marker, (data.length + 2) >> 8, (data.length + 2) & 0xff]);
+    out.set(data, 4);
+    return out;
+  };
+  // TIFF（II）: IFD0 = [Orientation, GPSInfo → GPS IFD]、GPS IFD に緯度の文字列。
+  const s = enc(opts.secret);
+  const tiff = new Uint8Array(8 + 2 + 24 + 4 + 2 + 12 + 4 + s.length);
+  const t = new DataView(tiff.buffer);
+  tiff.set([0x49, 0x49, 0x2a, 0x00]);
+  t.setUint32(4, 8, true);
+  t.setUint16(8, 2, true);
+  t.setUint16(10, 0x0112, true); // Orientation
+  t.setUint16(12, 3, true);
+  t.setUint32(14, 1, true);
+  t.setUint16(18, opts.orientation ?? 1, true);
+  t.setUint16(22, 0x8825, true); // GPSInfo
+  t.setUint16(24, 4, true);
+  t.setUint32(26, 1, true);
+  const gps = 8 + 2 + 24 + 4;
+  t.setUint32(30, gps, true);
+  t.setUint32(34, 0, true);
+  t.setUint16(gps, 1, true);
+  t.setUint16(gps + 2, 0x0002, true); // GPSLatitude（ここでは文字列で代用）
+  t.setUint16(gps + 4, 2, true);
+  t.setUint32(gps + 6, s.length, true);
+  t.setUint32(gps + 10, gps + 2 + 12 + 4, true);
+  tiff.set(s, gps + 2 + 12 + 4);
+  const exif = concatBytes(enc("Exif\0\0"), tiff);
+  const scan =
+    opts.scan ?? new Uint8Array([0x12, 0xff, 0x00, 0x34, 0xff, 0xd0, 0x56, 0x78, 0x9a]);
+  const parts = [
+    new Uint8Array([0xff, 0xd8]),
+    seg(0xe0, concatBytes(enc("JFIF\0"), new Uint8Array([1, 1, 0, 0, 1, 0, 1, 0, 0]))),
+    seg(0xe1, exif),
+    seg(0xe1, enc(`http://ns.adobe.com/xap/1.0/\0<x:xmpmeta exif:GPSLatitude="${opts.secret}"/>`)),
+    seg(0xe2, enc(`MPF\0${opts.secret}`)),
+    seg(0xe2, concatBytes(enc("ICC_PROFILE\0"), new Uint8Array([1, 1, 9, 9]))),
+    seg(0xed, enc(`Photoshop 3.0\0${opts.secret}`)),
+    seg(0xfe, enc(`comment ${opts.secret}`)),
+    seg(0xdb, new Uint8Array(65)), // DQT
+    seg(0xc0, new Uint8Array([8, 0, 16, 0, 16, 1, 1, 0x11, 0])), // SOF0 16x16
+    seg(0xc4, new Uint8Array(20)), // DHT
+    seg(0xda, new Uint8Array([1, 1, 0, 0, 63, 0])), // SOS
+    scan,
+    new Uint8Array([0xff, 0xd9]), // EOI
+    // MPF の 2 枚目（EOI の後ろ）
+    new Uint8Array([0xff, 0xd8]),
+    seg(0xe1, concatBytes(enc("Exif\0\0"), enc(opts.secret))),
+    new Uint8Array([0xff, 0xd9]),
+  ];
+  const bytes = concatBytes(...parts);
+  if (opts.padTo && bytes.length < opts.padTo) {
+    // 大きさを稼ぐのは画像の本体の中（詰め物にしないと構造が変わる）。
+    const extra = new Uint8Array(opts.padTo - bytes.length).fill(0x11);
+    return fakeJpegWithGps({ ...opts, padTo: undefined, scan: concatBytes(scan, extra) });
+  }
+  return { bytes, scan };
 }
 
 /** 指定の大きさの PDF らしきバイト列（判定は先頭の %PDF だけを見る）。 */
