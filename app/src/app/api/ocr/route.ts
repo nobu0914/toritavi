@@ -128,6 +128,19 @@ function buildContent(
   return content;
 }
 
+/**
+ * 先に走らせておき、**あとで順に await する**ための包み。
+ *
+ * 🔴 **未処理の拒否にしない。** 並べて始めた読み取りのうち、前の判定で
+ * 先に返った要求では、後ろの Promise を誰も await しない。その Promise が
+ * 失敗すると Node は「未処理の拒否」として扱う。ここで空の catch を付けて
+ * おき、**await した側には元の失敗がそのまま届く**（判定の挙動は変わらない）。
+ */
+function startEarly<T>(p: Promise<T>): Promise<T> {
+  p.catch(() => {});
+  return p;
+}
+
 function decodeDataUrl(s: string): { mime: string; bytes: Uint8Array } | null {
   const m = s.match(/^data:([a-zA-Z0-9.+/-]+);base64,(.+)$/);
   if (!m) return null;
@@ -178,7 +191,27 @@ export async function POST(request: NextRequest) {
   // 🔴 **サーバ側の記録で決める**（2026-09-08・§5.1）。
   //    raw_user_meta_data は利用者が書き換えられるので材料にしない。
   //    引数は認証から来た userId だけ。リクエストボディを見ない。
-  const consent = await decideAiConsentFromServer(auth.userId, "/api/ocr");
+  //
+  // 🔴 **入口の 4 つの読み取りを同時に始める**（2026-10-19・夜間検査 7-31）。
+  //    以前は 許諾 → プラン → 非常停止スイッチ → モデレーション を
+  //    1 本ずつ待っていた。どれも userId だけで引け、**互いの結果を使わない。**
+  //    待つ必要があるのは「どの順で判定するか」だけなので、
+  //    **始めるのは一度に、判定は下で元の順に 1 つずつ**行う
+  //    （DB が落ちたときに返るコードを変えない —— plan_unavailable が先）。
+  //
+  //    🔴 **断るのが決まっているゲストには、許諾以外を始めない。**
+  //    下の 403 で返す要求に、プランや凍結の状態を読ませる理由が無い。
+  const guestRefused = isAnonymous && !GUEST_MODE_ENABLED;
+  const consentP = startEarly(decideAiConsentFromServer(auth.userId, "/api/ocr"));
+  const gates = guestRefused
+    ? null
+    : {
+        plan: startEarly(resolvePlan(sb, userId)),
+        mode: startEarly(getAiMode("ocr")),
+        blocked: startEarly(assertActiveOr403Strict(userId, lang)),
+      };
+
+  const consent = await consentP;
   if (!consent.allow) {
     return NextResponse.json(
       { error: consent.code, message: apiMessage("ai_consent_required", lang) },
@@ -190,7 +223,8 @@ export async function POST(request: NextRequest) {
   //    アプリのフラグでは閉じない —— サーバは匿名 JWT を受けるので、
   //    Supabase の匿名サインインが有効なら外部から使える。**ここで断る。**
   //    戻すときに塞ぐものは `guest-quota.ts` の `GUEST_MODE_ENABLED` に列挙。
-  if (isAnonymous && !GUEST_MODE_ENABLED) {
+  if (!gates) {
+    // ＝ `guestRefused`（匿名かつゲスト閉鎖中）。
     return NextResponse.json(
       {
         error: "registration_required",
@@ -206,7 +240,7 @@ export async function POST(request: NextRequest) {
   //    「無料」に変換しない。
   let plan;
   try {
-    plan = await resolvePlan(sb, userId);
+    plan = await gates.plan;
   } catch {
     return NextResponse.json(
       { error: "plan_unavailable", message: apiMessage("plan_unavailable", lang) },
@@ -221,7 +255,7 @@ export async function POST(request: NextRequest) {
   if (mismatch) console.error("[OCR] quota does not match spec:", mismatch);
 
   // --- 非常停止スイッチ（DB。env はより厳しい側にだけ効く）---
-  const mode = await getAiMode("ocr");
+  const mode = await gates.mode;
   if (!modeAllows(mode, audience)) {
     return NextResponse.json(
       { error: "ai_disabled", message: MODE_MESSAGE[mode as "guest_off" | "off"] },
@@ -231,7 +265,7 @@ export async function POST(request: NextRequest) {
 
   // --- モデレーション: **高原価の処理はフェイルクローズ** ---
   // 判定できないまま通すと、凍結した相手に外部への支払いを続けることになる。
-  const blocked = await assertActiveOr403Strict(userId, lang);
+  const blocked = await gates.blocked;
   if (blocked) return blocked;
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
