@@ -40,6 +40,18 @@ import {
 } from "@/lib/concierge-clock";
 import type { Journey, Step } from "@/lib/types";
 import { ALLOWED_ORIGINS } from "@/lib/allowed-origins";
+import { conciergeCallBudget } from "@/lib/request-deadline";
+
+/**
+ * 🔴 **関数の上限を宣言する**（2026-10-19・夜間検査 7-34）。
+ * 以前は宣言が無く、プラットフォームの既定で切られうる状態だった。
+ * 切られると後片づけ（予約の戻し）が走らない。
+ *
+ * 応答そのものは `request-deadline.ts` の `CONCIERGE_TOTAL_MS`（50 秒）までに
+ * 返す —— アプリは 60 秒で諦めるので、**この値は締切ではなく「殺される前の
+ * 余白」。** 締切より長くしておく（`concierge-deadline.test.ts` が見張る）。
+ */
+export const maxDuration = 60;
 
 const MODEL = "claude-haiku-4-5-20251001";
 const MAX_TOKENS = 1024;
@@ -147,6 +159,9 @@ type AssistantPayload = {
 };
 
 export async function POST(request: NextRequest) {
+  // 🔴 **リクエスト全体の締切の起点**（7-34）。AI に渡す時間はここから引く。
+  const startedAt = Date.now();
+
   // 🔴 **アプリのフラグはサーバを閉じない**（JR000187・`CLAUDE.md` §5）。
   //    `kConciergeEnabled = false` は導線を消すだけで、ここは生きていた。
   //    `concierge-context.ts` は**確認番号とメモ**を文脈に含めるので、
@@ -432,6 +447,25 @@ export async function POST(request: NextRequest) {
   const messages = buildAnthropicMessages(history ?? [], (t) => context.vault.hide(t));
   const placeSuggest = wantsPlaceSuggest(body.features);
 
+  // 🔴 **締切から逆算して AI に時間を渡す**（2026-10-19・夜間検査 7-34）。
+  //    アプリは 60 秒で諦める。以前は締切が無く、SDK の既定（10 分）まで
+  //    待ちうる間に関数が殺されると、**取った予約が戻らなかった。**
+  //    残りが最低線を割っていたら**呼ばずに戻す** —— 呼んでから殺されると、
+  //    課金だけ起きて戻せない。
+  //
+  //    🔴 **利用者の切断（request.signal）では打ち切らない。** 切断で予約を
+  //    戻すと、答えが出る直前に切るだけで「枠にも予算にも計上されない
+  //    呼び出し」を繰り返せる（OCR の `ai_call_failed` の注記と同じ理屈）。
+  const ab = conciergeCallBudget(startedAt, Date.now());
+  if (!ab.ok) {
+    console.error("[concierge] no time left before calling AI; releasing");
+    await releaseConcierge(userId);
+    return NextResponse.json(
+      { error: "ai_error", message: apiMessage("ai_unavailable", lang) },
+      { status: 502 },
+    );
+  }
+
   let response;
   try {
     response = await client.messages.create({
@@ -453,11 +487,16 @@ export async function POST(request: NextRequest) {
         "\n" + context.promptBlock,
       tools: placeSuggest ? [ADD_STEP_TOOL, SUGGEST_PLACES_TOOL] : [ADD_STEP_TOOL],
       messages,
+    }, {
+      // 🔴 締切で打ち切る。打ち切られると下の catch に落ち、予約を戻す。
+      timeout: ab.countMs,
+      maxRetries: 0,
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[concierge] Anthropic error:", msg);
     // 🔴 **予約を戻す。** 実費が発生していないのに枠だけ減るのを避ける。
+    //    締切での打ち切り（SDK の timeout）もここに落ちる。
     await releaseConcierge(userId);
     // 🔴 **生のエラー文を利用者へ返さない。** SDK の文面には URL や
     //    内部の識別子が混ざりうる。ログには残す。

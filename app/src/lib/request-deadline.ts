@@ -40,3 +40,37 @@ export function callBudget(startedAt: number, now: number): Budget {
   if (usable < MIN_CALL_MS) return { ok: false, reason: "no_time" };
   return { ok: true, countMs: usable };
 }
+
+// ===========================================================================
+// /api/concierge の締切（2026-10-19・夜間検査 7-34）
+//
+// 🔴 **アプリは 60 秒で諦める**（`toritavi_app` の `concierge_service.dart` の
+// `kConciergeTimeout`）。サーバ側には締切も `maxDuration` も無く、Anthropic の
+// 呼び出しは SDK の既定（10 分）まで待ちうる。その間にプラットフォームの上限で
+// 関数が殺されると、`toritavi_concierge_begin` で取った**予約が戻らない** ——
+// 利用者は答えを受け取れないのに、日次の枠だけが減る。
+//
+// OCR と同じく**開始時刻から締切を引き**、アプリが諦める前に返し終える。
+// ===========================================================================
+
+/** アプリが諦めるまでの時間。**アプリ側の値を変えたらここも変える。** */
+export const CONCIERGE_APP_TIMEOUT_MS = 60_000;
+/**
+ * サーバが応答を返し終える締切（開始から）。アプリが諦める前に、
+ * 通信と起動のぶん 10 秒を残す。
+ */
+export const CONCIERGE_TOTAL_MS = 50_000;
+/**
+ * 答えのあとに必ず残す時間。成功なら保存と計上（並べて待つ）、
+ * 失敗なら予約の戻し（`toritavi_concierge_release`）に使う。
+ */
+export const CONCIERGE_AFTER_MS = 5_000;
+/** これを下回るなら AI を呼び始めない（呼んでも間に合わない）。 */
+export const CONCIERGE_MIN_CALL_MS = 5_000;
+
+/** コンシェルジュの AI 呼び出しに使ってよい時間。**後片づけのぶんは残す。** */
+export function conciergeCallBudget(startedAt: number, now: number): Budget {
+  const usable = startedAt + CONCIERGE_TOTAL_MS - CONCIERGE_AFTER_MS - now;
+  if (usable < CONCIERGE_MIN_CALL_MS) return { ok: false, reason: "no_time" };
+  return { ok: true, countMs: usable };
+}
