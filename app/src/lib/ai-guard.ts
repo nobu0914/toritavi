@@ -494,13 +494,13 @@ export async function enforceAiLimits(
   const msgs = msgsFor(cfg, audience, lang);
 
   // 拒否は toritavi_ai_rejections に記録して繰り返し違反者を可視化する
-  // （規約 第9条6/7/8号）。記録はベストエフォートで await しても安全。
+  // （規約 第9条6/7/8号）。記録は after() で応答のあとに書く（待たせない・7-41）。
   const reject = async (
     reason: string,
     message: string,
     status: number,
   ): Promise<NextResponse> => {
-    await logAiRejection(userId, cfg.feature as "ocr" | "concierge", reason);
+    logAiRejection(userId, cfg.feature as "ocr" | "concierge", reason);
     return NextResponse.json({ error: reason, message }, { status });
   };
 
@@ -616,7 +616,7 @@ export async function reserveOcrUnits(
   if (!granted) {
     const usedAfter = Number(row?.used_after ?? pass.limitRequests);
     const remaining = Math.max(0, pass.limitRequests - usedAfter);
-    await logAiRejection(userId, cfg.feature as "ocr" | "concierge", "quota_units");
+    logAiRejection(userId, cfg.feature as "ocr" | "concierge", "quota_units");
     return NextResponse.json(
       {
         error: "quota_request_limit",
@@ -653,7 +653,7 @@ export async function assertUnitsWithinQuota(
   units: number,
 ): Promise<NextResponse | null> {
   if (units <= pass.remaining) return null;
-  await logAiRejection(userId, cfg.feature as "ocr" | "concierge", "quota_units");
+  logAiRejection(userId, cfg.feature as "ocr" | "concierge", "quota_units");
   return NextResponse.json(
     {
       error: "quota_request_limit",
@@ -809,7 +809,7 @@ export async function checkMinuteRate(
     return null;
   }
   if ((count ?? 0) >= perMin) {
-    await logAiRejection(userId, cfg.feature as "ocr" | "concierge", "rate_limit");
+    logAiRejection(userId, cfg.feature as "ocr" | "concierge", "rate_limit");
     return NextResponse.json(
       { error: "rate_limit", message: msgsFor(cfg, audience, lang).rateLimit(perMin) },
       { status: 429 },
@@ -890,7 +890,7 @@ export async function tryOcrAttempt(
     });
     if (error) throw error;
     if (data === true) return null;
-    await logAiRejection(userId, "ocr", "rate_limit");
+    logAiRejection(userId, "ocr", "rate_limit");
     return NextResponse.json(
       { error: "rate_limit", message: msgsFor(OCR_GUARD, audience, lang).rateLimit(perMin) },
       { status: 429 },
@@ -989,7 +989,7 @@ export async function beginOcrRequest(args: {
   if (status === "quota_exceeded") {
     const used = Number(row?.used_after ?? args.limitUnits);
     const remaining = Math.max(0, args.limitUnits - used);
-    await logAiRejection(args.userId, "ocr", "quota_units");
+    logAiRejection(args.userId, "ocr", "quota_units");
     return NextResponse.json(
       {
         error: "quota_request_limit",
@@ -1014,11 +1014,11 @@ export async function beginOcrRequest(args: {
     // キャッシュが古くて 'on' に見えることがある。DB は止めているので、
     // **迷ったら「停止」と言う。**「不明」を返さない。
     const message = mode === "on" ? MODE_MESSAGE.off : MODE_MESSAGE[mode];
-    await logAiRejection(args.userId, "ocr", "ai_disabled");
+    logAiRejection(args.userId, "ocr", "ai_disabled");
     return NextResponse.json({ error: "ai_disabled", message }, { status: 503 });
   }
   if (status === "budget_exceeded") {
-    await logAiRejection(args.userId, "ocr", "budget_exceeded");
+    logAiRejection(args.userId, "ocr", "budget_exceeded");
     return NextResponse.json(
       { error: "monthly_budget_exceeded", message: OCR_GUARD.messages.budgetExceeded },
       { status: 503 },

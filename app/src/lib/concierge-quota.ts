@@ -110,7 +110,7 @@ export async function beginConcierge(args: {
   //    この関数へ置き換えたときに**記録ごと落ちた** ——
   //    分間レートが落ちたのと同じ作り替えで、同じ型の抜け。
   //    **違反検知の画面がコンシェルジュを一切見ていなかった。**
-  await logAiRejection(args.userId, "concierge", status);
+  logAiRejection(args.userId, "concierge", status);
 
   if (status === "ai_disabled") {
     return {

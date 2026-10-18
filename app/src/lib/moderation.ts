@@ -11,7 +11,7 @@
  * A moderation-infra outage must never lock the whole user base out.
  */
 import "server-only";
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServiceClient } from "@/lib/supabase-service";
 import { apiMessage, DEFAULT_LANG, type Lang } from "@/lib/api-messages";
@@ -70,21 +70,44 @@ export async function assertActiveOr403(
 
 /**
  * Append a rate-limit / budget rejection to toritavi_ai_rejections. Best
- * effort: never throws, so it can be awaited from the AI guard without risk.
- * Uses the service-role client (the table is service-role only).
+ * effort: never throws. Uses the service-role client (the table is
+ * service-role only).
+ *
+ * 🔴 **応答を待たせない。`after()` で応答のあとに書く**（2026-10-19・夜間検査 7-41）。
+ *
+ * この表は `/admin/abuse` と `/admin/concierge` が**読むだけ**の記録で、
+ * 上限を効かせる判定には一切使っていない（上限は DB の予約関数が持つ）。
+ * 以前は呼び出し側が await しており、**上限に当たった利用者は 429 / 503 を
+ * 受け取るまで、この記録の往復ぶん余計に待っていた。**
+ *
+ * 🔴 **記録をやめたのではない。** after() は応答のあとも関数の寿命を延ばして
+ * 走らせる（Vercel の waitUntil）。だから戻り値は void —— **呼び出し側で
+ * await しないこと**（しても何も待たない）。
  */
-export async function logAiRejection(
+export function logAiRejection(
   userId: string,
   feature: "ocr" | "concierge",
   reason: string
-): Promise<void> {
+): void {
+  const write = async () => {
+    try {
+      const admin = createServiceClient();
+      const { error } = await admin
+        .from("toritavi_ai_rejections")
+        .insert({ user_id: userId, feature, reason });
+      // 🔴 **返ってきた error を捨てない。** supabase-js は失敗を throw せず
+      //    `{ error }` で返すので、以前の catch だけでは**書けなかったことが
+      //    どこにも出なかった**。コードだけ出す（本文に値が混ざりうる）。
+      if (error) console.error("[moderation] logAiRejection failed", error.code ?? "unknown");
+    } catch (e) {
+      console.error("[moderation] logAiRejection failed", e);
+    }
+  };
   try {
-    const admin = createServiceClient();
-    await admin
-      .from("toritavi_ai_rejections")
-      .insert({ user_id: userId, feature, reason });
-  } catch (e) {
-    console.error("[moderation] logAiRejection failed", e);
+    after(write);
+  } catch {
+    // リクエストの外（スクリプト等）では after() が投げる。その場で書いておく。
+    void write();
   }
 }
 

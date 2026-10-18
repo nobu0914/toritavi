@@ -424,7 +424,7 @@ export async function POST(request: NextRequest) {
         //    かった」は、利用者に取れる手が違う。前者は登録、後者は再試行。
         //    まとめると、**設定ミスの人に「使い切った」と嘘をつく**。
         const unreadable = decision.reason === "device_unreadable";
-        await logAiRejection(
+        logAiRejection(
           userId,
           "ocr",
           unreadable ? "guest_device_unreadable" : "guest_device_exhausted",
@@ -664,7 +664,7 @@ export async function POST(request: NextRequest) {
     //    **予約（`beginOcrRequest`）の前**に置く。後だと予約だけ取って
     //    断ることになり、DB 側の枠が減る。
     if (guestDecision && guestUnitsExceedRemaining(guestDecision, units)) {
-      await logAiRejection(userId, "ocr", "guest_units_over_remaining");
+      logAiRejection(userId, "ocr", "guest_units_over_remaining");
       return NextResponse.json(
         {
           error: "guest_quota_exhausted",
