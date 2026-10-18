@@ -486,8 +486,18 @@ export async function POST(request: NextRequest) {
       }
       totalBytes += dec.bytes.byteLength;
       if (dec.bytes.byteLength > MAX_INLINE_FILE_BYTES || totalBytes > MAX_INLINE_TOTAL_BYTES) {
+        // 🔴 **`REJECT_MESSAGE.too_large` を使わない。** あれは `validateFile` の
+        //    10MB（Phase 2 の確定仕様）の文言で、ここで効いているのは
+        //    インライン経路の上限。数字は定数から作る（夜間検査 3-25）。
         return NextResponse.json(
-          { error: "too_large", message: REJECT_MESSAGE.too_large },
+          {
+            error: "too_large",
+            message: apiMessageN(
+              "too_large_inline",
+              lang,
+              MAX_INLINE_TOTAL_BYTES / (1024 * 1024),
+            ),
+          },
           { status: 413 },
         );
       }

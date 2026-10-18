@@ -1022,7 +1022,9 @@ export async function beginOcrRequest(args: {
     return NextResponse.json(
       {
         error: "quota_request_limit",
-        message: msgsFor(OCR_GUARD, args.audience).quotaUnits(remaining),
+        // 🔴 **言語を必ず渡す。** 省略すると `msgsFor` の既定（日本語）に倒れ、
+        //    英語の利用者にだけ日本語が出る（夜間検査 3-3）。
+        message: msgsFor(OCR_GUARD, args.audience, args.lang).quotaUnits(remaining),
         remaining,
       },
       { status: 429 },
@@ -1048,8 +1050,15 @@ export async function beginOcrRequest(args: {
   }
   if (status === "budget_exceeded") {
     logAiRejection(args.userId, "ocr", "budget_exceeded");
+    // 🔴 **`message` は文字列で返す。** 以前は `{ja, en}` の入れ物ごと載せており、
+    //    アプリ（`scan_screen.dart` の `_serverMessage`）は文字列以外を捨てて
+    //    汎用の文言に倒していた。「あなたの枠は減っていない」が届かず、
+    //    503 と 429 の区別が画面から消える（夜間検査 3-2）。
     return NextResponse.json(
-      { error: "monthly_budget_exceeded", message: OCR_GUARD.messages.budgetExceeded },
+      {
+        error: "monthly_budget_exceeded",
+        message: msgsFor(OCR_GUARD, args.audience, args.lang).budgetExceeded,
+      },
       { status: 503 },
     );
   }

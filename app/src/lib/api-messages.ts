@@ -192,6 +192,16 @@ export const API_MESSAGES_N = {
     ja: (n: number) => `ファイルは一度に最大 ${n} 件までです。`,
     en: (n: number) => `You can send up to ${n} files at a time.`,
   },
+  // 🔴 **インライン経路の上限（`MAX_INLINE_TOTAL_BYTES`）で断るとき。** n は MB。
+  //    数字は呼び出し側が定数から作る —— ここに書くと、上限を変えたときに
+  //    文言だけが古い数字を言い続ける（以前は「1 ファイル 10MB まで」と
+  //    言いながら 3MB で断っていた・夜間検査 3-25）。
+  too_large_inline: {
+    ja: (n: number) =>
+      `ファイルが大きすぎます（1 回の読み取りで合計 ${n}MB まで）。画像を圧縮するか、PDF をページで分けてお試しください。`,
+    en: (n: number) =>
+      `The file is too large (up to ${n} MB per scan in total). Please compress the image or split the PDF.`,
+  },
   // 🔴 ゲスト向け。**「今月」「翌月 1 日」と言わない** ——
   //    お試し枠にリセットは無く、待てば戻ると読ませる（2026-08-31 に実機で発覚）。
   guest_remaining: {
