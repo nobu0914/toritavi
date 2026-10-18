@@ -492,8 +492,17 @@ bash tool/rls_probe.sh
   実際に A のデータが変わる
 - **⛔（検査不能）が 1 つでも残っていたら緑ではない。** A 側にデータを
   作ってから回し直す。「A が空だから 0 件」は何も証明しない
-- 埋めるために A で作るもの: 旅程・予定・**スキャン画像**・連絡先（電話番号入り）・
-  やることのチェック・設定の変更・フィードバック（添付付き）
+- 埋めるために A で作るもの（**一度作れば残る**。アプリで A にログインして作る）:
+  - 旅程（**消していないもの**を 1 つ以上）・予定・やることのチェック・設定の変更
+  - **スキャン画像** —— 保管場所 `step-attachments` の A のフォルダ
+  - フィードバック（添付付き）—— 保管場所 `toritavi-feedback`
+  - 🔴 **アカウント画像** —— 保管場所 `toritavi-avatars`。アカウントタブの一番上の
+    カード → 画像を選んで保存。**空のままだと毎回 ⛔**（2026-10-18 の夜間検査 6-3 まで
+    この行が無かった）
+  - 連絡先（電話番号入り）は導線が閉じているので ⏸（`_showSelfContacts=false`）
+- 🔴 **書類（`toritavi_trip_documents`）は A で作れない。** アプリは 2026-10-12 から
+  書類を端末＋iCloud に置き、この表へは書かない。**プローブが A のトークンで
+  1 行撒いて、測り終えたら A が消す**（消していない旅程が A に無いと ⛔）
 
 ### 匿名・ログイン済みの RPC 棚卸し（毎回・人が 1 本流す）
 
@@ -519,10 +528,17 @@ select p.proname, pg_get_function_identity_arguments(p.oid) as args,
 - **`anon_can = true` が 1 つでもあれば revoke。** ただし `returns = trigger` は
   PostgREST から呼べないので対象外（`cascade_soft_delete_steps` 等）
 - `auth_can = true` は「アプリが端末から呼ぶもの」だけに絞る。
-  正解は `grep -rn "\.rpc(" lib/` の結果と一致すること（現在 `increment_ad_impression` の 1 本）
-- 閉じ方は**両方書く**:
+  正解は `tool/verify/function_grants_probe.py` の ③ が出す「アプリが呼ぶ RPC」と
+  一致すること（2026-10-18 時点で 4 本: `increment_ad_impression`・`toritavi_inbox_claim`・
+  `toritavi_mail_alias_get_or_create`・`toritavi_mail_alias_rotate`）。
+  🔴 **`grep "\.rpc(" lib/` では数え落とす** —— 変数渡し（`rpcText` 経由）と
+  複数行の呼び出しが映らない（夜間検査 6-4）
+- 🔴 **同じプローブが総合検査（`inspect.sh` の L1b・1 台目のみ）で毎日回る。**
+  ① ACL の監査（PUBLIC を ACL の位置に関係なく拾う・6-5）／② 実挙動／③ 呼び出し元との
+  突き合わせ。上の SQL は「プローブが見ない引数・戻り値まで人が見る」ためのもの
+- 閉じ方は**3 つとも書く**（`from anon, authenticated` だけでは PUBLIC が残る・`CLAUDE.md` §7）:
   ```sql
-  revoke execute on function public.<名前>(<引数>) from anon, authenticated;
+  revoke execute on function public.<名前>(<引数>) from public, anon, authenticated;
   ```
 
 > ⚠️ **OpenAPI（`GET /rest/v1/` の `application/openapi+json`）で面を数える案は
