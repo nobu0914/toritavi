@@ -82,12 +82,24 @@ export type IncomingEvent = {
   screen?: unknown;
   props?: unknown;
   at_local?: unknown;
+  id?: unknown;
 };
 
 export type CleanEvent = {
   name: EventName;
   screen: string | null;
   props: Record<string, string | number>;
+  /**
+   * 1 件ごとに端末が作る UUID（2026-10-22）。**再送で同じ 1 件を 2 回数えない**ための鍵。
+   *
+   * 🔴 **送った直後にアプリが裏へ回ると**（登録 → 確認メールを開く）、届いたのに
+   *    応答を受け取れず、アプリは「送れなかった」として同じ 1 件を再送する。
+   *    2026-10-22 に `signup.completed` が 1 回の起動で 18 秒差の 2 件になっていた。
+   *
+   *    **人も端末も指さない**（1 件ごとに作り直す乱数）。形が違えば null で、
+   *    イベント自体は落とさない（古いアプリは送ってこない）。
+   */
+  eventId: string | null;
 };
 
 /** 識別子の形か。違えば null（**切らずに落とす**）。 */
@@ -135,6 +147,7 @@ export function sanitizeEvent(raw: IncomingEvent): CleanEvent | null {
     name: raw.name as EventName,
     screen: ident(raw.screen),
     props,
+    eventId: isUuid(raw.id) ? raw.id.toLowerCase() : null,
   };
 }
 

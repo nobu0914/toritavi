@@ -154,6 +154,32 @@ test("session_id は UUID の形だけ通す", () => {
 });
 
 /**
+ * 🔴 **再送で 2 回数えない**ための鍵（2026-10-22）。届いたのに応答を受け取れなかった
+ * 1 件を、アプリは同じ鍵のまま送り直す。サーバは同じ鍵を 1 行にまとめる。
+ */
+test("1 件ごとの鍵（UUID）は通す。大文字は小文字に揃える", () => {
+  const e = sanitizeEvent({
+    name: "signup.completed",
+    id: "3F8A92C1-4B2E-4D1A-9F3C-1A2B3C4D5E6F",
+  });
+  assert.equal(e?.eventId, "3f8a92c1-4b2e-4d1a-9f3c-1a2b3c4d5e6f");
+});
+
+test("🔴 鍵の形が違っても、イベントは落とさない（鍵だけ外す）", () => {
+  for (const id of ["not-a-uuid", "", 123, null, undefined, "SKR-6620 羽田"]) {
+    const e = sanitizeEvent({ name: "signup.completed", id });
+    assert.equal(e?.name, "signup.completed", `🔴 鍵 ${String(id)} でイベントごと落ちた`);
+    assert.equal(e?.eventId, null, `🔴 鍵 ${String(id)} が通った`);
+  }
+});
+
+test("陽性対照: 鍵を送ってこない古いアプリのイベントもそのまま通る", () => {
+  const { events, dropped } = sanitizeEvents([{ name: "scan.succeeded" }]);
+  assert.equal(dropped, 0);
+  assert.equal(events[0].eventId, null);
+});
+
+/**
  * 🔴 **名前を足すときに、ここも見ること。** 一覧に足しただけで
  * アプリが送らなければ何も起きないし、アプリが送っても一覧に無ければ
  * 黙って捨てられる。**両方が揃って初めて動く。**

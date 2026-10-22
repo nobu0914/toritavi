@@ -71,10 +71,29 @@ export async function POST(request: NextRequest) {
     props: e.props,
     ...ctx,
   }));
+  // 🔴 **再送で 2 回数えない**（2026-10-22・`events.ts` の `eventId`）。
+  //    同じ鍵の行が既にあれば黙って飛ばす（`supabase/events_idempotency.sql` の一意索引）。
+  //    鍵を送ってこない古いアプリの行には、欄そのものを付けない。
+  const keyed = events.some((e) => e.eventId);
+  const keyedRows = rows.map((r, i) =>
+    events[i].eventId ? { ...r, event_id: events[i].eventId } : r,
+  );
 
   try {
     const admin = createServiceClient();
-    const { error } = await admin.from("toritavi_events").insert(rows);
+    // 🔴 **呼ぶたびに `from()` から作り直す。** 組み立て役は URL の検索条件を
+    //    持ち回るので、使い回すと 2 回目の insert に `on_conflict` が残る。
+    let { error } = keyed
+      ? await admin
+          .from("toritavi_events")
+          .upsert(keyedRows, { onConflict: "event_id", ignoreDuplicates: true })
+      : await admin.from("toritavi_events").insert(rows);
+    if (error && keyed) {
+      // 🔴 **欄や索引がまだ無い本番でも、イベントを失わない。** 鍵を外して入れ直す
+      //    （重複は防げないが、0 件よりよい）。黙らずにログへ残す。
+      console.warn("[events] keyed insert failed — 鍵なしで入れ直す", error.message);
+      ({ error } = await admin.from("toritavi_events").insert(rows));
+    }
     if (error) {
       console.warn("[events] insert failed", error.message);
       return NextResponse.json({ accepted: 0, dropped }, { status: 200 });
