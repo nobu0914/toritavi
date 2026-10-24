@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { buildConciergeContext } from "../concierge-context.ts";
-import { PiiVault, UNKNOWN_TOKEN_TEXT } from "../pii-vault.ts";
+import { PiiVault, UNKNOWN_TOKEN_TEXT, protectJourneys } from "../pii-vault.ts";
 import type { Journey, Step } from "../types.ts";
 
 const CONF = "3350342163";
@@ -207,4 +207,61 @@ test("🔴 旅券番号は、欄でも自由文でも送らない（数字だけ
 test("旅券の見出しの後の普通の語は消さない・日付は電話にしない", () => {
   const ctx = build(journey([{ memo: "Passport required at check-in on 2026-11-14" }]));
   assert.match(ctx.promptBlock, /Passport required at check-in on 2026-11-14/);
+});
+
+// ---- 🔴 題名・出発地・到着地（2026-10-24・夜間検査 4-4） ----
+//
+// 以前はメモ・詳細・原文・情報欄だけが `scrubSensitive` を通り、
+// 旅程の題名・予定の題名は `vault.hide` だけ、出発地・到着地は**素通し**だった。
+// OCR は予約票の 1 行目をそのまま題名にしうる（「予約確認 taro@example.com」）ので、
+// メールや旅券番号が題名に入れば、そのまま AI へ渡っていた。
+
+test("🔴 旅程の題名・予定の題名・出発地・到着地のメールと旅券番号も送らない", () => {
+  const leaks = {
+    journeyTitle: ["trip@example.com", "TK1234567"],
+    stepTitle: ["hotel@example.jp", "AB7654321"],
+    from: ["from@example.org", "K1234567A"],
+    to: ["to@example.net", "XY2345678"],
+  };
+  const j = journey(
+    [
+      {
+        title: `予約確認 ${leaks.stepTitle.join(" ")}`,
+        from: `成田 ${leaks.from.join(" ")}`,
+        to: `札幌 ${leaks.to.join(" ")}`,
+        confNumber: CONF,
+      },
+    ],
+    { title: `札幌 ${leaks.journeyTitle.join(" ")}` },
+  );
+  const ctx = build(j);
+  for (const [field, values] of Object.entries(leaks)) {
+    for (const v of values) {
+      assert.ok(!ctx.promptBlock.includes(v), `${field} の本物が載っている: ${v}`);
+    }
+  }
+  // 中身（場所の名前）は残る —— 欄ごと消して答えられなくするのではない
+  assert.match(ctx.promptBlock, /成田 \[メール省略\] \[番号省略\]/);
+  assert.match(ctx.promptBlock, /札幌 \[メール省略\] \[番号省略\]/);
+  assert.match(ctx.promptBlock, /予約確認 \[メール省略\] \[番号省略\]/);
+
+  // 守った結果そのもの（プロンプトの組み立て方に依らず固定する）
+  const safe = protectJourneys([j], new PiiVault());
+  const dump = JSON.stringify(safe);
+  for (const v of Object.values(leaks).flat()) {
+    assert.ok(!dump.includes(v), `守った結果に本物が残っている: ${v}`);
+  }
+});
+
+test("🔴 題名・出発地・到着地に書かれた登録済みの番号は記号になる", () => {
+  const ctx = build(
+    journey([{ confNumber: CONF, title: `予約 ${CONF}`, from: `受付 ${TEL}`, to: "札幌" }], {
+      title: `札幌（${CONF}）`,
+    }),
+  );
+  for (const v of [CONF, TEL]) assert.ok(!ctx.promptBlock.includes(v), `本物が載っている: ${v}`);
+  assert.match(ctx.promptBlock, /"title": "予約 \[CONF_1\]"/);
+  assert.match(ctx.promptBlock, /"from": "受付 \[TEL_1\]"/);
+  // 出発地・到着地を空のまま送らない（無い欄は無いまま）
+  assert.match(ctx.promptBlock, /"to": "札幌"/);
 });

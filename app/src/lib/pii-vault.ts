@@ -190,9 +190,11 @@ export function protectJourneys(journeys: Journey[], vault: PiiVault): SafeJourn
   // 欄の番号を先に登録してから、自由文にだけある電話番号を拾う
   // （欄と同じ番号なら、欄の種類の記号のまま使われる）。
   for (const j of journeys) {
-    registerPhonesIn(j.memo, vault);
+    for (const t of [j.title, j.memo]) registerPhonesIn(t, vault);
     for (const s of j.steps) {
-      for (const t of [s.memo, s.detail, s.sourceText]) registerPhonesIn(t, vault);
+      for (const t of [s.title, s.from, s.to, s.memo, s.detail, s.sourceText]) {
+        registerPhonesIn(t, vault);
+      }
       for (const info of s.information ?? []) {
         if (!kindOfLabel(info.label)) registerPhonesIn(info.value, vault);
       }
@@ -201,9 +203,13 @@ export function protectJourneys(journeys: Journey[], vault: PiiVault): SafeJourn
   const text = (v: string | null | undefined) =>
     v == null ? undefined : (scrubSensitive(vault.hide(String(v))) ?? undefined);
 
+  // 🔴 **題名も自由文と同じ扱い**（2026-10-24・夜間検査 4-4）。
+  //    以前は `vault.hide` だけで、メール・カード・旅券番号は素通しだった。
+  //    OCR は予約票の 1 行目をそのまま題名にしうるので、題名は自由文と変わらない。
+  //    題名は必須の欄なので、空になっても `undefined` にはしない。
   return journeys.map((j) => ({
     ...j,
-    title: vault.hide(j.title),
+    title: text(j.title) ?? j.title,
     memo: text(j.memo),
     steps: j.steps.map((s): SafeStep => protectStep(s, vault, text)),
   }));
@@ -216,7 +222,11 @@ function protectStep(
 ): SafeStep {
   return {
     ...s,
-    title: vault.hide(s.title),
+    title: text(s.title) ?? s.title,
+    // 🔴 出発地・到着地も自由文（以前は `...s` のまま素通しだった・夜間検査 4-4）。
+    //    無い欄は無いまま（`text` は null/undefined を undefined で返す）。
+    from: text(s.from),
+    to: text(s.to),
     confNumber: vault.token("CONF", s.confNumber) ?? undefined,
     memo: text(s.memo),
     detail: text(s.detail),
