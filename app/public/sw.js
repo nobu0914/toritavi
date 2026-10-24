@@ -16,7 +16,8 @@
  * CACHE_VERSION is bumped per notable deploy so activation cleans up old
  * caches that may contain the previous deploy's stale HTML.
  */
-const CACHE_VERSION = "toritavi-v9";
+// v10（2026-10-24）: 管理画面の HTML を控えに入れていたので、古い控えごと捨てるために上げた。
+const CACHE_VERSION = "toritavi-v10";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const HTML_FALLBACK = `${CACHE_VERSION}-html`;
 
@@ -58,7 +59,10 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          if (response.ok) {
+          // 🔴 **管理画面（/admin）の HTML は控えに入れない**（Cloudflare 検査 run-2・
+          //    2026-10-24）。控えは利用者・ログインの状態に縛られておらず、ログアウト・
+          //    退会のあとも、圏外で開くと最後に見た管理画面（利用者の一覧など）が出えた。
+          if (response.ok && !url.pathname.startsWith("/admin")) {
             const clone = response.clone();
             caches.open(HTML_FALLBACK).then((cache) => cache.put("/", clone));
           }

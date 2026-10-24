@@ -35,3 +35,18 @@ test("🔴 route: DB に書く前に回数制限を通し、IP をログに出�
   assert.ok(limit > 0 && limit < src.indexOf("toritavi_events"), "回数制限が書き込みより前に無い");
   assert.ok(!/console\.\w+\([^)]*eventsSourceOf/.test(src), "送り元をログに出している");
 });
+
+test("🔴 行数で数える: 1 回に 50 件ずつなら、上限の行数で止まる（回数では止まらない量）", () => {
+  const l = new EventsRateLimiter(100, 6_000, 60_000);
+  assert.deepEqual([1, 2, 3].map(() => l.allow("1.2.3.4", 0, 50)), [true, true, false]);
+  // 止まった分は数えない（残りの 0 件ぶんは使える）
+  assert.ok(!l.allow("1.2.3.4", 0, 1));
+  assert.ok(l.allow("1.2.3.4", 60_000, 50));
+});
+
+test("🔴 route: 行数の制限を中身を確かめたあと・書き込みより前に通す", () => {
+  const src = readFileSync(new URL("../../app/api/events/route.ts", import.meta.url), "utf8");
+  const rows = src.indexOf("eventRowsLimiter.allow(source, Date.now(), events.length)");
+  assert.ok(rows > src.indexOf("sanitizeEvents(body.events)"), "行数の制限が中身を確かめる前にある（件数が分からない）");
+  assert.ok(rows > 0 && rows < src.indexOf('from("toritavi_events")'), "行数の制限が書き込みより前に無い");
+});

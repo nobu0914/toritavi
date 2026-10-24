@@ -21,6 +21,14 @@ export const EVENTS_WINDOW_MS = 60_000;
 export const EVENTS_PER_SOURCE = 20;
 /** インスタンス全体で 1 分に受ける回数。 */
 export const EVENTS_PER_INSTANCE = 1_200;
+/**
+ * 同じ送り元から 1 分に書く**行数**（2026-10-24・Cloudflare 検査 run-2）。
+ * 回数だけでは 1 回に 50 件（`MAX_BATCH`）まで積めるので、1 分に 1,000 行まで書けた。
+ * アプリは 1 回に最大 50 件まとめて送る（`kAnalyticsBatchSize`）ので、満杯の 2 回ぶん。
+ */
+export const EVENT_ROWS_PER_SOURCE = 100;
+/** インスタンス全体で 1 分に書く行数。 */
+export const EVENT_ROWS_PER_INSTANCE = 6_000;
 /** 覚えておく送り元の数の上限（メモリを食い潰されないため）。 */
 const MAX_SOURCES = 10_000;
 
@@ -43,10 +51,10 @@ export class EventsRateLimiter {
     this.windowMs = windowMs;
   }
 
-  /** 受けてよければ true。数えるのは受けた分だけ。 */
-  allow(source: string, now = Date.now()): boolean {
+  /** 受けてよければ true。数えるのは受けた分だけ。`units` は 1 回で使う量（行数で数えるとき）。 */
+  allow(source: string, now = Date.now(), units = 1): boolean {
     if (now - this.all.start >= this.windowMs) this.all = { start: now, count: 0 };
-    if (this.all.count >= this.perInstance) return false;
+    if (this.all.count + units > this.perInstance) return false;
 
     const key = createHash("sha256").update(source).digest("base64url").slice(0, 16);
     let b = this.sources.get(key);
@@ -57,9 +65,9 @@ export class EventsRateLimiter {
       b = { start: now, count: 0 };
       this.sources.set(key, b);
     }
-    if (b.count >= this.perSource) return false;
-    b.count += 1;
-    this.all.count += 1;
+    if (b.count + units > this.perSource) return false;
+    b.count += units;
+    this.all.count += units;
     return true;
   }
 
@@ -78,3 +86,5 @@ export function eventsSourceOf(headers: Headers): string {
 }
 
 export const eventsRateLimiter = new EventsRateLimiter();
+/** 書く行数の制限。回数の制限（上）を通ったあと、中身を確かめてから数える。 */
+export const eventRowsLimiter = new EventsRateLimiter(EVENT_ROWS_PER_SOURCE, EVENT_ROWS_PER_INSTANCE);

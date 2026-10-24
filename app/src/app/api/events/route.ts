@@ -22,7 +22,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase-service";
 import { ALLOWED_ORIGINS } from "@/lib/allowed-origins";
 import { sanitizeEvents, sanitizeContext, isUuid } from "@/lib/events";
-import { eventsRateLimiter, eventsSourceOf } from "@/lib/events-rate-limit";
+import { eventRowsLimiter, eventsRateLimiter, eventsSourceOf } from "@/lib/events-rate-limit";
 
 export async function POST(request: NextRequest) {
   const origin = request.headers.get("origin");
@@ -32,7 +32,8 @@ export async function POST(request: NextRequest) {
 
   // 🔴 回数制限（events-rate-limit.ts）。超えても 200 を返す —— 正規のアプリの
   //    送信経路を例外に落とさない（冒頭の「失敗しても 200」と同じ理由）。
-  if (!eventsRateLimiter.allow(eventsSourceOf(request.headers))) {
+  const source = eventsSourceOf(request.headers);
+  if (!eventsRateLimiter.allow(source)) {
     console.warn("[events] rate limited");
     return NextResponse.json({ accepted: 0, dropped: 0, limited: true }, { status: 200 });
   }
@@ -58,6 +59,13 @@ export async function POST(request: NextRequest) {
       console.warn(`[events] dropped ${dropped} event(s) — 許可一覧に無い名前？`);
     }
     return NextResponse.json({ accepted: 0, dropped }, { status: 200 });
+  }
+
+  // 🔴 **書く行数でも数える**（2026-10-24・Cloudflare 検査 run-2）。回数だけだと 1 回に
+  //    50 件まで積めて、同じ送り元から 1 分に 1,000 行書けた。超えたら 1 行も書かない。
+  if (!eventRowsLimiter.allow(source, Date.now(), events.length)) {
+    console.warn("[events] row limit");
+    return NextResponse.json({ accepted: 0, dropped, limited: true }, { status: 200 });
   }
 
   // 🔴 **誰かを決めない。** トークンを読まない。`user_id` を書かない。
