@@ -41,6 +41,8 @@ function fakeAdmin(opts: {
   files: Record<string, Entry[]>;
   removeFailFor?: string;
   selectError?: { code: string; message: string };
+  /** 取得上限（PostgREST の Max rows）を模す。行の照会がこの数で切られる（count は全件）。 */
+  maxRows?: number;
 }) {
   const calls: string[] = [];
   const deleted: string[] = [];
@@ -67,9 +69,11 @@ function fakeAdmin(opts: {
           if (!cutoff) {
             // 孤児の掃除の照会（select("id").in("id", …)）。
             calls.push(`rows.lookup ${ids.join(",")}`);
+            const hit = opts.rows.filter((r) => ids.includes(r.id)).map((r) => ({ id: r.id }));
             return Promise.resolve({
-              data: opts.rows.filter((r) => ids.includes(r.id)).map((r) => ({ id: r.id })),
+              data: opts.maxRows === undefined ? hit : hit.slice(0, opts.maxRows),
               error: null,
+              count: hit.length,
             }).then(res);
           }
           const hit = opts.rows.filter((r) => r.expires_at < cutoff);
@@ -234,4 +238,44 @@ test("🔴 利用者のフォルダが 100 件を超えても、後ろの孤児�
   g.__toritaviTestAdmin = f.admin;
   await GET(req());
   assert.ok(f.calls.includes("remove u130/lost/1.pdf"), "🔴 101 人目以降を見ていない");
+});
+
+// Codex の二次検査（2026-10-24）: 1,000 件の id を 1 回で照会していたので、取得上限
+// （Max rows）がそれより小さいと、返らなかった生きている行を孤児として消しえた。
+test("🔴 行の照会が取得上限で切られたら、どのフォルダも消さない（生きている添付を守る）", async () => {
+  const f = fakeAdmin({
+    maxRows: 1,
+    rows: [
+      { id: "live1", user_id: "u1", expires_at: FUTURE },
+      { id: "live2", user_id: "u1", expires_at: FUTURE },
+    ],
+    files: {
+      "": [{ name: "u1", folder: true }],
+      u1: [
+        { name: "live1", folder: true },
+        { name: "live2", folder: true },
+        { name: "orphan", folder: true },
+      ],
+      "u1/live1": ["1.pdf"],
+      "u1/live2": ["1.pdf"],
+      "u1/orphan": ["1.pdf"],
+    },
+  });
+  g.__toritaviTestAdmin = f.admin;
+  const r = (await GET(req())) as unknown as { status: number };
+  assert.equal(r.status, 200);
+  assert.ok(!f.calls.some((c) => c.startsWith("remove u1/")), `🔴 切られた照会で消した: ${f.calls.join(" | ")}`);
+});
+
+test("行の照会は 100 件ずつに分ける（取得上限より十分小さく）", async () => {
+  const items = Array.from({ length: 150 }, (_, i) => ({ name: `it${i}`, folder: true }));
+  const f = fakeAdmin({
+    rows: [],
+    files: { "": [{ name: "u1", folder: true }], u1: items },
+  });
+  g.__toritaviTestAdmin = f.admin;
+  await GET(req());
+  const lookups = f.calls.filter((c) => c.startsWith("rows.lookup "));
+  assert.equal(lookups.length, 2, lookups.map((c) => c.split(",").length).join(","));
+  assert.ok(lookups.every((c) => c.slice("rows.lookup ".length).split(",").length <= 100));
 });

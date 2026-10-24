@@ -162,6 +162,37 @@ export async function GET(request: NextRequest) {
 
 type Bucket = ReturnType<ReturnType<typeof createServiceClient>["storage"]["from"]>;
 
+/** 行の有無を一度に照会する数。取得上限（PostgREST の Max rows）より十分小さく保つ。 */
+const LIVE_CHECK_CHUNK = 100;
+
+/**
+ * [ids] のうち、受信箱の行が在るものを返す。**数え切れなかったら null**（消さない）。
+ *
+ * 🔴 **取得上限で切られた結果を「無い」と読まない**（Codex の二次検査・2026-10-24）。
+ *    以前は最大 1,000 件の id を 1 回で照会し、返らなかった id を孤児として消していた。
+ *    取得上限（Max rows）がそれより小さいと、**生きている受信項目の添付を消しうる**。
+ *    100 件ずつに分け、件数（count: exact）と返った行の数が合わなければ数え切れていない
+ *    として何も消さない（0edc7b5 の受信の見張りと同じ考え方）。
+ */
+async function liveItemIds(
+  admin: ReturnType<typeof createServiceClient>,
+  ids: string[],
+): Promise<Set<string> | null> {
+  const alive = new Set<string>();
+  for (let i = 0; i < ids.length; i += LIVE_CHECK_CHUNK) {
+    const chunk = ids.slice(i, i + LIVE_CHECK_CHUNK);
+    const { data, error, count } = await admin
+      .from(INBOX_TABLE)
+      .select("id", { count: "exact" })
+      .in("id", chunk);
+    if (error || typeof count !== "number") return null;
+    const rows = (data ?? []) as Array<{ id: string }>;
+    if (rows.length < count) return null;
+    for (const r of rows) alive.add(r.id);
+  }
+  return alive;
+}
+
 /**
  * 行の無いフォルダ（`{user_id}/{item_id}/`）の添付を消す。
  *
@@ -178,8 +209,12 @@ async function sweepOrphanFolders(
   let seen = 0;
   // 🔴 **先頭の 100 人だけを見ない。** 一覧は名前順なので、ページを送らないと
   //    101 人目以降の孤児には永久に届かない。
+  // 🔴 **時間を使い切らない**（maxDuration 60 秒）。残りは翌日に回す。
+  //    締切は一覧を取る前から数え、内側の繰り返しでも見る（Codex の二次検査・2026-10-24）。
+  const deadline = Date.now() + SWEEP_TIME_BUDGET_MS;
   const users: Array<{ name: string; id?: string | null }> = [];
   for (let offset = 0; offset < MAX_USER_FOLDERS; offset += 100) {
+    if (Date.now() > deadline) return { objects, skipped };
     const { data, error } = await bucket.list("", { limit: 100, offset });
     if (error) {
       console.warn(`${LOG} orphan sweep: list failed`, (error as { name?: string }).name ?? "");
@@ -188,8 +223,6 @@ async function sweepOrphanFolders(
     users.push(...((data ?? []) as Array<{ name: string; id?: string | null }>));
     if ((data ?? []).length < 100) break;
   }
-  // 🔴 **時間を使い切らない**（maxDuration 60 秒）。残りは翌日に回す。
-  const deadline = Date.now() + SWEEP_TIME_BUDGET_MS;
   // フォルダは id を持たない（ファイルは持つ）。
   for (const u of users.filter((f) => f.name && !f.id)) {
     if (Date.now() > deadline) break;
@@ -197,6 +230,7 @@ async function sweepOrphanFolders(
     const items: Array<{ name: string; id?: string | null }> = [];
     let listFailed = false;
     for (let offset = 0; offset < MAX_ITEMS_PER_USER; offset += 100) {
+      if (Date.now() > deadline) return { objects, skipped };
       const { data, error: e1 } = await bucket.list(u.name, { limit: 100, offset });
       if (e1) {
         listFailed = true;
@@ -211,13 +245,13 @@ async function sweepOrphanFolders(
     }
     const itemIds = items.filter((f) => f.name && !f.id).map((f) => f.name);
     if (itemIds.length === 0) continue;
-    const { data: live, error: e2 } = await admin.from(INBOX_TABLE).select("id").in("id", itemIds);
-    if (e2) {
+    const alive = await liveItemIds(admin, itemIds);
+    if (!alive) {
       skipped += 1;
       continue;
     }
-    const alive = new Set(((live ?? []) as Array<{ id: string }>).map((r) => r.id));
     for (const itemId of itemIds) {
+      if (Date.now() > deadline) return { objects, skipped };
       if (alive.has(itemId)) continue;
       if (++seen > MAX_ORPHAN_FOLDERS) return { objects, skipped };
       const folder = `${u.name}/${itemId}`;
