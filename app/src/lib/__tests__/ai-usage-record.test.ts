@@ -17,6 +17,8 @@ import { fakeDb, resetInjections, type DbCall } from "./support/fake-db.ts";
 
 const UID = "55555555-5555-4555-8555-555555555555";
 const USAGE = { userId: UID, tokensIn: 1200, tokensOut: 340, costCents: 3 };
+/** 予約の控え（033 以降の関数が返した予約日と、渡した見積り）。 */
+const RESERVATION = { userId: UID, day: "2026-10-23", estTokens: 1500 };
 
 /** console.error / console.warn を差し替えて、出た行を集める。 */
 function captureConsole() {
@@ -62,7 +64,7 @@ describe("使用量の計上のやり直し", () => {
     });
     (globalThis as Record<string, unknown>).__toritaviTestAdmin = db.client;
 
-    const ok = await recordConciergeUsage(USAGE);
+    const ok = await recordConciergeUsage({ ...USAGE, reservation: RESERVATION });
 
     const calls = rpcCalls(db.calls, "increment_concierge_usage_srv");
     assert.equal(calls.length, 3, "🔴 落ちたあとにやり直していない");
@@ -74,6 +76,8 @@ describe("使用量の計上のやり直し", () => {
         p_tokens_in: 1200,
         p_tokens_out: 340,
         p_cost_cents: 3,
+        p_est_tokens: 1500,
+        p_day: "2026-10-23",
       });
     }
     assert.ok(
@@ -90,7 +94,7 @@ describe("使用量の計上のやり直し", () => {
     );
     (globalThis as Record<string, unknown>).__toritaviTestAdmin = db.client;
 
-    const ok = await recordConciergeUsage(USAGE);
+    const ok = await recordConciergeUsage({ ...USAGE, reservation: RESERVATION });
 
     assert.equal(ok, false, "🔴 計上できなかったのに成功を返した");
     assert.equal(

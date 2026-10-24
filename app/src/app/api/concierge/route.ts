@@ -321,6 +321,10 @@ export async function POST(request: NextRequest) {
     lang,
   });
   if (!reserved.ok) return reserved.response;
+  // 🔴 **予約の控え（予約した日・見積り）を、戻しと計上まで持ち運ぶ**
+  //    （2026-10-24・夜間検査 3-9 / 3-10）。今日を数え直すと、日付をまたいだとき
+  //    別の日の行を触る。
+  const reservation = reserved.reservation;
 
   /* ---- 4) Ensure thread ---- */
   let threadId = body.threadId;
@@ -343,7 +347,7 @@ export async function POST(request: NextRequest) {
       .select("id", { count: "exact", head: true })
       .gte("created_at", jstMidnightUtc);
     if ((count ?? 0) >= MAX_NEW_THREADS_PER_DAY) {
-      await releaseConcierge(userId);
+      await releaseConcierge(reservation);
       return NextResponse.json(
         { error: "thread_limit", message: apiMessage("thread_limit", lang) },
         { status: 429 },
@@ -362,7 +366,7 @@ export async function POST(request: NextRequest) {
     if (thrErr || !created) {
       // 🔴 **予約を戻す。** AI は呼んでいないのに枠だけ減るのを避ける
       //    （既存の抜け。2026-09-23 に気づいた）。
-      await releaseConcierge(userId);
+      await releaseConcierge(reservation);
       return NextResponse.json({ error: "failed to create thread" }, { status: 500 });
     }
     threadId = created.id;
@@ -420,7 +424,7 @@ export async function POST(request: NextRequest) {
     });
     if (error) {
       console.error("[concierge] save user message failed:", error.message);
-      await releaseConcierge(userId);
+      await releaseConcierge(reservation);
       return NextResponse.json(
         { error: "save_failed", message: apiMessage("plan_unavailable", lang) },
         { status: 503 },
@@ -462,7 +466,7 @@ export async function POST(request: NextRequest) {
   const ab = conciergeCallBudget(startedAt, Date.now());
   if (!ab.ok) {
     console.error("[concierge] no time left before calling AI; releasing");
-    await releaseConcierge(userId);
+    await releaseConcierge(reservation);
     return NextResponse.json(
       { error: "ai_error", message: apiMessage("ai_unavailable", lang) },
       { status: 502 },
@@ -500,7 +504,7 @@ export async function POST(request: NextRequest) {
     console.error("[concierge] Anthropic error:", msg);
     // 🔴 **予約を戻す。** 実費が発生していないのに枠だけ減るのを避ける。
     //    締切での打ち切り（SDK の timeout）もここに落ちる。
-    await releaseConcierge(userId);
+    await releaseConcierge(reservation);
     // 🔴 **生のエラー文を利用者へ返さない。** SDK の文面には URL や
     //    内部の識別子が混ざりうる。ログには残す。
     return NextResponse.json(
@@ -607,6 +611,8 @@ export async function POST(request: NextRequest) {
       tokensIn: assistant.tokensIn,
       tokensOut: assistant.tokensOut,
       costCents: cost,
+      // 予約が足した見積りを、予約した日の行で実績に置き換える（033）。
+      reservation,
     }),
 
     /* ---- 11) Bump thread updated_at ---- */

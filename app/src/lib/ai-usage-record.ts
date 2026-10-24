@@ -13,6 +13,7 @@
  */
 import "server-only";
 import { createServiceClient } from "@/lib/supabase-service";
+import type { ConciergeReservation } from "@/lib/concierge-quota";
 
 type Usage = {
   userId: string;
@@ -56,7 +57,7 @@ const RECORD_BACKOFF_MS = 200;
 async function record(
   rpc: string,
   u: Usage,
-  extra: Record<string, number> = {},
+  extra: Record<string, number | string> = {},
 ): Promise<boolean> {
   const args = {
     p_user_id: u.userId,
@@ -170,6 +171,24 @@ export async function recordOcrTokensOnly(u: OcrUsage): Promise<boolean> {
   return allOk;
 }
 
-/** コンシェルジュの計上。**通れば true**（落ちても投げない・`record` 参照）。 */
-export const recordConciergeUsage = (u: Usage): Promise<boolean> =>
-  record("increment_concierge_usage_srv", u);
+/**
+ * コンシェルジュの計上。**通れば true**（落ちても投げない・`record` 参照）。
+ *
+ * 予約（`beginConcierge`）の控えを受け取り、**見積りを実績に置き換える**（033）——
+ * 予約は tokens_total に見積りを足してあるので、ここで「実トークン − 見積り」を
+ * **予約した日**の行に足す（2026-10-24・夜間検査 3-9 / 3-10）。
+ * 予約日が無い（033 より前の関数）ときは、新しい引数を渡さない（従来どおり実トークンを足す）。
+ */
+export const recordConciergeUsage = (
+  u: Usage & { reservation: ConciergeReservation },
+): Promise<boolean> =>
+  record(
+    "increment_concierge_usage_srv",
+    u,
+    u.reservation.day === null
+      ? {}
+      : {
+          p_est_tokens: Math.max(0, Math.trunc(u.reservation.estTokens)),
+          p_day: u.reservation.day,
+        },
+  );

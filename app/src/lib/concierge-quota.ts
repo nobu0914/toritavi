@@ -30,9 +30,34 @@ import { apiMessage, type Lang } from "@/lib/api-messages";
 import { msgsFor, CONCIERGE_GUARD, type Audience } from "@/lib/ai-guard";
 import { logAiRejection } from "@/lib/moderation";
 
+/**
+ * 取った予約の控え。**戻し（`releaseConcierge`）と計上（`recordConciergeUsage`）に
+ * そのまま渡す**（2026-10-24・夜間検査 3-9 / 3-10）。
+ *
+ * 🔴 **今日を数え直さない。** 予約は「その日」の行に件数と見積りを足している。
+ *    戻しや計上の時点で今日を数え直すと、23:59 に予約して 00:00 過ぎに
+ *    落ちた／答えが出たとき、**翌日の行**を触る（以前の release がそうだった）。
+ */
+export type ConciergeReservation = {
+  userId: string;
+  /**
+   * 予約した JST の日付（YYYY-MM-DD）。DB の begin が返す `reserved_day`。
+   *
+   * 🔴 **null ＝ 033 より前の関数**（`reserved_day` を返さず、見積りも足していない）。
+   *    そのときは戻しにも計上にも**新しい引数を渡さない** —— 旧い関数には
+   *    `p_day` / `p_est_tokens` が無く、渡すと PostgREST が関数を見つけられず
+   *    計上が落ちる（上限が緩む側）。推測の日付で埋めることもしない。
+   */
+  day: string | null;
+  /** begin に渡した見積り（`p_est_tokens`）。033 以降は予約時に tokens_total へ足してある。 */
+  estTokens: number;
+};
+
 export type ConciergeBegin =
-  | { ok: true; usedAfter: number }
+  | { ok: true; usedAfter: number; reservation: ConciergeReservation }
   | { ok: false; response: NextResponse };
+
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
  * 1 件ぶん予約する。**AI を呼ぶ前に必ず通す。**
@@ -99,7 +124,21 @@ export async function beginConcierge(args: {
   const status = String(row?.status ?? "");
   const usedAfter = Number(row?.used_after ?? 0);
 
-  if (status === "ok") return { ok: true, usedAfter };
+  if (status === "ok") {
+    const rawDay = row?.reserved_day;
+    const day = typeof rawDay === "string" && ISO_DAY.test(rawDay) ? rawDay : null;
+    if (day === null) {
+      // 033（`supabase_migrations/033_concierge_reserve_tokens_and_day.sql`）が
+      // 未適用。動きはする（旧い引数で戻し・計上する）が、予約がトークンを
+      // 押さえず、戻しが「今日」を減らす元の欠陥が残っている。
+      console.error("[concierge-quota] begin が reserved_day を返さない（033 未適用？）");
+    }
+    return {
+      ok: true,
+      usedAfter,
+      reservation: { userId: args.userId, day, estTokens: args.estTokens },
+    };
+  }
 
   // 🔴 **拒否を記録する**（2026-09-23）。`toritavi_ai_rejections` が
   //    `/admin/abuse`（「AI/OCR 制限に繰り返し当たった利用者」）の材料。
@@ -175,16 +214,22 @@ export async function beginConcierge(args: {
 /**
  * 予約を戻す。**AI が落ちたときに呼ぶ。**
  *
+ * **予約した日**の行から、件数 1 と見積りのトークンを戻す（033）。
+ * 予約日が無い（033 より前の関数）ときは従来どおり `p_user_id` だけを渡す。
+ *
  * 🔴 **戻し損ねても、上限が緩む方向には壊れない**（フェイルクローズ）。
  * 失うのは利用者の枠が 1 減ることだけ。だから `await` して失敗しても
  * 要求そのものは続ける。
  */
-export async function releaseConcierge(userId: string): Promise<void> {
+export async function releaseConcierge(r: ConciergeReservation): Promise<void> {
   try {
     const admin = createServiceClient();
-    const { error } = await admin.rpc("toritavi_concierge_release", {
-      p_user_id: userId,
-    });
+    const { error } = await admin.rpc(
+      "toritavi_concierge_release",
+      r.day === null
+        ? { p_user_id: r.userId }
+        : { p_user_id: r.userId, p_day: r.day, p_est_tokens: r.estTokens },
+    );
     if (error) console.error("[concierge-quota] release failed:", error.message);
   } catch (e) {
     console.error("[concierge-quota] release threw:", e);

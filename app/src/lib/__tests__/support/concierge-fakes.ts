@@ -9,6 +9,11 @@ import { fakeDb, hasOp, type DbCall } from "./fake-db.ts";
 
 export const CONCIERGE_UID = "77777777-7777-4777-8777-777777777777";
 export const CONCIERGE_THREAD = "88888888-8888-4888-8888-888888888888";
+/**
+ * 偽の予約が返す「予約した日」。**わざと今日ではない日**にしてある ——
+ * サーバが今日を数え直して渡していれば、ここで食い違う。
+ */
+export const CONCIERGE_RESERVED_DAY = "2026-10-23";
 
 type Wait = () => Promise<void>;
 
@@ -21,6 +26,11 @@ export type ConciergeFakeOpts = {
   holdUsage?: Wait;
   /** 使用量の計上（RPC）を、最初の n 回だけ失敗させる（`Infinity` で常に）。 */
   failUsage?: number;
+  /**
+   * 予約（`toritavi_concierge_begin`）が返す `reserved_day`（033 以降の関数）。
+   * `null` なら列ごと返さない（033 より前の関数）。省略時は "2026-10-23"。
+   */
+  reservedDay?: string | null;
 };
 
 /** 答えのあとの書き込みか（アシスタントの発言・使用量・スレッドの更新）。 */
@@ -39,7 +49,11 @@ export function setupConcierge(opts: ConciergeFakeOpts = {}) {
   const db = fakeDb(async (call: DbCall) => {
     if (call.kind === "rpc") {
       if (call.fn === "toritavi_concierge_begin") {
-        return { data: [{ status: "ok", used_after: 1 }], error: null };
+        const day = opts.reservedDay === undefined ? CONCIERGE_RESERVED_DAY : opts.reservedDay;
+        return {
+          data: [{ status: "ok", used_after: 1, ...(day === null ? {} : { reserved_day: day }) }],
+          error: null,
+        };
       }
       if (call.fn === "increment_concierge_usage_srv") {
         if (opts.holdUsage) await opts.holdUsage();

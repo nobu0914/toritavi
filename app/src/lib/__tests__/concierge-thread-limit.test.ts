@@ -43,7 +43,7 @@ test("🔴 弾くときは予約を戻す（枠だけ減らさない）", () => 
   const i = src.indexOf('error: "thread_limit"');
   assert.ok(i >= 0, "🔴 thread_limit を返していない");
   const before = src.slice(Math.max(0, i - 300), i);
-  assert.match(before, /releaseConcierge\(userId\)/, "🔴 予約を戻していない");
+  assert.match(before, /releaseConcierge\(reservation\)/, "🔴 予約を戻していない");
 });
 
 test("🔴 スレッド作成に失敗したときも予約を戻す", () => {
@@ -51,7 +51,7 @@ test("🔴 スレッド作成に失敗したときも予約を戻す", () => {
   const i = src.indexOf('error: "failed to create thread"');
   assert.ok(i >= 0);
   const before = src.slice(Math.max(0, i - 300), i);
-  assert.match(before, /releaseConcierge\(userId\)/, "🔴 AI を呼ばずに枠だけ減る");
+  assert.match(before, /releaseConcierge\(reservation\)/, "🔴 AI を呼ばずに枠だけ減る");
 });
 
 test("文言は日英そろっている", () => {
