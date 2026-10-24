@@ -536,6 +536,23 @@ export function funnelFrom(
   return out;
 }
 
+/**
+ * `listUsers` の戻り値から利用者の一覧を取り出す。**読めなかったら null。**
+ *
+ * 🔴 Codex 夜間検査 3-5（2026-10-24）: supabase-js は失敗を例外ではなく
+ *    `{ data: { users: [] }, error }` で返す。`data?.users ?? []` だけ見ると、
+ *    失敗が「登録 0 人」になり、ファネルの全段が 0 と出た（離脱していないのに
+ *    離脱に見える）。
+ */
+export function listedUsers(res: {
+  data?: { users?: unknown[]; total?: number } | null;
+  error?: unknown;
+}): { users: unknown[]; capped: boolean } | null {
+  if (res.error || !res.data || !Array.isArray(res.data.users)) return null;
+  const list = res.data.users;
+  return { users: list, capped: (res.data.total ?? list.length) > 1000 };
+}
+
 async function fetchFunnel(
   admin: Client,
   periodStart: string
@@ -543,11 +560,13 @@ async function fetchFunnel(
   let users: FunnelUser[] | null = null;
   let capped = false;
   try {
-    const { data } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-    const list = data?.users ?? [];
-    // @ts-expect-error supabase exposes total on the payload
-    capped = ((data && (data.total ?? list.length)) as number) > 1000;
-    users = list as unknown as FunnelUser[];
+    const listed = listedUsers(await admin.auth.admin.listUsers({ page: 1, perPage: 1000 }));
+    if (listed == null) {
+      console.warn("[analytics] funnel: listUsers returned an error");
+    } else {
+      users = listed.users as unknown as FunnelUser[];
+      capped = listed.capped;
+    }
   } catch (e) {
     console.warn("[analytics] funnel: listUsers failed", e);
   }

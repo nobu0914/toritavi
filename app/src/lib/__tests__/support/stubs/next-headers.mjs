@@ -1,6 +1,17 @@
 // `next/headers` のスタブ。到達したときに黙って空を返すのではなく、明確に落とす。
-export function cookies() {
-  throw new Error("next/headers の cookies() はテストでは使えない（スタブ）");
+/**
+ * `cookies()` のスタブ。テストが `globalThis.__toritaviTestCookies` に
+ * `{ 名前: 値 }` を置いたときだけ返す。置いていなければ落とす ——
+ * 本物もリクエストの外では投げる。
+ */
+export async function cookies() {
+  const c = globalThis.__toritaviTestCookies;
+  if (!c) {
+    throw new Error("next/headers の cookies() が注入されていない（スタブ）");
+  }
+  return {
+    get: (name) => (name in c ? { name, value: c[name] } : undefined),
+  };
 }
 
 /**

@@ -34,9 +34,11 @@ const req = (auth = "Bearer cron-secret") =>
 
 type Row = { id: string; user_id: string; expires_at: string };
 
+type Entry = string | { name: string; folder?: boolean; created_at?: string };
+
 function fakeAdmin(opts: {
   rows: Row[];
-  files: Record<string, string[]>;
+  files: Record<string, Entry[]>;
   removeFailFor?: string;
   selectError?: { code: string; message: string };
 }) {
@@ -62,6 +64,14 @@ function fakeAdmin(opts: {
             return Promise.resolve({ error: null, count: ids.length }).then(res);
           }
           if (opts.selectError) return Promise.resolve({ data: null, error: opts.selectError }).then(res);
+          if (!cutoff) {
+            // 孤児の掃除の照会（select("id").in("id", …)）。
+            calls.push(`rows.lookup ${ids.join(",")}`);
+            return Promise.resolve({
+              data: opts.rows.filter((r) => ids.includes(r.id)).map((r) => ({ id: r.id })),
+              error: null,
+            }).then(res);
+          }
           const hit = opts.rows.filter((r) => r.expires_at < cutoff);
           return Promise.resolve({ data: hit, error: null }).then(res);
         },
@@ -74,7 +84,12 @@ function fakeAdmin(opts: {
         return {
           async list(folder: string) {
             calls.push(`list ${folder}`);
-            return { data: (opts.files[folder] ?? []).map((name) => ({ name })), error: null };
+            const data = (opts.files[folder] ?? []).map((e) =>
+              typeof e === "string"
+                ? { name: e, id: `obj-${e}`, created_at: OLD }
+                : { name: e.name, id: e.folder ? null : `obj-${e.name}`, created_at: e.created_at },
+            );
+            return { data, error: null };
           },
           async remove(paths: string[]) {
             calls.push(`remove ${paths.join(",")}`);
@@ -91,6 +106,7 @@ function fakeAdmin(opts: {
 }
 
 const PAST = "2020-01-01T00:00:00.000Z";
+const OLD = "2020-01-01T00:00:00.000Z";
 const FUTURE = "2999-01-01T00:00:00.000Z";
 
 test("🔴 期限切れだけを、Storage → 行の順で消す", async () => {
@@ -105,7 +121,7 @@ test("🔴 期限切れだけを、Storage → 行の順で消す", async () => 
   const r = (await GET(req())) as unknown as { status: number };
   assert.equal(r.status, 200);
   assert.deepEqual(f.deleted, ["i1"]);
-  assert.deepEqual(f.calls, ["list u1/i1", "remove u1/i1/1.pdf,u1/i1/2.jpg", "rows.delete"]);
+  assert.deepEqual(f.calls.slice(0, 3), ["list u1/i1", "remove u1/i1/1.pdf,u1/i1/2.jpg", "rows.delete"]);
 });
 
 test("🔴 Storage で失敗した行は消さない（次回に回す）", async () => {
@@ -165,4 +181,39 @@ test("🔴 cron が登録されている（既存の 2 本も消していない�
   // Hobby は 1 日 1 回まで。それより細かいとデプロイが落ちる。
   const s = vercel.crons.find((c) => c.path === "/api/cron/purge-inbox")!.schedule;
   assert.match(s, /^\d{1,2} \d{1,2} \* \* \*$/, `1 日 1 回の形でない: ${s}`);
+});
+
+// 🔴 Codex 夜間検査 5-5（2026-10-24）: 受信で行が入らず、置いた添付の削除も
+//    落ちると、行の無い予約票が残った。期限切れの掃除は行を起点にするので届かない。
+test("🔴 行の無いフォルダの添付も消す（期限切れの掃除のあとで）", async () => {
+  const f = fakeAdmin({
+    rows: [{ id: "live", user_id: "u1", expires_at: FUTURE }],
+    files: {
+      "": [{ name: "u1", folder: true }],
+      u1: [{ name: "live", folder: true }, { name: "orphan", folder: true }],
+      "u1/live": ["1.pdf"],
+      "u1/orphan": ["1.pdf", "2.jpg"],
+    },
+  });
+  g.__toritaviTestAdmin = f.admin;
+  const r = (await GET(req())) as unknown as { status: number; json(): Promise<unknown> };
+  assert.equal(r.status, 200);
+  assert.ok(f.calls.includes("remove u1/orphan/1.pdf,u1/orphan/2.jpg"), f.calls.join(" | "));
+  assert.ok(!f.calls.some((c) => c.startsWith("remove u1/live")), "🔴 行のある添付を消した");
+  assert.equal(((await r.json()) as { orphanObjects: number }).orphanObjects, 2);
+});
+
+test("🔴 置いたばかり（受信の途中かもしれない）の添付は、行が無くても消さない", async () => {
+  const fresh = new Date().toISOString();
+  const f = fakeAdmin({
+    rows: [],
+    files: {
+      "": [{ name: "u1", folder: true }],
+      u1: [{ name: "inflight", folder: true }],
+      "u1/inflight": [{ name: "1.pdf", created_at: fresh }],
+    },
+  });
+  g.__toritaviTestAdmin = f.admin;
+  await GET(req());
+  assert.ok(!f.calls.some((c) => c.startsWith("remove")), f.calls.join(" | "));
 });

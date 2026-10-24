@@ -231,8 +231,8 @@ export default async function AdminUsagePage({
         <strong>人数ではありません</strong> —— 同じ人が 3 回起動すれば 3 と出ます。
         <strong>日をまたぐ追跡はできません</strong>（「登録した人が後日購入した」は
         繋がりません）。節目は「1 回の起動の中でどこまで進んだか」です。
-        🔴 保持は 180 日ですが、<strong>掃除の cron はまだ登録していません</strong>
-        （課題 265）。
+        保持は 180 日で、毎日 03:17（UTC）の cron <code>purge-events-daily</code> が
+        それより古い行を消します（2026-10-06 登録・課題 265）。
       </p>
     </div>
   );

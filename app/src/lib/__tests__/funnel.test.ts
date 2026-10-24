@@ -12,7 +12,7 @@
  */
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { funnelFrom, type FunnelUser } from "../admin-analytics";
+import { funnelFrom, listedUsers, type FunnelUser } from "../admin-analytics";
 
 const START = "2026-09-01";
 const u = (o: Partial<FunnelUser> & { id: string }): FunnelUser => ({
@@ -88,4 +88,14 @@ test("コホートの開始日と capped をそのまま返す", () => {
   const f = funnelFrom([], [], [], START, true);
   assert.equal(f.cohortFrom, START);
   assert.equal(f.capped, true);
+});
+
+// 🔴 Codex 夜間検査 3-5（2026-10-24）: listUsers は失敗を例外ではなく
+//    error 付きの戻り値で返す。空の一覧として数えると全段が 0 になった。
+test("🔴 listUsers が error を返したら、一覧は null（0 人にしない）", () => {
+  assert.equal(listedUsers({ data: { users: [] }, error: { message: "boom" } }), null);
+  assert.equal(listedUsers({ data: null, error: null }), null);
+  const ok = listedUsers({ data: { users: [{ id: "a" }], total: 1 }, error: null });
+  assert.deepEqual(ok, { users: [{ id: "a" }], capped: false });
+  assert.equal(listedUsers({ data: { users: [], total: 1500 }, error: null })?.capped, true);
 });

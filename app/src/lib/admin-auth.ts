@@ -17,6 +17,7 @@
  *      how to respond (redirect for pages, 401/403 JSON for APIs).
  */
 import "server-only";
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase-server";
 
 // 役割と序列は画面側とも共有する（`admin-roles.ts`）。ここに 2 つ目を
@@ -29,6 +30,9 @@ export type AdminContext = {
   email: string | null;
   role: AdminRole;
 };
+
+/** /auth/callback?type=recovery が立てる印（`proxy.ts` と同じ名前）。 */
+const RECOVERY_COOKIE = "toritavi_recovery";
 
 export class AdminAuthError extends Error {
   readonly status: 401 | 403;
@@ -44,6 +48,16 @@ export class AdminAuthError extends Error {
  * admin" path — use requireAdmin() when you want to enforce.
  */
 export async function getAdminContext(): Promise<AdminContext | null> {
+  // 🔴 **パスワード再設定のリンクで得たセッションでは入れない**
+  //    （Codex 夜間検査 5-4・2026-10-24）。ページ側はプロキシが
+  //    /reset-password へ戻すが、matcher が /api を除外しているので、
+  //    管理 API は回復セッションのまま通っていた（パスワードを変えずに＝
+  //    本人に「変更しました」の通知を出さずに、署名 URL を発行できた）。
+  //    ⚠️ この Cookie は持ち主が消せる。ページ側の関門と同じ強さで、
+  //    本当の関門は管理者の MFA（課題 12・requireAdmin で aal2）。
+  const jar = await cookies();
+  if (jar.get(RECOVERY_COOKIE)?.value === "1") return null;
+
   const sb = await createClient();
   const { data: { user }, error: userErr } = await sb.auth.getUser();
   if (userErr || !user) return null;

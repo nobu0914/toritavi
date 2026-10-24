@@ -21,6 +21,15 @@
  * 毎日 500 を出し続けると本物の失敗が埋もれるので、表が無いことだけは
  * 200 ＋警告で返す。それ以外の失敗は 500。
  *
+ * ## 🔴 行の無いフォルダも拾う（孤児の掃除）
+ *
+ * 受信（`/api/inbound-mail`）は「添付を置く → 行を入れる」の順で、行が入らな
+ * ければ置いたものを消す。**その削除も落ちると、行の無い添付が残る**
+ * （Codex 夜間検査 5-5・2026-10-24）。期限切れの掃除は行を起点にするので、
+ * 行の無い予約票には二度と届かなかった。期限切れの掃除のあとで、
+ * **行の無いフォルダ**を見て消す。置いたばかり（1 日以内）のものは、
+ * 受信の途中（置いた後・行を入れる前）かもしれないので触らない。
+ *
  * ## 認証は必須
  *
  * 消す処理なので `CRON_SECRET` が無ければ動かさない（`purge-anonymous` と同じ）。
@@ -36,6 +45,11 @@ export const maxDuration = 60;
 
 /** 1 回で消す行の上限。**少しずつ、毎日。** */
 const MAX_PER_RUN = 200;
+
+/** 1 回で見る「行の無いフォルダ」の上限（少しずつ、毎日）。 */
+const MAX_ORPHAN_FOLDERS = 50;
+/** これより新しい添付は孤児とみなさない（受信の途中かもしれない）。 */
+const ORPHAN_MIN_AGE_MS = 24 * 60 * 60 * 1000;
 
 const LOG = "[cron/purge-inbox]";
 
@@ -122,9 +136,83 @@ export async function GET(request: NextRequest) {
     deleted = count ?? cleared.length;
   }
 
+  const orphans = await sweepOrphanFolders(admin, bucket, Date.now());
+
   // 🔴 **成功も出す。**「0 件でした」と「呼ばれていない」を区別できるように。
   console.log(
-    `${LOG} expired=${rows.length} deleted=${deleted} objects=${objects} skipped=${skipped}`,
+    `${LOG} expired=${rows.length} deleted=${deleted} objects=${objects} skipped=${skipped}` +
+      ` orphanObjects=${orphans.objects} orphanSkipped=${orphans.skipped}`,
   );
-  return NextResponse.json({ ok: true, expired: rows.length, deleted, objects, skipped });
+  return NextResponse.json({
+    ok: true,
+    expired: rows.length,
+    deleted,
+    objects,
+    skipped,
+    orphanObjects: orphans.objects,
+    orphanSkipped: orphans.skipped,
+  });
+}
+
+type Bucket = ReturnType<ReturnType<typeof createServiceClient>["storage"]["from"]>;
+
+/**
+ * 行の無いフォルダ（`{user_id}/{item_id}/`）の添付を消す。
+ *
+ * 🔴 **分からないときは消さない。** 一覧・行の照会が落ちたフォルダは飛ばして
+ *    次回へ（`skipped`）。作られた時刻が無い・新しい添付があるフォルダも触らない。
+ */
+async function sweepOrphanFolders(
+  admin: ReturnType<typeof createServiceClient>,
+  bucket: Bucket,
+  now: number,
+): Promise<{ objects: number; skipped: number }> {
+  let objects = 0;
+  let skipped = 0;
+  let seen = 0;
+  const { data: users, error } = await bucket.list("", { limit: 100 });
+  if (error) {
+    console.warn(`${LOG} orphan sweep: list failed`, (error as { name?: string }).name ?? "");
+    return { objects, skipped: 1 };
+  }
+  // フォルダは id を持たない（ファイルは持つ）。
+  for (const u of (users ?? []).filter((f) => f.name && !f.id)) {
+    const { data: items, error: e1 } = await bucket.list(u.name, { limit: 100 });
+    if (e1) {
+      skipped += 1;
+      continue;
+    }
+    const itemIds = (items ?? []).filter((f) => f.name && !f.id).map((f) => f.name);
+    if (itemIds.length === 0) continue;
+    const { data: live, error: e2 } = await admin.from(INBOX_TABLE).select("id").in("id", itemIds);
+    if (e2) {
+      skipped += 1;
+      continue;
+    }
+    const alive = new Set(((live ?? []) as Array<{ id: string }>).map((r) => r.id));
+    for (const itemId of itemIds) {
+      if (alive.has(itemId)) continue;
+      if (++seen > MAX_ORPHAN_FOLDERS) return { objects, skipped };
+      const folder = `${u.name}/${itemId}`;
+      const { data: files, error: e3 } = await bucket.list(folder, { limit: 100 });
+      if (e3) {
+        skipped += 1;
+        continue;
+      }
+      const real = (files ?? []).filter((f) => f.name && f.name !== ".emptyFolderPlaceholder");
+      if (real.length === 0) continue;
+      const young = real.some((f) => {
+        const at = Date.parse((f as { created_at?: string }).created_at ?? "");
+        return Number.isNaN(at) || now - at < ORPHAN_MIN_AGE_MS;
+      });
+      if (young) continue;
+      const { error: e4 } = await bucket.remove(real.map((f) => `${folder}/${f.name}`));
+      if (e4) {
+        skipped += 1;
+        continue;
+      }
+      objects += real.length;
+    }
+  }
+  return { objects, skipped };
 }

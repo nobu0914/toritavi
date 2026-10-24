@@ -97,5 +97,6 @@ export function resetInjections(): void {
   delete g.__toritaviTestAdmin;
   delete g.__toritaviTestSessionClient;
   delete g.__toritaviTestHeaders;
+  delete g.__toritaviTestCookies;
   g.__toritaviAfterTasks = [];
 }

@@ -19,7 +19,7 @@ import { fakeDb, hasOp, resetInjections, type DbCall } from "./support/fake-db.t
 const ADMIN = "99999999-9999-4999-8999-999999999999";
 const ORIGIN = "https://junros.coyoteandpowell.com";
 
-type Opts = { auditError?: unknown; upsertError?: unknown };
+type Opts = { auditError?: unknown; upsertError?: unknown; cookies?: Record<string, string> };
 
 function setup(opts: Opts = {}) {
   // 管理者の判定（セッションの client）。
@@ -47,6 +47,7 @@ function setup(opts: Opts = {}) {
   };
   g.__toritaviTestAdmin = svc.client;
   g.__toritaviTestHeaders = { "user-agent": "test" };
+  g.__toritaviTestCookies = opts.cookies ?? {};
   return svc;
 }
 
@@ -94,4 +95,21 @@ test("🔴 記録のあとに書き込みが落ちたら 500、失敗も監査�
     (c) => ((c.kind === "query" ? c.ops.find((o) => o.op === "insert")?.args[0] : null) as { action?: string })?.action,
   );
   assert.deepEqual(actions, ["admin.affiliate.rate_changed", "admin.affiliate.rate_change_failed"]);
+});
+
+// 🔴 Codex 夜間検査 5-4（2026-10-24）: 管理 API はプロキシの回復セッションの
+//    関門（/api を除外）を通らず、パスワード再設定のリンクで得たセッションの
+//    まま書き込めた。
+test("🔴 回復セッション（toritavi_recovery）では管理 API に入れない", async () => {
+  const svc = setup({ cookies: { toritavi_recovery: "1" } });
+  const res = await post();
+  assert.equal(res.status, 401);
+  assert.equal(upserts(svc.calls).length, 0, "🔴 回復セッションのまま書き込んだ");
+});
+
+test("対照: 印が無ければ通る", async () => {
+  const svc = setup({ cookies: {} });
+  const res = await post();
+  assert.ok(res.status < 300, `status=${res.status}`);
+  assert.equal(upserts(svc.calls).length, 1);
 });

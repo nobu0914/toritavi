@@ -159,6 +159,14 @@ function jstFirstOfMonth(): string {
  * 期間キーを決められなかった。**free に倒さず、ここで止める。**
  * 呼び出し側は 503 を返すこと（`plan_unavailable` と同じ扱い）。
  */
+/** 当期の使用量を DB から読めなかった（[readAiUsageCounts]）。 */
+export class AiUsageUnavailableError extends Error {
+  constructor(table: string) {
+    super(`usage read failed: ${table}`);
+    this.name = "AiUsageUnavailableError";
+  }
+}
+
 export class QuotaPeriodUnavailableError extends Error {
   constructor() {
     super("quota period unavailable");
@@ -707,12 +715,18 @@ export async function readAiUsageCounts(
   cfg: AiGuardConfig,
 ): Promise<AiUsageCounts> {
   const key = await quotaKey(sb, userId, cfg.quotaPeriod);
-  const { data: usage } = await sb
+  const { data: usage, error } = await sb
     .from(cfg.tables.quota)
     .select("requests_count, tokens_total")
     .eq("user_id", userId)
     .eq(key.col, key.val)
     .maybeSingle();
+  // 🔴 **読めなかったことを 0 件に変換しない**（Codex 夜間検査 3-3・2026-10-24）。
+  //    以前は error を捨てて `usage ?? 0` にしていたので、使用量の SELECT だけが
+  //    落ちると 200・usedRequests: 0 を返し、50 件使った人の画面に「残り 50 件」と
+  //    出た（実行時は DB の関門が拒否する）。投げれば /api/ai-usage は 503 を返し、
+  //    アプリは「確認できません」を出す。
+  if (error) throw new AiUsageUnavailableError(cfg.tables.quota);
   return {
     requests: usage?.requests_count ?? 0,
     tokens: usage?.tokens_total ?? 0,

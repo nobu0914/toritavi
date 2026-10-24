@@ -26,6 +26,7 @@ type Opts = {
   hold?: ReturnType<typeof gate>;
   plan?: { data?: unknown; error?: unknown };
   periodNext?: { data?: unknown; error?: unknown };
+  ocrUsage?: { data?: unknown; error?: unknown };
 };
 
 function setup(opts: Opts = {}) {
@@ -38,7 +39,7 @@ function setup(opts: Opts = {}) {
     }
     if (call.table === "toritavi_user_plan") return opts.plan ?? { data: { plan: "free" }, error: null };
     if (call.table === "toritavi_ocr_usage_monthly") {
-      return { data: { requests_count: 3, tokens_total: 1000 }, error: null };
+      return opts.ocrUsage ?? { data: { requests_count: 3, tokens_total: 1000 }, error: null };
     }
     if (call.table === "toritavi_concierge_usage") {
       return { data: { requests_count: 2, tokens_total: 500 }, error: null };
@@ -118,4 +119,23 @@ test("🔴 プランが読めなければ 503（ほかの読み取りが先に�
   const res = await aiUsageGet(makeRequest() as NextRequest);
   assert.equal(res.status, 503);
   assert.equal((await body(res)).error, "plan_unavailable");
+});
+
+// 🔴 Codex 夜間検査 3-3（2026-10-24）: 使用量の SELECT だけが落ちると、
+//    error を捨てて 0 件にし、200 で「残り満杯」を返していた。
+test("🔴 使用量を読めなければ 503（0 件として 200 を返さない）", async () => {
+  setup({ ocrUsage: { data: null, error: { message: "timeout" } } });
+  const res = await aiUsageGet(makeRequest() as NextRequest);
+  assert.equal(res.status, 503);
+  const b = await body(res);
+  assert.equal(b.error, "plan_unavailable");
+  assert.equal((b as { ocr?: unknown }).ocr, undefined);
+});
+
+test("対照: 行が無い（今期まだ使っていない）は 0 件で 200", async () => {
+  setup({ ocrUsage: { data: null, error: null } });
+  const res = await aiUsageGet(makeRequest() as NextRequest);
+  assert.equal(res.status, 200);
+  const b = (await body(res)) as { ocr: { usedRequests: number } };
+  assert.equal(b.ocr.usedRequests, 0);
 });
