@@ -19,6 +19,8 @@ export type ConciergeFakeOpts = {
   holdAfterWrites?: Wait;
   /** 使用量の計上（RPC）だけで止める。 */
   holdUsage?: Wait;
+  /** 使用量の計上（RPC）を、最初の n 回だけ失敗させる（`Infinity` で常に）。 */
+  failUsage?: number;
 };
 
 /** 答えのあとの書き込みか（アシスタントの発言・使用量・スレッドの更新）。 */
@@ -33,6 +35,7 @@ export function isAfterAnswerWrite(call: DbCall): boolean {
 }
 
 export function setupConcierge(opts: ConciergeFakeOpts = {}) {
+  let usageCalls = 0;
   const db = fakeDb(async (call: DbCall) => {
     if (call.kind === "rpc") {
       if (call.fn === "toritavi_concierge_begin") {
@@ -41,6 +44,10 @@ export function setupConcierge(opts: ConciergeFakeOpts = {}) {
       if (call.fn === "increment_concierge_usage_srv") {
         if (opts.holdUsage) await opts.holdUsage();
         if (opts.holdAfterWrites) await opts.holdAfterWrites();
+        usageCalls += 1;
+        if (usageCalls <= (opts.failUsage ?? 0)) {
+          return { data: null, error: { message: "usage rpc unavailable (test)" } };
+        }
         return { data: null, error: null };
       }
       return { data: null, error: null }; // release ほか

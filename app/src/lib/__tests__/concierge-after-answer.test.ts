@@ -81,4 +81,30 @@ describe("/api/concierge の答えのあと", {
     const res = await pending;
     assert.equal(res.status, 200);
   });
+
+  // 🔴 計上が落ちても、その要求の原価を 1 回で諦めない（2026-10-24・夜間検査 3-8）。
+  //    やり直しても通らなければ `[ai-usage] UNRECORDED` で残す。答えは返す ——
+  //    AI は既に呼ばれて実費が出ており、利用者を待たせて失敗にしても原価は戻らない。
+  test("🔴 計上が落ちてもやり直し、最後まで落ちても答えは返す", async () => {
+    const db = setupConcierge({ failUsage: Infinity });
+    const errors: string[] = [];
+    const orig = { error: console.error, warn: console.warn };
+    console.error = (...a: unknown[]) => errors.push(a.map(String).join(" "));
+    console.warn = () => {};
+    try {
+      const res = await conciergePost(makeRequest({ body: conciergeBody() }) as NextRequest);
+      assert.equal(res.status, 200, "計上が落ちただけで答えを捨てた");
+      const b = (await res.json()) as { assistant: { content: string } };
+      assert.equal(b.assistant.content, "明日は 9:00 の便です。");
+    } finally {
+      console.error = orig.error;
+      console.warn = orig.warn;
+    }
+    const tries = db.calls.filter((c) => label(c) === "rpc:increment_concierge_usage_srv").length;
+    assert.equal(tries, 3, "🔴 計上が 1 回落ちただけで諦めた（その要求の原価が上限に足されない）");
+    assert.ok(
+      errors.some((e) => e.includes("[ai-usage] UNRECORDED")),
+      "🔴 計上が落ちたことが目立つ形で残っていない",
+    );
+  });
 });

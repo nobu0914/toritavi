@@ -597,6 +597,8 @@ export async function POST(request: NextRequest) {
     /* ---- 10) Increment usage ---- */
     // 記録は service_role 専用 RPC 経由（利用者が PostgREST から直接叩いて
     // 共有予算を焼き切れないようにするため）。
+    // 落ちたら数回やり直し、それでも落ちたら `[ai-usage] UNRECORDED` で残す
+    // （`ai-usage-record.ts`）。**答えは返す** —— 実費は既に出ている。
     recordConciergeUsage({
       userId,
       tokensIn: assistant.tokensIn,
