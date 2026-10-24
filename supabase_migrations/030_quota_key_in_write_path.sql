@@ -63,6 +63,8 @@ comment on column public.toritavi_ocr_requests.period_quota is
   'period_month は全体予算・記録用の暦月で、別物。NULL は 030 適用前の行。';
 
 -- ② 数える 5 つの関数を、期間関数に寄せる。
+-- 🔴 begin_request は 034（2026-10-24・再試行で audience を書き直す）で更新済み。
+--    この 030 を流し直すと 034 の修正が消えるので、流し直したら 034 も流すこと。
 CREATE OR REPLACE FUNCTION public.toritavi_ocr_begin_request(p_request_id uuid, p_user_id uuid, p_audience text, p_units integer, p_limit_units integer, p_est_cost_cents integer, p_est_tokens integer, p_limit_tokens integer, p_counted_input integer DEFAULT NULL::integer, p_reserved_input integer DEFAULT NULL::integer)
  RETURNS TABLE(status text, used_after integer, cached jsonb)
  LANGUAGE plpgsql
