@@ -219,18 +219,32 @@ export async function POST(request: NextRequest) {
   //     なので、行の記録と置き場所は一致する。
   const incoming = mail.attachments.reduce((n, a) => n + a.bytes.byteLength, 0);
   if (incoming > 0) {
+    // 🔴 **件数も一緒に取り、取れた行がそれより少なければ「数え切れていない」とする**
+    //    （Cloudflare 検査 run-2 の要確認・2026-10-24）。PostgREST は設定の Max rows
+    //    （Supabase の既定 1000）で黙って切る。limit(5001) を頼りにすると、1000 行を
+    //    超えた時点で合計が数え漏れ、全体の上限（300 MB）を素通りする。
     const [mine, all] = await Promise.all([
-      admin.from(INBOX_TABLE).select("attachments").eq("user_id", userId)
+      admin.from(INBOX_TABLE).select("attachments", { count: "exact" }).eq("user_id", userId)
         .limit(INBOX_BUDGET_SCAN_LIMIT),
-      admin.from(INBOX_TABLE).select("attachments").limit(INBOX_BUDGET_SCAN_LIMIT + 1),
+      admin.from(INBOX_TABLE).select("attachments", { count: "exact" })
+        .limit(INBOX_BUDGET_SCAN_LIMIT + 1),
     ]);
-    if (mine.error || all.error || !mine.data || !all.data) {
+    if (
+      mine.error || all.error || !mine.data || !all.data ||
+      mine.count == null || all.count == null
+    ) {
       // 数えられないなら入れない。**黙って上限なしで通さない**（⑧と同じ）。
       console.error(`${LOG} budget count failed`, mine.error?.code ?? "", all.error?.code ?? "");
       return retryLater("budget");
     }
-    if (all.data.length > INBOX_BUDGET_SCAN_LIMIT) {
-      console.error(`${LOG} dropped: inbox too large to count (>${INBOX_BUDGET_SCAN_LIMIT} rows)`);
+    if (
+      all.data.length > INBOX_BUDGET_SCAN_LIMIT ||
+      all.count > all.data.length ||
+      mine.count > mine.data.length
+    ) {
+      console.error(
+        `${LOG} dropped: inbox too large to count (rows=${all.data.length}/${all.count})`,
+      );
       return ok(false);
     }
     const verdict = inboxBudgetVerdict(

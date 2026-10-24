@@ -38,6 +38,8 @@ type FakeOpts = {
   rows?: Row[];
   insertError?: { code: string; message: string } | null;
   uploadErrorAt?: number;
+  /** PostgREST の Max rows（黙って切る行数）。既定は切らない。 */
+  maxRows?: number;
 };
 
 /** 表とバケットのインメモリ実装。route が組み立てる WHERE を実際に評価する。 */
@@ -50,12 +52,14 @@ function fakeAdmin(o: FakeOpts = {}) {
   function query(table: string) {
     const filters: Array<(r: Row) => boolean> = [];
     let head = false;
+    let counted = false;
     let lim: number | null = null;
     let mode: "select" | "insert" = "select";
     let inserted: Row | null = null;
     const b = {
       select(_cols: string, opts?: { count?: string; head?: boolean }) {
         head = opts?.head === true;
+        counted = opts?.count === "exact";
         return b;
       },
       eq(col: string, v: unknown) {
@@ -109,8 +113,12 @@ function fakeAdmin(o: FakeOpts = {}) {
           }
           assert.equal(table, "toritavi_inbox_items");
           const all = rows.filter((r) => filters.every((f) => f(r)));
-          const hit = lim == null ? all : all.slice(0, lim);
-          return head ? { count: all.length, data: null, error: null } : { data: hit, error: null };
+          const cap = Math.min(lim ?? Infinity, o.maxRows ?? Infinity);
+          const hit = cap === Infinity ? all : all.slice(0, cap);
+          if (head) return { count: all.length, data: null, error: null };
+          return counted
+            ? { data: hit, count: all.length, error: null }
+            : { data: hit, error: null };
         };
         return run().then(res, rej);
       },
@@ -382,6 +390,23 @@ describe("/api/inbound-mail", () => {
     await POST(signedRequest(mail()));
     assert.equal(f.rows.length, INBOX_BUDGET_SCAN_LIMIT + 1);
     assert.equal(f.objects.size, 0);
+  });
+
+  // Cloudflare 検査 run-2（2026-10-24）: PostgREST の Max rows（既定 1000）で黙って
+  // 切られると、limit(5001) の見張りは働かず、合計が数え漏れて全体の上限を素通りした。
+  test("🔴 API の取得上限で行が切られたら、数え切れていないとして 200 で捨てる", async () => {
+    const old = new Date(Date.now() - 3 * 86_400_000).toISOString();
+    const other = "33333333-3333-4333-8333-333333333333";
+    const rows = Array.from({ length: 1500 }, () => ({
+      user_id: other, status: "done", received_at: old,
+      attachments: [{ path: "x", bytes: 300_000 }],
+    }));
+    const f = fakeAdmin({ aliases: { [TOKEN]: UID }, rows, maxRows: 1000 });
+    g.__toritaviTestAdmin = f.admin;
+    const r = (await POST(signedRequest(mail()))) as unknown as { status: number };
+    assert.equal(r.status, 200);
+    assert.equal(f.objects.size, 0, "🔴 1000 行で切られた合計で、全体の上限を素通りした");
+    assert.equal(f.rows.length, 1500);
   });
 
   test("凍結中の利用者は 200 で捨てる／状態を読めなければ 503（再送させる）", async () => {
