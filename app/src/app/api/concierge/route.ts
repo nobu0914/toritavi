@@ -15,6 +15,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { CONCIERGE_ENABLED } from "@/lib/concierge-flags";
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateRequest } from "@/lib/supabase-server";
+import { authUnavailableTo503 } from "@/lib/auth-unavailable";
 import { apiMessage, resolveLang } from "@/lib/api-messages";
 import { buildLanguageBlock } from "@/lib/concierge-language";
 import { CONCIERGE_GUARD, audienceOf } from "@/lib/ai-guard";
@@ -194,7 +195,9 @@ export async function POST(request: NextRequest) {
   //    （`ocr_switch_db_enforce.sql` の理屈）。
   const mode = await getAiMode("concierge");
 
-  const auth = await authenticateRequest(request);
+  // 認証基盤が答えないときは 401 ではなく 503（`auth-unavailable.ts`）。
+  const auth = await authenticateRequest(request).catch(authUnavailableTo503);
+  if (auth instanceof NextResponse) return auth;
   if (!auth) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

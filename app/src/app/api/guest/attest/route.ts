@@ -25,6 +25,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { ALLOWED_ORIGINS } from "@/lib/allowed-origins";
 import { authenticateRequest } from "@/lib/supabase-server";
+import { authUnavailableTo503 } from "@/lib/auth-unavailable";
 import { createServiceClient } from "@/lib/supabase-service";
 import { verifyAppAttest } from "@/lib/attest";
 
@@ -55,7 +56,9 @@ export async function GET(request: NextRequest) {
   const bad = forbiddenOrigin(request);
   if (bad) return bad;
 
-  const auth = await authenticateRequest(request);
+  // 認証基盤が答えないときは 401 ではなく 503（`auth-unavailable.ts`）。
+  const auth = await authenticateRequest(request).catch(authUnavailableTo503);
+  if (auth instanceof NextResponse) return auth;
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!auth.isAnonymous) {
     return NextResponse.json({ error: "not_guest" }, { status: 400 });
@@ -91,7 +94,9 @@ export async function POST(request: NextRequest) {
   const bad = forbiddenOrigin(request);
   if (bad) return bad;
 
-  const auth = await authenticateRequest(request);
+  // 認証基盤が答えないときは 401 ではなく 503（`auth-unavailable.ts`）。
+  const auth = await authenticateRequest(request).catch(authUnavailableTo503);
+  if (auth instanceof NextResponse) return auth;
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!auth.isAnonymous) {
     return NextResponse.json({ error: "not_guest" }, { status: 400 });

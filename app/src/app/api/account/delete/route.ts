@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateRequest } from "@/lib/supabase-server";
+import { authUnavailableTo503 } from "@/lib/auth-unavailable";
 import { createServiceClient } from "@/lib/supabase-service";
 import { ALLOWED_ORIGINS } from "@/lib/allowed-origins";
 import {
@@ -144,7 +145,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const auth = await authenticateRequest(request);
+  // 🔴 **認証基盤（GoTrue）が答えないときは 401 ではなく 503**（2026-10-24・夜間検査 5-3）。
+  //    アプリは「新しいトークンで 401」を「もう消えている」と読み、端末の控えを
+  //    消して「削除しました」と出す（`decideDelete`）。障害中に 401 を返すと、
+  //    **アカウントが残ったまま退会が済んだことになる。** 503 なら失敗として扱われ、
+  //    掃除もサインアウトもしない。
+  const auth = await authenticateRequest(request).catch(authUnavailableTo503);
+  if (auth instanceof NextResponse) return auth;
   if (!auth) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
