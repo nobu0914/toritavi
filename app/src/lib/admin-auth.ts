@@ -53,8 +53,12 @@ export async function getAdminContext(): Promise<AdminContext | null> {
   //    /reset-password へ戻すが、matcher が /api を除外しているので、
   //    管理 API は回復セッションのまま通っていた（パスワードを変えずに＝
   //    本人に「変更しました」の通知を出さずに、署名 URL を発行できた）。
-  //    ⚠️ この Cookie は持ち主が消せる。ページ側の関門と同じ強さで、
-  //    本当の関門は管理者の MFA（課題 12・requireAdmin で aal2）。
+  //    ⚠️ **これは関門ではなく、普通のブラウザの迷い込みを止める柵。** この Cookie は
+  //    持ち主が消せるうえ、立つかどうかは /auth/callback の `type` クエリ（利用者が
+  //    書き換えられる）で決まる（Codex の二次検査）。ページ側の関門と同じ強さしか無い。
+  //    回復セッションを確実に見分けるにはセッションの属性（amr）を読む必要があるが、
+  //    本番で回復時の amr の値を確かめられていない。本当の関門は管理者の MFA
+  //    （課題 12・requireAdmin で aal2。**まだ実装されていない**）。
   const jar = await cookies();
   if (jar.get(RECOVERY_COOKIE)?.value === "1") return null;
 

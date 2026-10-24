@@ -82,9 +82,12 @@ function fakeAdmin(opts: {
       from(bucket: string) {
         assert.equal(bucket, "toritavi-inbox");
         return {
-          async list(folder: string) {
+          async list(folder: string, o?: { limit?: number; offset?: number }) {
             calls.push(`list ${folder}`);
-            const data = (opts.files[folder] ?? []).map((e) =>
+            const from = o?.offset ?? 0;
+            const all = opts.files[folder] ?? [];
+            const page = all.slice(from, from + (o?.limit ?? all.length));
+            const data = page.map((e) =>
               typeof e === "string"
                 ? { name: e, id: `obj-${e}`, created_at: OLD }
                 : { name: e.name, id: e.folder ? null : `obj-${e.name}`, created_at: e.created_at },
@@ -216,4 +219,19 @@ test("🔴 置いたばかり（受信の途中かもしれない）の添付は
   g.__toritaviTestAdmin = f.admin;
   await GET(req());
   assert.ok(!f.calls.some((c) => c.startsWith("remove")), f.calls.join(" | "));
+});
+
+test("🔴 利用者のフォルダが 100 件を超えても、後ろの孤児まで届く（ページを送る）", async () => {
+  const users = Array.from({ length: 150 }, (_, i) => ({ name: `u${String(i).padStart(3, "0")}`, folder: true }));
+  const f = fakeAdmin({
+    rows: [],
+    files: {
+      "": users,
+      u130: [{ name: "lost", folder: true }],
+      "u130/lost": ["1.pdf"],
+    },
+  });
+  g.__toritaviTestAdmin = f.admin;
+  await GET(req());
+  assert.ok(f.calls.includes("remove u130/lost/1.pdf"), "🔴 101 人目以降を見ていない");
 });

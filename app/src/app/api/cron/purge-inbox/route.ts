@@ -48,6 +48,12 @@ const MAX_PER_RUN = 200;
 
 /** 1 回で見る「行の無いフォルダ」の上限（少しずつ、毎日）。 */
 const MAX_ORPHAN_FOLDERS = 50;
+/** 孤児の掃除に使ってよい時間（期限切れの掃除のあと・maxDuration の内側）。 */
+const SWEEP_TIME_BUDGET_MS = 30_000;
+/** 1 人の受信項目のフォルダを何件まで見るか（100 件ずつ）。 */
+const MAX_ITEMS_PER_USER = 1000;
+/** 利用者のフォルダを 1 回で何件まで見るか（100 件ずつ）。 */
+const MAX_USER_FOLDERS = 2000;
 /** これより新しい添付は孤児とみなさない（受信の途中かもしれない）。 */
 const ORPHAN_MIN_AGE_MS = 24 * 60 * 60 * 1000;
 
@@ -170,19 +176,40 @@ async function sweepOrphanFolders(
   let objects = 0;
   let skipped = 0;
   let seen = 0;
-  const { data: users, error } = await bucket.list("", { limit: 100 });
-  if (error) {
-    console.warn(`${LOG} orphan sweep: list failed`, (error as { name?: string }).name ?? "");
-    return { objects, skipped: 1 };
+  // 🔴 **先頭の 100 人だけを見ない。** 一覧は名前順なので、ページを送らないと
+  //    101 人目以降の孤児には永久に届かない。
+  const users: Array<{ name: string; id?: string | null }> = [];
+  for (let offset = 0; offset < MAX_USER_FOLDERS; offset += 100) {
+    const { data, error } = await bucket.list("", { limit: 100, offset });
+    if (error) {
+      console.warn(`${LOG} orphan sweep: list failed`, (error as { name?: string }).name ?? "");
+      return { objects, skipped: skipped + 1 };
+    }
+    users.push(...((data ?? []) as Array<{ name: string; id?: string | null }>));
+    if ((data ?? []).length < 100) break;
   }
+  // 🔴 **時間を使い切らない**（maxDuration 60 秒）。残りは翌日に回す。
+  const deadline = Date.now() + SWEEP_TIME_BUDGET_MS;
   // フォルダは id を持たない（ファイルは持つ）。
-  for (const u of (users ?? []).filter((f) => f.name && !f.id)) {
-    const { data: items, error: e1 } = await bucket.list(u.name, { limit: 100 });
-    if (e1) {
+  for (const u of users.filter((f) => f.name && !f.id)) {
+    if (Date.now() > deadline) break;
+    // 受信項目のフォルダも 100 件で打ち切らない（二次検査の指摘）。
+    const items: Array<{ name: string; id?: string | null }> = [];
+    let listFailed = false;
+    for (let offset = 0; offset < MAX_ITEMS_PER_USER; offset += 100) {
+      const { data, error: e1 } = await bucket.list(u.name, { limit: 100, offset });
+      if (e1) {
+        listFailed = true;
+        break;
+      }
+      items.push(...((data ?? []) as Array<{ name: string; id?: string | null }>));
+      if ((data ?? []).length < 100) break;
+    }
+    if (listFailed) {
       skipped += 1;
       continue;
     }
-    const itemIds = (items ?? []).filter((f) => f.name && !f.id).map((f) => f.name);
+    const itemIds = items.filter((f) => f.name && !f.id).map((f) => f.name);
     if (itemIds.length === 0) continue;
     const { data: live, error: e2 } = await admin.from(INBOX_TABLE).select("id").in("id", itemIds);
     if (e2) {
