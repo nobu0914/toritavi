@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase-service";
 import { eventAtIso, periodAnchorDate, revokedUserIds } from "@/lib/webhook-event-order";
 import { verifyRevenueCatSignature } from "@/lib/revenuecat-signature";
+import { lookupProEntitlement } from "@/lib/revenuecat-subscriber";
 
 /**
  * POST /api/webhooks/revenuecat
@@ -152,17 +153,30 @@ export async function POST(request: NextRequest) {
   //    `transferred_from` に載っている事実で、権利 ID の有無に依存させると
   //    フェイルオープンになる。
   //
-  // 🔴 **付与（受け取った側）はしない。** `entitlement_ids` が無いので
-  //    「移された権利が pro だったか」も「いま有効か」も判断できない。
-  //    期限切れの取引が移っただけでも `TRANSFER` は飛ぶため、無条件に
-  //    付与するとフェイルオープンになる（払っていない人に Pro を配る）。
-  //    受け取った側は**次の `RENEWAL` で pro になる**（最長 1 か月）。
-  //    [要確認] この空白を埋めるには RevenueCat の REST API で
-  //    subscriber を引く必要があり、秘密鍵の追加が要る。未着手。
+  // 🔴 **付与（受け取った側）は、確かめられたときだけ**（2026-10-24・夜間検査 3-1）。
+  //    `entitlement_ids` が無いので、本文だけでは「移された権利が pro だったか」も
+  //    「いま有効か」も判断できない。期限切れの取引が移っただけでも `TRANSFER` は
+  //    飛ぶため、無条件に付与するとフェイルオープンになる（払っていない人に Pro を配る）。
+  //    以前は付与を一切せず、受け取った側は**次の `RENEWAL` まで最長 1 か月
+  //    free のまま**だった（払っているのに）。
+  //
+  //    いまは `REVENUECAT_SECRET_API_KEY` があるときだけ、RevenueCat の REST API で
+  //    受け取った側の subscriber を引き（`revenuecat-subscriber.ts`）、
+  //    **pro が有効（期限が無いか、今より後）なときだけ**付与する。書き込みは
+  //    共通処理の付与と同じ門を通す —— 匿名には付けない／行が無ければ作る／
+  //    イベントより古い行だけ進める（`.lt`）。
+  //
+  //    🔴 **確かめられないなら付けない。** 鍵が無い・引けない・期限切れ・pro が無い・
+  //    匿名かどうか分からない —— どれも付与せず warn を残す。そのとき受け取った側は
+  //    以前と同じく次の `RENEWAL` で pro になる。
+  //    🔴 **5xx を返すのは失効が落ちたときだけ**（以前と同じ）。付与を取りこぼしても
+  //    以前の空白に戻るだけで、渡した側が Pro のまま残る失効の取りこぼしとは重さが違う。
   if (event.type === "TRANSFER") {
     const from = revokedUserIds(event);
     const to = (event.transferred_to ?? []).filter((id) => UUID_RE.test(id));
-    if (from.length === 0) {
+    const rcKey = process.env.REVENUECAT_SECRET_API_KEY;
+    const canGrant = Boolean(rcKey) && to.length > 0;
+    if (from.length === 0 && !canGrant) {
       return NextResponse.json({ ok: true, skipped: "transfer_no_known_source" });
     }
     let admin;
@@ -175,27 +189,34 @@ export async function POST(request: NextRequest) {
         { status: 500 },
       );
     }
-    const { error: revokeErr } = await admin
-      .from("toritavi_user_plan")
-      .update({ plan: "free", updated_at: eventAt, last_event_id: event.id ?? null })
-      .in("user_id", from)
-      // 🔴 **同時刻は失効を勝たせる**（下の共通処理と同じ理由）。
-      .lte("updated_at", eventAt);
-    if (revokeErr) {
-      console.error("[webhooks/revenuecat] transfer revoke failed", from, revokeErr);
-      // 5xx で再送させる。**200 で流すと渡した側が Pro のまま残る。**
-      return NextResponse.json({ error: revokeErr.message }, { status: 500 });
+    if (from.length > 0) {
+      const { error: revokeErr } = await admin
+        .from("toritavi_user_plan")
+        .update({ plan: "free", updated_at: eventAt, last_event_id: event.id ?? null })
+        .in("user_id", from)
+        // 🔴 **同時刻は失効を勝たせる**（下の共通処理と同じ理由）。
+        .lte("updated_at", eventAt);
+      if (revokeErr) {
+        console.error("[webhooks/revenuecat] transfer revoke failed", from, revokeErr);
+        // 5xx で再送させる。**200 で流すと渡した側が Pro のまま残る。**
+        return NextResponse.json({ error: revokeErr.message }, { status: 500 });
+      }
     }
-    // 付与を保留したことを**黙らせない**。ここが空白であることは設計であって
-    // 事故ではないが、記録が無いと次に見た人が事故と区別できない。
+    let granted = 0;
     if (to.length > 0) {
-      console.warn(
-        "[webhooks/revenuecat] TRANSFER: 受け取った側の付与は保留した" +
-          "（entitlement_ids が無く有効性を判断できない）。次の RENEWAL で pro になる:",
-        to,
-      );
+      if (rcKey) {
+        granted = await grantTransferRecipients(admin, to, event, eventAt, rcKey);
+      } else {
+        // 付与を保留したことを**黙らせない**。鍵が無い間の空白は設計であって
+        // 事故ではないが、記録が無いと次に見た人が事故と区別できない。
+        console.warn(
+          "[webhooks/revenuecat] TRANSFER: 受け取った側の付与は保留した" +
+            "（REVENUECAT_SECRET_API_KEY が無く有効性を確かめられない）。次の RENEWAL で pro になる:",
+          to,
+        );
+      }
     }
-    return NextResponse.json({ ok: true, transfer: { revoked: from.length, granted: 0 } });
+    return NextResponse.json({ ok: true, transfer: { revoked: from.length, granted } });
   }
 
   // ここから先は `app_user_id` を前提にする共通処理。
@@ -360,4 +381,82 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true, plan: newPlan, applied: false });
   }
   return NextResponse.json({ ok: true, plan: newPlan, applied: true });
+}
+
+/**
+ * `TRANSFER` で受け取った側に、**pro が有効だと確かめられた人だけ**付与する。
+ * 戻り値は実際に pro へ進めた人数（行を作った＋古い行を進めた）。
+ *
+ * 書き込みは共通処理の付与と同じ形（匿名は断る → upsert で行を作る →
+ * `.lt` で古い行だけ進める）。**どこで落ちても付与しないだけで、投げない**
+ * （呼び出し側は 200 を返す。上の TRANSFER ブロックの注記）。
+ */
+async function grantTransferRecipients(
+  admin: ReturnType<typeof createServiceClient>,
+  to: string[],
+  event: RevenueCatEvent,
+  eventAt: string,
+  rcKey: string,
+): Promise<number> {
+  let granted = 0;
+  for (const userId of to) {
+    // 匿名（ゲスト）には付けない（共通処理と同じ理由）。確かめられなければ付けない。
+    const { data: got, error: anonErr } = await admin.auth.admin.getUserById(userId);
+    if (anonErr) {
+      console.error(
+        "[webhooks/revenuecat] TRANSFER: 匿名の確認ができず付与しない",
+        userId,
+        anonErr.message,
+      );
+      continue;
+    }
+    if (got?.user?.is_anonymous === true) {
+      console.warn("[webhooks/revenuecat] TRANSFER: 匿名アカウントへの付与を拒否した:", userId);
+      continue;
+    }
+
+    const lookup = await lookupProEntitlement({
+      appUserId: userId,
+      secretKey: rcKey,
+      entitlementId: PRO_ENTITLEMENT,
+      nowMs: Date.now(),
+    });
+    if (lookup.status !== "active") {
+      console.warn(
+        `[webhooks/revenuecat] TRANSFER: 受け取った側に付与しない（${lookup.status}: ${lookup.reason}）:`,
+        userId,
+      );
+      continue;
+    }
+
+    // 起点は権利の購入時刻（通常の付与が `purchased_at_ms` を使うのと同じ・JST で切る）。
+    const values = {
+      plan: "pro" as const,
+      updated_at: eventAt,
+      last_event_id: event.id ?? null,
+      period_anchor: periodAnchorDate({ purchased_at_ms: lookup.purchasedAtMs ?? undefined }),
+    };
+    // ① 行が無ければ作る。ignoreDuplicates なので、返るのは**作った行だけ**。
+    const { data: inserted, error: insErr } = await admin
+      .from("toritavi_user_plan")
+      .upsert({ user_id: userId, ...values }, { onConflict: "user_id", ignoreDuplicates: true })
+      .select("user_id");
+    if (insErr) {
+      console.error("[webhooks/revenuecat] TRANSFER: insert failed", userId, insErr);
+      continue;
+    }
+    // ② 既存行は、**このイベントより古いときだけ**進める（付与は `.lt`・共通処理と同じ）。
+    const { data: updated, error: updErr } = await admin
+      .from("toritavi_user_plan")
+      .update(values)
+      .eq("user_id", userId)
+      .lt("updated_at", eventAt)
+      .select("user_id");
+    if (updErr) {
+      console.error("[webhooks/revenuecat] TRANSFER: update failed", userId, updErr);
+      continue;
+    }
+    if ((inserted?.length ?? 0) > 0 || (updated?.length ?? 0) > 0) granted += 1;
+  }
+  return granted;
 }

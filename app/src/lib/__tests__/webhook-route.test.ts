@@ -78,18 +78,29 @@ function fakeAdmin(rows: Row[], opts: { anonymous?: boolean } = {}) {
           values: Row,
           opts: { onConflict?: string; ignoreDuplicates?: boolean } = {},
         ) {
-          return {
-            then(
-              onFulfilled: (r: { data: null; error: null }) => unknown,
-            ): unknown {
-              const hit = rows.find((r) => r.user_id === values.user_id);
-              if (!hit) rows.push({ ...values });
-              else if (!opts.ignoreDuplicates) Object.assign(hit, values);
-              return Promise.resolve({ data: null, error: null } as const).then(
-                onFulfilled,
-              );
+          let wantSelect = false;
+          const run = () => {
+            const hit = rows.find((r) => r.user_id === values.user_id);
+            if (!hit) rows.push({ ...values });
+            else if (!opts.ignoreDuplicates) Object.assign(hit, values);
+            // PostgREST の ignore-duplicates は `ON CONFLICT DO NOTHING RETURNING`
+            // なので、`.select()` で返るのは**実際に作った行だけ**（本物と同じ）。
+            const written = !hit || !opts.ignoreDuplicates;
+            return {
+              data: wantSelect ? (written ? [{ user_id: values.user_id }] : []) : null,
+              error: null,
+            };
+          };
+          const b = {
+            select: (_cols: string) => {
+              wantSelect = true;
+              return b;
+            },
+            then(onFulfilled: (r: ReturnType<typeof run>) => unknown): unknown {
+              return Promise.resolve(run()).then(onFulfilled);
             },
           };
+          return b;
         },
         update(values: Partial<Row>) {
           const preds: Array<(r: Row) => boolean> = [];
@@ -151,6 +162,10 @@ test("🔴 TRANSFER: app_user_id が無くても transferred_from が free に�
   // 公式の TRANSFER には app_user_id も entitlement_ids も無い。
   // 「app_user_id を必須に戻す」「TRANSFER ブロックを消す」のどちらでも
   // ここが 400 か素通りになり、渡した側が pro のまま残る。
+  delete process.env.REVENUECAT_SECRET_API_KEY;
+  const rc = stubRevenueCat(() => {
+    throw new Error("鍵が無いのに RevenueCat を引いた");
+  });
   const rows: Row[] = [{ user_id: U1, plan: "pro", updated_at: iso(T - 3600_000) }];
   setAdmin(fakeAdmin(rows));
   const res = await POST(
@@ -176,6 +191,212 @@ test("🔴 TRANSFER: app_user_id が無くても transferred_from が free に�
     !rows.some((r) => r.user_id === U2),
     "TRANSFER が受け取った側に行を作った（無条件付与はフェイルオープン）",
   );
+  // 鍵（REVENUECAT_SECRET_API_KEY）が無ければ、問い合わせもしない
+  assert.equal(rc.calls.length, 0);
+  rc.restore();
+});
+
+// ──────── TRANSFER の受け取った側（2026-10-24・夜間検査 3-1） ────────
+//
+// TRANSFER には `entitlement_ids` が無いので、本文だけでは「移った権利が pro か」
+// 「いま有効か」を判断できない。以前は付与を一切せず、受け取った側は
+// **次の RENEWAL まで最長 1 か月 free のまま**だった（払っているのに）。
+//
+// `REVENUECAT_SECRET_API_KEY` があるときだけ、RevenueCat の REST API で
+// 受け取った側の subscriber を引き、**pro が有効なときだけ**付与する。
+// 🔴 **確かめられないときは付けない**（鍵が無い・引けない・期限切れ・pro が無い）。
+//    失効（渡した側）は従来どおり先に行い、付与の成否で応答を 5xx にしない。
+
+const RC_KEY = "sk_test_revenuecat_secret";
+const realFetch = globalThis.fetch;
+
+type RcCall = { url: string; authorization: string | null };
+
+/** RevenueCat の REST API だけを差し替える。呼ばれた URL と鍵を残す。 */
+function stubRevenueCat(respond: (url: string) => Response | Promise<Response>) {
+  const calls: RcCall[] = [];
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input instanceof Request ? input.url : input);
+    const h = new Headers(init?.headers);
+    calls.push({ url, authorization: h.get("authorization") });
+    return respond(url);
+  }) as typeof fetch;
+  return {
+    calls,
+    restore: () => {
+      globalThis.fetch = realFetch;
+    },
+  };
+}
+
+function subscriber(entitlements: Record<string, { expires_date: string | null; purchase_date?: string }>) {
+  return new Response(
+    JSON.stringify({
+      request_date_ms: T,
+      subscriber: { original_app_user_id: U2, entitlements, subscriptions: {} },
+    }),
+    { status: 200, headers: { "content-type": "application/json" } },
+  );
+}
+
+async function transferWithKey(rows: Row[], respond: (url: string) => Response | Promise<Response>, opts: { anonymous?: boolean } = {}) {
+  process.env.REVENUECAT_SECRET_API_KEY = RC_KEY;
+  const rc = stubRevenueCat(respond);
+  setAdmin(fakeAdmin(rows, opts));
+  try {
+    const res = await POST(
+      signed({
+        event: {
+          type: "TRANSFER",
+          id: "evt_transfer_001",
+          transferred_from: [U1],
+          transferred_to: [U2],
+          event_timestamp_ms: T,
+        },
+      }),
+    );
+    return { res, rc };
+  } finally {
+    rc.restore();
+    delete process.env.REVENUECAT_SECRET_API_KEY;
+  }
+}
+
+const FUTURE = iso(Date.now() + 20 * 24 * 3600_000);
+const PAST = iso(Date.now() - 24 * 3600_000);
+
+test("🔴 TRANSFER＋鍵あり: 受け取った側の pro が有効なら付与する（行が無ければ作る）", async () => {
+  const rows: Row[] = [{ user_id: U1, plan: "pro", updated_at: iso(T - 3600_000) }];
+  const { res, rc } = await transferWithKey(rows, () =>
+    subscriber({ pro: { expires_date: FUTURE, purchase_date: "2026-08-29T21:00:00Z" } }),
+  );
+  assert.equal(res.status, 200);
+  assert.deepEqual(await json(res), { ok: true, transfer: { revoked: 1, granted: 1 } });
+  // 問い合わせ先と鍵
+  assert.equal(rc.calls.length, 1);
+  assert.equal(rc.calls[0].url, `https://api.revenuecat.com/v1/subscribers/${U2}`);
+  assert.equal(rc.calls[0].authorization, `Bearer ${RC_KEY}`);
+  // 渡した側は free、受け取った側は pro
+  assert.equal(rows.find((r) => r.user_id === U1)?.plan, "free");
+  const got = rows.find((r) => r.user_id === U2) as Record<string, unknown> | undefined;
+  assert.ok(got, "🔴 受け取った側に付与していない（次の RENEWAL まで free のまま）");
+  assert.equal(got.plan, "pro");
+  assert.equal(got.updated_at, iso(T));
+  assert.equal(got.last_event_id, "evt_transfer_001");
+  // 起点は権利の購入時刻（JST で切る・通常の付与と同じ）
+  assert.equal(got.period_anchor, "2026-08-30");
+});
+
+test("TRANSFER＋鍵あり: 既存の行は、イベントより古いときだけ pro へ進める", async () => {
+  const older: Row[] = [{ user_id: U2, plan: "free", updated_at: iso(T - 60_000) }];
+  const a = await transferWithKey(older, () => subscriber({ pro: { expires_date: FUTURE } }));
+  assert.deepEqual(await json(a.res), { ok: true, transfer: { revoked: 1, granted: 1 } });
+  assert.equal(older[0].plan, "pro");
+  assert.equal(older[0].updated_at, iso(T));
+
+  // より新しい状態（例: 後から届いた EXPIRATION を反映済み）は踏み潰さない
+  const newer: Row[] = [{ user_id: U2, plan: "free", updated_at: iso(T + 60_000) }];
+  const b = await transferWithKey(newer, () => subscriber({ pro: { expires_date: FUTURE } }));
+  assert.deepEqual(await json(b.res), { ok: true, transfer: { revoked: 1, granted: 0 } });
+  assert.equal(newer[0].plan, "free", "古い TRANSFER が新しい状態を踏んだ");
+});
+
+test("TRANSFER＋鍵あり: 期限の無い pro（買い切り）も付与する", async () => {
+  const rows: Row[] = [];
+  const { res } = await transferWithKey(rows, () => subscriber({ pro: { expires_date: null } }));
+  assert.deepEqual(await json(res), { ok: true, transfer: { revoked: 1, granted: 1 } });
+  assert.equal(rows.find((r) => r.user_id === U2)?.plan, "pro");
+});
+
+for (const [name, respond] of [
+  ["pro の期限が切れている", () => subscriber({ pro: { expires_date: PAST } })],
+  ["pro の権利が無い", () => subscriber({ other: { expires_date: FUTURE } })],
+  ["権利が 1 つも無い", () => subscriber({})],
+] as const) {
+  test(`🔴 TRANSFER＋鍵あり: ${name} → 付与しない`, async () => {
+    const rows: Row[] = [{ user_id: U1, plan: "pro", updated_at: iso(T - 3600_000) }];
+    const { res } = await transferWithKey(rows, respond);
+    assert.equal(res.status, 200);
+    assert.deepEqual(await json(res), { ok: true, transfer: { revoked: 1, granted: 0 } });
+    assert.ok(!rows.some((r) => r.user_id === U2), "🔴 有効でない権利で pro を配った");
+    assert.equal(rows[0].plan, "free", "渡した側の失効は従来どおり");
+  });
+}
+
+for (const [name, respond] of [
+  ["通信が届かない", (): Response => {
+    throw new TypeError("fetch failed");
+  }],
+  ["RevenueCat が 500", () => new Response("oops", { status: 500 })],
+  ["鍵が通らない（401）", () => new Response(JSON.stringify({ code: 7225 }), { status: 401 })],
+  ["応答が JSON でない", () => new Response("<html>", { status: 200 })],
+] as const) {
+  test(`🔴 TRANSFER＋鍵あり: ${name} → 付与しない・応答は 200（失効は済ませる）`, async () => {
+    const rows: Row[] = [{ user_id: U1, plan: "pro", updated_at: iso(T - 3600_000) }];
+    const orig = { warn: console.warn, error: console.error };
+    console.warn = () => {};
+    console.error = () => {};
+    try {
+      const { res } = await transferWithKey(rows, respond);
+      assert.equal(res.status, 200, "付与の失敗で 5xx を返すと、済んだ失効ごと再送される");
+      assert.deepEqual(await json(res), { ok: true, transfer: { revoked: 1, granted: 0 } });
+    } finally {
+      console.warn = orig.warn;
+      console.error = orig.error;
+    }
+    assert.ok(!rows.some((r) => r.user_id === U2), "🔴 確かめられないのに pro を配った");
+    assert.equal(rows[0].plan, "free");
+  });
+}
+
+test("TRANSFER＋鍵あり: 渡した側が UUID でなくても、受け取った側は確かめて付与する", async () => {
+  // 匿名の RevenueCat ID（`$RCAnonymousID:...`）から移った場合。失効する相手は
+  // いないが、受け取った側の権利は確かめられる。鍵が無ければ従来どおり受け流す。
+  process.env.REVENUECAT_SECRET_API_KEY = RC_KEY;
+  const rc = stubRevenueCat(() => subscriber({ pro: { expires_date: FUTURE } }));
+  const rows: Row[] = [];
+  setAdmin(fakeAdmin(rows));
+  try {
+    const res = await POST(
+      signed({
+        event: {
+          type: "TRANSFER",
+          transferred_from: ["$RCAnonymousID:abc"],
+          transferred_to: [U2],
+          event_timestamp_ms: T,
+        },
+      }),
+    );
+    assert.equal(res.status, 200);
+    assert.deepEqual(await json(res), { ok: true, transfer: { revoked: 0, granted: 1 } });
+    assert.equal(rows.find((r) => r.user_id === U2)?.plan, "pro");
+  } finally {
+    rc.restore();
+    delete process.env.REVENUECAT_SECRET_API_KEY;
+  }
+
+  setAdmin(undefined);
+  const noKey = await POST(
+    signed({
+      event: {
+        type: "TRANSFER",
+        transferred_from: ["$RCAnonymousID:abc"],
+        transferred_to: [U2],
+        event_timestamp_ms: T,
+      },
+    }),
+  );
+  assert.deepEqual(await json(noKey), { ok: true, skipped: "transfer_no_known_source" });
+});
+
+test("🔴 TRANSFER＋鍵あり: 受け取った側が匿名なら、有効でも付与しない", async () => {
+  const rows: Row[] = [];
+  const { res } = await transferWithKey(rows, () => subscriber({ pro: { expires_date: FUTURE } }), {
+    anonymous: true,
+  });
+  assert.equal(res.status, 200);
+  assert.deepEqual(await json(res), { ok: true, transfer: { revoked: 1, granted: 0 } });
+  assert.ok(!rows.some((r) => r.user_id === U2), "🔴 匿名アカウントに pro を付けた");
 });
 
 test("🔴 TRANSFER: 同時刻の行も落とす（失効は .lte）", async () => {
